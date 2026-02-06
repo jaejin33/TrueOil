@@ -199,17 +199,28 @@ public class VehiclePage extends JScrollPane {
         grid.setOpaque(false);
 
         Object[][] healthItems = {
-                {"엔진 오일", 50, new Color(34, 197, 94)},
-                {"타이어", 65, new Color(234, 179, 8)},
-                {"브레이크 패드", 40, new Color(234, 88, 12)},
-                {"배터리", 90, new Color(34, 197, 94)}
+                {"엔진 오일", 50},
+                {"타이어", 30},
+                {"브레이크 패드", 45},
+                {"배터리", 55}
         };
 
         for (Object[] item : healthItems) {
             String name = (String) item[0];
             int value = (int) item[1];
-            Color color = (Color) item[2];
-            grid.add(createHealthItem(name, value, color));
+            
+            Color statusColor;
+            if (value <= 35) {
+                statusColor = new Color(239, 68, 68); // 빨간색
+            } else if (value <= 50) {
+                statusColor = new Color(234, 179, 8); // 노란색
+            } else if (value <= 75) {
+                statusColor = new Color(59, 130, 246); // 파란색
+            } else {
+                statusColor = new Color(34, 197, 94); // 초록색
+            }
+            
+            grid.add(createHealthItem(name, value, statusColor));
         }
 
         body.add(grid);
