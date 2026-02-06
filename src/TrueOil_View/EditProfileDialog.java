@@ -18,12 +18,12 @@ public class EditProfileDialog extends JDialog {
         setResizable(false);
         setSize(420, 680);
 
-        /* ===== 전체 배경 (Login 배경색과 통일) ===== */
+        /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
         background.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        /* ===== 카드 패널 (Login의 card 스타일 이식) ===== */
+        /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
