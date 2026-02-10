@@ -176,7 +176,7 @@ public class VehiclePage extends JScrollPane {
 					g2.drawString(String.format("%,d", i * 100000), 10, y + 5);
 				}
 
-				int barWidth = 70; // 막대 크기 고정
+				int barWidth = 70; 
 				int barSpace = chartW / months.length;
 				for (int i = 0; i < monthlyExpenses.length; i++) {
 					int x = leftMargin + (i * barSpace) + (barSpace - barWidth) / 2;
