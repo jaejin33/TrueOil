@@ -1,4 +1,4 @@
-package TrueOil_View;
+package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -86,7 +86,7 @@ public class StationPage extends JScrollPane {
         JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         filterRow.setOpaque(false);
         filterRow.add(new JLabel("유종: "));
-        filterRow.add(new JComboBox<>(new String[]{"휘발유", "경유", "LPG"}));
+        filterRow.add(new JComboBox<>(new String[]{"휘발유", "경유", "LPG", "전기"}));
         filterRow.add(Box.createHorizontalStrut(15));
         filterRow.add(new JLabel("정렬: "));
         filterRow.add(new JComboBox<>(new String[]{"가격순", "거리순"}));

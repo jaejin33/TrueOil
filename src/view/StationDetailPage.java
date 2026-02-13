@@ -1,4 +1,4 @@
-package TrueOil_View;
+package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -136,9 +136,10 @@ public class StationDetailPage extends JScrollPane {
         grid.add(createPriceDetailBox("휘발유", "1,550원", "전국 평균 대비 -30원"));
         grid.add(createPriceDetailBox("경유", "1,450원", "전국 평균 대비 -20원"));
         grid.add(createPriceDetailBox("LPG", "950원", "전국 평균 대비 -10원"));
-
+        grid.add(createPriceDetailBox("전기", "1,860원", "전국 평균 대비 +10원"));
+        
         // [DB Point] 데이터 수집/업데이트 로그 시간 표시 (updated_at 컬럼)
-        JLabel updateLabel = new JLabel("* 최종 업데이트: 2026-01-27 09:30", SwingConstants.CENTER);
+        JLabel updateLabel = new JLabel("* 최종 업데이트: 2026-02-13 09:00", SwingConstants.CENTER);
         updateLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         updateLabel.setForeground(Color.LIGHT_GRAY);
         updateLabel.setAlignmentX(Component.CENTER_ALIGNMENT);

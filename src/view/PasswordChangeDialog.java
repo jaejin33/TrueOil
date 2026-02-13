@@ -1,33 +1,33 @@
-package TrueOil_View;
+package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDate;
 
 /**
- * [Add Record Dialog]
- * 1. 기능 설명: 사용자가 주유 날짜, 장소, 가격, 주유량, 주행거리를 입력하여 개인 차량 관리 데이터를 생성합니다.
- * 2. API 포인트: [없음] (현재 수동 입력 방식)
- * 3. DB 포인트: 입력된 정보를 기반으로 fuel_records 테이블에 새로운 행을 INSERT 합니다.
- * 4. 추가해야 되는 기능: 주유소 명칭 입력 시 인근 주유소 리스트를 추천해주는 API 연동 기능.
+ * [Password Change Dialog]
+ * 핵심 역할:
+ * 1. 입력 검증: 현재 PW 확인, 새 PW와 확인 PW의 일치 여부 체크
+ * 2. DB 업데이트: 비밀번호 컬럼 UPDATE (암호화 권장)
  */
-public class AddStationDialog extends JDialog {
-    private JTextField dateF, stationF, priceF, litersF, mileageF; // priceF 추가
+public class PasswordChangeDialog extends JDialog {
+    private JPasswordField currentPwF, newPwF, confirmPwF;
     private JButton saveBtn, cancelBtn;
 
-    public AddStationDialog(Frame parent) {
-        super(parent, "주유 기록 추가", true);
+    public PasswordChangeDialog(Frame parent) {
+        super(parent, "비밀번호 변경", true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(420, 620);
+        setSize(420, 520);
 
+        /* ===== 전체 배경 (메인 톤 유지) ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
         background.setBorder(new EmptyBorder(20, 20, 20, 20));
 
+        /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -37,7 +37,7 @@ public class AddStationDialog extends JDialog {
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 헤더 영역 ===== */
+        /* ===== 상단 헤더 (우측 종료 버튼) ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
@@ -57,32 +57,27 @@ public class AddStationDialog extends JDialog {
         });
         header.add(closeLabel, BorderLayout.EAST);
 
-        JLabel titleLabel = new JLabel("주유 기록 추가");
+        /* ===== 제목 섹션 ===== */
+        JLabel titleLabel = new JLabel("비밀번호 변경");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 입력 폼 영역 ===== */
+        /* ===== 입력 폼 영역 (JPasswordField) ===== */
         JPanel formWrapper = new JPanel();
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
         formWrapper.setBackground(Color.WHITE);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 400));
+        formWrapper.setMaximumSize(new Dimension(320, 260));
 
         Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
         Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
 
-        // [기능 설명] 오늘 날짜 자동 세팅
-        addInput(formWrapper, "날짜", dateF = new JTextField(LocalDate.now().toString()), labelFont, fieldSize);
-        addInput(formWrapper, "주유소", stationF = new JTextField(), labelFont, fieldSize);
-        
-        // [추가해야 되는 기능] 현재 위치 기준 해당 주유소의 실시간 가격 API를 호출하여 자동으로 채워주는 기능
-        addInput(formWrapper, "가격 (원)", priceF = new JTextField(), labelFont, fieldSize);
-        
-        addInput(formWrapper, "주유량 (L)", litersF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "누적 주행 거리 (km)", mileageF = new JTextField(), labelFont, fieldSize);
+        addPasswordInput(formWrapper, "현재 비밀번호", currentPwF = new JPasswordField(), labelFont, fieldSize);
+        addPasswordInput(formWrapper, "새 비밀번호", newPwF = new JPasswordField(), labelFont, fieldSize);
+        addPasswordInput(formWrapper, "새 비밀번호 확인", confirmPwF = new JPasswordField(), labelFont, fieldSize);
 
-        /* ===== 저장 버튼 및 로직 ===== */
-        saveBtn = new JButton("추가");
+        /* ===== 하단 버튼 및 로직 ===== */
+        saveBtn = new JButton("저장");
         saveBtn.setBackground(new Color(37, 99, 235));
         saveBtn.setForeground(Color.WHITE);
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
@@ -92,24 +87,30 @@ public class AddStationDialog extends JDialog {
         saveBtn.setMaximumSize(new Dimension(320, 45));
 
         saveBtn.addActionListener(e -> {
-            try {
-                // [기능 설명] 필드 값 추출 및 숫자 데이터 파싱 검증
-                String date = dateF.getText();
-                String station = stationF.getText();
-                int price = Integer.parseInt(priceF.getText()); // 가격 추출
-                double liters = Double.parseDouble(litersF.getText());
-                int mileage = Integer.parseInt(mileageF.getText());
+            String currentPw = new String(currentPwF.getPassword());
+            String newPw = new String(newPwF.getPassword());
+            String confirmPw = new String(confirmPwF.getPassword());
 
-                // [DB 포인트] 사용자가 입력한 필드 데이터를 쿼리 파라미터로 매핑하여 DB에 저장
-                // SQL: INSERT INTO fuel_records (user_id, log_date, station_name, fuel_price, liters, mileage) 
-                //      VALUES (?, ?, ?, ?, ?, ?);
-
-                JOptionPane.showMessageDialog(this, "주유 기록이 성공적으로 추가되었습니다.");
-                dispose();
-            } catch (NumberFormatException ex) {
-                // [추가해야 되는 기능] 어떤 필드가 잘못되었는지 사용자에게 구체적으로 알려주는 포커스 기능
-                JOptionPane.showMessageDialog(this, "가격, 리터, 주행거리는 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
+            // 1. [검증] 빈 칸 체크
+            if (currentPw.isEmpty() || newPw.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "비밀번호를 입력해주세요.", "입력 오류", JOptionPane.WARNING_MESSAGE);
+                return;
             }
+
+            // 2. [DB Point 1] 현재 비밀번호 대조
+            // SELECT user_pw FROM members WHERE user_id = ?
+            // DB에서 가져온 비밀번호와 currentPw가 일치하는지 먼저 확인해야 합니다.
+
+            // 3. [검증] 새 비밀번호 일치 여부
+            if (!newPw.equals(confirmPw)) {
+                JOptionPane.showMessageDialog(this, "새 비밀번호가 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 4. [DB Point 2] 최종 업데이트
+            // UPDATE members SET user_pw = ? WHERE user_id = ?
+            JOptionPane.showMessageDialog(this, "비밀번호가 성공적으로 변경되었습니다.");
+            dispose();
         });
 
         cancelBtn = new JButton("취소");
@@ -121,13 +122,13 @@ public class AddStationDialog extends JDialog {
         cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         cancelBtn.addActionListener(e -> dispose());
 
-        /* ===== 컴포넌트 조립 ===== */
+        /* ===== 카드 조립 ===== */
         card.add(header);
         card.add(Box.createVerticalStrut(10));
         card.add(titleLabel);
         card.add(Box.createVerticalStrut(25));
         card.add(formWrapper);
-        card.add(Box.createVerticalStrut(15));
+        card.add(Box.createVerticalStrut(10));
         card.add(saveBtn);
         card.add(Box.createVerticalStrut(12));
         card.add(cancelBtn);
@@ -137,21 +138,17 @@ public class AddStationDialog extends JDialog {
         setLocationRelativeTo(parent);
     }
 
-    private void addInput(JPanel p, String title, JTextField tf, Font font, Dimension size) {
+    private void addPasswordInput(JPanel p, String title, JPasswordField pf, Font font, Dimension size) {
         JLabel lbl = new JLabel(title);
         lbl.setFont(font);
-        lbl.setForeground(new Color(55, 65, 81));
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(lbl);
-        p.add(Box.createVerticalStrut(5));
+        p.add(Box.createVerticalStrut(6));
 
-        tf.setMaximumSize(size);
-        tf.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tf.setBorder(new CompoundBorder(
-            new LineBorder(new Color(209, 213, 219), 1),
-            new EmptyBorder(0, 10, 0, 10)
-        ));
-        p.add(tf);
-        p.add(Box.createVerticalStrut(12));
+        pf.setMaximumSize(size);
+        pf.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pf.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(0, 10, 0, 10)));
+        p.add(pf);
+        p.add(Box.createVerticalStrut(14));
     }
 }
