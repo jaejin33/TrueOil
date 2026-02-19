@@ -55,8 +55,8 @@ public class VehicleHealthSettingDialog extends JDialog {
          * - 구현 방법: SELECT 결과를 아래 redVal, yellowVal 변수에 할당하세요.
          */
         addThresholdSection(formWrapper, "엔진 오일", 20, 50);
-        addThresholdSection(formWrapper, "타이어", 30, 60);
-        addThresholdSection(formWrapper, "브레이크 패드", 25, 55);
+        addThresholdSection(formWrapper, "타이어", 45, 70);
+        addThresholdSection(formWrapper, "브레이크 패드", 30, 75);
         addThresholdSection(formWrapper, "배터리", 15, 45);
 
         /* ===== 버튼 영역 ===== */
