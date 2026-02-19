@@ -4,13 +4,14 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.*; // DB 연동 시 필요
+import java.sql.*;
 
 public class VehiclePage extends JScrollPane {
 
     private JPanel healthGrid;
     private JLabel mLabel; 
-    private int currentTotalMileage = 52340; // DB에서 조회할 현재 주행거리
+    private JPanel fuelGridContainer;
+    private int currentTotalMileage = 0; // DB에서 불러온 값이 저장될 변수
 
     public VehiclePage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -22,7 +23,7 @@ public class VehiclePage extends JScrollPane {
         container.setBackground(new Color(243, 244, 246));
         container.setBorder(new EmptyBorder(40, 80, 40, 80));
 
-        // 상단 타이틀
+        // 타이틀
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.X_AXIS));
         titlePanel.setOpaque(false);
@@ -35,19 +36,27 @@ public class VehiclePage extends JScrollPane {
         container.add(titlePanel);
         container.add(Box.createVerticalStrut(30));
         
-        // 1. 소모품 건강도 섹션
         container.add(createHealthSection());
         container.add(Box.createVerticalStrut(25));
-        
-        // 2. 주유 기록 섹션 
         container.add(createFuelHistorySection());
         container.add(Box.createVerticalStrut(25));
-        
-        // 3. 월별 주유비 통계 섹션
         container.add(createStatsSection());
 
         container.add(Box.createVerticalStrut(60));
         setViewportView(container);
+
+        // 탭 전환 시 DB 데이터 새로고침
+        this.addHierarchyListener(new HierarchyListener() {
+            @Override
+            public void hierarchyChanged(HierarchyEvent e) {
+                if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                    refreshHealthData();
+                    loadFuelData();
+                }
+            }
+        });
+
+        refreshHealthData();
     }
 
     private JPanel createHealthSection() {
@@ -66,9 +75,6 @@ public class VehiclePage extends JScrollPane {
 
         healthGrid = new JPanel(new GridLayout(0, 2, 20, 20));
         healthGrid.setOpaque(false);
-        
-        refreshHealthData(); 
-
         body.add(healthGrid);
         body.add(Box.createVerticalStrut(25));
 
@@ -89,29 +95,27 @@ public class VehiclePage extends JScrollPane {
         btnWrapper.setOpaque(false);
         btnWrapper.add(settingsBtn);
         body.add(btnWrapper);
+        
         return card;
     }
 
     public void refreshHealthData() {
         if (healthGrid == null || mLabel == null) return;
 
-        /* [DB 연동 포인트: SELECT]
-         * 1. Connection conn = DriverManager.getConnection(url, user, pw);
-         * 2. ResultSet rsMileage = conn.createStatement().executeQuery("SELECT mileage FROM car_info");
-         * 3. if(rsMileage.next()) currentTotalMileage = rsMileage.getInt(1);
-         */
-        
+        // [DB 연동 포인트 1: 총 주행거리 조회]
+        // SQL: SELECT total_km FROM car_info WHERE user_id = ?
+        // currentTotalMileage = rs.getInt("total_km");
+        currentTotalMileage = 52340; // 임시 값
+
         mLabel.setText("<html><font color='gray' size='4'>현재 총 주행거리</font><br><b style='font-size:18pt; color:#1e293b;'>" 
                         + String.format("%,d", currentTotalMileage) + " km</b></html>");
 
         healthGrid.removeAll();
 
-        /* [DB 연동 가이드: 반복문]
-         * ResultSet rs = stmt.executeQuery("SELECT item_name, last_km, cycle FROM maintenance");
-         * while(rs.next()) {
-         * healthGrid.add(createHealthItem(rs.getString(1), rs.getInt(2), rs.getInt(3)));
-         * }
-         */
+        // [DB 연동 포인트 2: 소모품 리스트 반복문 로드]
+        // SQL: SELECT item_name, last_replace_km, cycle_km FROM maintenance WHERE user_id = ?
+        // while(rs.next()) { healthGrid.add(createHealthItem(rs.getString(1), rs.getInt(2), rs.getInt(3))); }
+        
         healthGrid.add(createHealthItem("엔진 오일", 48000, 10000));
         healthGrid.add(createHealthItem("타이어", 20000, 50000));
         healthGrid.add(createHealthItem("브레이크 패드", 45000, 30000));
@@ -122,12 +126,12 @@ public class VehiclePage extends JScrollPane {
     }
 
     private JPanel createHealthItem(String name, int lastKm, int cycle) {
-        // 자동 계산 로직
         int driven = currentTotalMileage - lastKm;
         int percent = (int) (((double) (cycle - driven) / cycle) * 100);
         percent = Math.max(0, Math.min(100, percent));
 
-        Color statusColor = (percent <= 20) ? new Color(239, 68, 68) : (percent <= 50) ? new Color(234, 179, 8) : new Color(34, 197, 94);
+        Color statusColor = (percent <= 20) ? new Color(239, 68, 68) : 
+                            (percent <= 50) ? new Color(234, 179, 8) : new Color(34, 197, 94);
 
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
@@ -175,13 +179,10 @@ public class VehiclePage extends JScrollPane {
     private JPanel createFuelHistorySection() {
         JPanel card = createBaseCard("주유 기록");
         JPanel body = (JPanel) card.getComponent(1);
-        JPanel gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
-        gridContainer.setOpaque(false);
-
-        // 초기 데이터 로드 (DB 연동 시 이 메서드 내부에서 RS 돌림)
-        loadFuelData(gridContainer);
-
-        body.add(gridContainer);
+        fuelGridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
+        fuelGridContainer.setOpaque(false);
+        loadFuelData();
+        body.add(fuelGridContainer);
         body.add(Box.createVerticalStrut(25));
 
         JButton addBtn = new JButton("+ 새로운 주유 기록 등록");
@@ -193,7 +194,11 @@ public class VehiclePage extends JScrollPane {
         addBtn.addActionListener(e -> {
             Window parentWindow = SwingUtilities.getWindowAncestor(this);
             AddStationDialog addPage = new AddStationDialog((Frame) parentWindow);
-            addPage.setVisible(true);		
+            addPage.setVisible(true);
+            if (addPage.isUpdated()) {
+                refreshHealthData(); 
+                loadFuelData();      
+            }
         });
 
         JPanel btnWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -203,25 +208,47 @@ public class VehiclePage extends JScrollPane {
         return card;
     }
 
-    private void loadFuelData(JPanel container) {
-        container.removeAll();
-        // SELECT * FROM fuel_history ORDER BY date DESC LIMIT 4
-        String[][] history = { { "2026-01-25", "주유소 A", "45,000원", "30L" }, { "2026-01-18", "주유소 B", "40,000원", "26L" }, { "2026-01-12", "주유소 C", "50,000원", "32L" }, { "2026-01-05", "주유소 D", "38,000원", "24L" } };
-        for (String[] h : history) container.add(createFuelItem(h[0], h[1], h[2], h[3]));
+    public void loadFuelData() {
+        if (fuelGridContainer == null) return;
+        fuelGridContainer.removeAll();
+        
+        // [DB 연동 포인트 3: 주유 기록 조회]
+        // SQL: SELECT fuel_date, station_name, fuel_price, fuel_amount FROM fuel_log WHERE user_id = ? ORDER BY fuel_date DESC
+        
+        String[][] history = { 
+            { "2026-01-25", "주유소 A", "45,000원", "30L" }, 
+            { "2026-01-18", "주유소 B", "40,000원", "26L" }, 
+            { "2026-01-12", "주유소 C", "50,000원", "32L" }, 
+            { "2026-01-05", "주유소 D", "38,000원", "24L" } 
+        };
+        
+        for (String[] h : history) {
+            fuelGridContainer.add(createFuelItem(h[0], h[1], h[2], h[3]));
+        }
+        
+        fuelGridContainer.revalidate();
+        fuelGridContainer.repaint();
     }
 
     private JPanel createFuelItem(String date, String station, String price, String liter) {
         JPanel item = new JPanel(new BorderLayout(10, 0));
         item.setBackground(Color.WHITE);
         item.setBorder(new CompoundBorder(new LineBorder(new Color(241, 245, 249)), new EmptyBorder(15, 18, 15, 18)));
+        
         JPanel left = new JPanel(new GridLayout(2, 1, 0, 3));
         left.setOpaque(false);
-        left.add(new JLabel(date)); left.add(new JLabel("<html><b>"+station+"</b></html>"));
+        left.add(new JLabel(date)); 
+        left.add(new JLabel("<html><b>"+station+"</b></html>"));
+        
         JPanel right = new JPanel(new GridLayout(2, 1, 0, 3));
         right.setOpaque(false);
-        JLabel p = new JLabel(price, SwingConstants.RIGHT); p.setForeground(new Color(37, 99, 235));
-        right.add(p); right.add(new JLabel(liter, SwingConstants.RIGHT));
-        item.add(left, BorderLayout.CENTER); item.add(right, BorderLayout.EAST);
+        JLabel p = new JLabel(price, SwingConstants.RIGHT); 
+        p.setForeground(new Color(37, 99, 235));
+        right.add(p); 
+        right.add(new JLabel(liter, SwingConstants.RIGHT));
+        
+        item.add(left, BorderLayout.CENTER); 
+        item.add(right, BorderLayout.EAST);
         return item;
     }
 
@@ -229,10 +256,11 @@ public class VehiclePage extends JScrollPane {
         JPanel card = createBaseCard("월별 주유비 통계");
         JPanel body = (JPanel) card.getComponent(1);
 
+        // [DB 연동 포인트 4: 월별 주유비 통계 데이터]
+        // SQL: SELECT MONTH(fuel_date), SUM(fuel_price) FROM fuel_log WHERE user_id = ? GROUP BY MONTH(fuel_date)
         int[] monthlyExpenses = { 250000, 285000, 320000, 305000, 295000, 318000 };
         String[] months = { "1월", "2월", "3월", "4월", "5월", "6월" };
 
-        // 커스텀 차트 복구
         JPanel chartPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -263,7 +291,6 @@ public class VehiclePage extends JScrollPane {
         body.add(chartPanel);
         body.add(Box.createVerticalStrut(20));
 
-        // 하단 요약 카드 복구
         JPanel infoGrid = new JPanel(new GridLayout(1, 4, 15, 0));
         infoGrid.setOpaque(false);
         infoGrid.add(createInfoCard("평균", "291,667원"));

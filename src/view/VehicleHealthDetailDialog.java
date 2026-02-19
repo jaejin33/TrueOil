@@ -8,19 +8,19 @@ import java.awt.event.MouseEvent;
 import java.sql.*;
 
 public class VehicleHealthDetailDialog extends JDialog {
-    private JTextField lastReplaceField, cycleField;
+    private JTextField lastReplaceField;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
-    private int updatedLastKm, updatedCycle;
+    private int updatedLastKm;
 
     public VehicleHealthDetailDialog(Frame parent, String itemName, int lastKm, int cycle) {
         super(parent, itemName + " 정보 수정", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(420, 420);
+        setSize(420, 380);
 
-        /* ===== 전체 배경 (메인 톤 유지) ===== */
+        /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
         background.setBorder(new CompoundBorder(
@@ -38,11 +38,10 @@ public class VehicleHealthDetailDialog extends JDialog {
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 상단 헤더 (우측 종료 버튼) ===== */
+        /* ===== 상단 헤더 (✕ 버튼) ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel closeLabel = new JLabel("✕");
         closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
@@ -68,15 +67,19 @@ public class VehicleHealthDetailDialog extends JDialog {
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
         formWrapper.setBackground(Color.WHITE);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 220));
+        formWrapper.setMaximumSize(new Dimension(320, 100));
 
         Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
         Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
 
         addInput(formWrapper, "마지막 교체 시점 (km)", lastReplaceField = new JTextField(String.valueOf(lastKm)), labelFont, fieldSize);
-        addInput(formWrapper, "권장 교체 주기 (km)", cycleField = new JTextField(String.valueOf(cycle)), labelFont, fieldSize);
+        JLabel infoLabel = new JLabel(itemName + "의 권장 교체 주기는 " + cycle + "km 입니다.");
+        infoLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        infoLabel.setForeground(new Color(75, 85, 99)); 
+        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formWrapper.add(infoLabel);
 
-        /* ===== 하단 버튼 및 로직 ===== */
+        /* ===== 하단 버튼 ===== */
         saveBtn = new JButton("저장");
         saveBtn.setBackground(new Color(37, 99, 235));
         saveBtn.setForeground(Color.WHITE);
@@ -89,15 +92,13 @@ public class VehicleHealthDetailDialog extends JDialog {
         saveBtn.addActionListener(e -> {
             try {
                 updatedLastKm = Integer.parseInt(lastReplaceField.getText());
-                updatedCycle = Integer.parseInt(cycleField.getText());
 
-                /* [DB Point] 항목명(itemName)에 맞춰 해당 데이터만 업데이트
-                 * String sql = "UPDATE maintenance SET last_replace_km = ?, recommended_cycle = ? WHERE item_name = ?";
+                /* [DB Point] cycle은 기존값을 그대로 사용하거나 필요한 쿼리에 적용
+                 * String sql = "UPDATE maintenance SET last_replace_km = ? WHERE item_name = ?";
                  * try (Connection conn = DBUtil.getConnection(); 
                  * PreparedStatement pstmt = conn.prepareStatement(sql)) {
                  * pstmt.setInt(1, updatedLastKm);
-                 * pstmt.setInt(2, updatedCycle);
-                 * pstmt.setString(3, itemName); // 엔진 오일, 타이어 등 클릭한 항목에 따라 필터링
+                 * pstmt.setString(2, itemName);
                  * pstmt.executeUpdate();
                  * } catch (SQLException ex) { ex.printStackTrace(); }
                  */
@@ -119,15 +120,15 @@ public class VehicleHealthDetailDialog extends JDialog {
         cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         cancelBtn.addActionListener(e -> dispose());
 
-        /* ===== 카드 조립 ===== */
+        /* ===== 카드 조립 (Strut 수치 조정으로 간격 최적화) ===== */
         card.add(header);
-        card.add(Box.createVerticalStrut(10));
+        card.add(Box.createVerticalStrut(5));
         card.add(titleLabel);
-        card.add(Box.createVerticalStrut(25));
+        card.add(Box.createVerticalStrut(20));
         card.add(formWrapper);
-        card.add(Box.createVerticalStrut(10));
+        card.add(Box.createVerticalStrut(15));
         card.add(saveBtn);
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(10));
         card.add(cancelBtn);
 
         background.add(card, BorderLayout.CENTER);
@@ -146,10 +147,9 @@ public class VehicleHealthDetailDialog extends JDialog {
         tf.setAlignmentX(Component.LEFT_ALIGNMENT);
         tf.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(0, 10, 0, 10)));
         p.add(tf);
-        p.add(Box.createVerticalStrut(14));
+        p.add(Box.createVerticalStrut(12)); 
     }
 
     public boolean isUpdated() { return isUpdated; }
     public int getLastKm() { return updatedLastKm; }
-    public int getCycle() { return updatedCycle; }
 }
