@@ -12,7 +12,7 @@ public class Login extends JFrame {
         setTitle("TrueOil");
         setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(420, 600);
+        setSize(420, 550);
         setLocationRelativeTo(null);
         setResizable(false);
 
