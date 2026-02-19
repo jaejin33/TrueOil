@@ -5,20 +5,22 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDate;
+import java.sql.*;
 
-public class AddStationDialog extends JDialog {
-    private JTextField dateF, stationF, priceF, litersF, mileageF;
+public class VehicleHealthDetailDialog extends JDialog {
+    private JTextField lastReplaceField;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
+    private int updatedLastKm;
 
-    public AddStationDialog(Frame parent) {
-        super(parent, "주유 기록 추가", true);
+    public VehicleHealthDetailDialog(Frame parent, String itemName, int lastKm, int cycle) {
+        super(parent, itemName + " 정보 수정", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(420, 620);
+        setSize(420, 380);
 
+        /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
         background.setBorder(new CompoundBorder(
@@ -26,6 +28,7 @@ public class AddStationDialog extends JDialog {
                 new EmptyBorder(20, 20, 20, 20) 
         ));
 
+        /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -35,11 +38,10 @@ public class AddStationDialog extends JDialog {
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 헤더 영역 ===== */
+        /* ===== 상단 헤더 (✕ 버튼) ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel closeLabel = new JLabel("✕");
         closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
@@ -55,7 +57,8 @@ public class AddStationDialog extends JDialog {
         });
         header.add(closeLabel, BorderLayout.EAST);
 
-        JLabel titleLabel = new JLabel("주유 기록 추가");
+        /* ===== 제목 섹션 ===== */
+        JLabel titleLabel = new JLabel(itemName + " 정보 수정");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -64,19 +67,20 @@ public class AddStationDialog extends JDialog {
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
         formWrapper.setBackground(Color.WHITE);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 400));
+        formWrapper.setMaximumSize(new Dimension(320, 100));
 
         Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
         Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
 
-        addInput(formWrapper, "날짜", dateF = new JTextField(LocalDate.now().toString()), labelFont, fieldSize);
-        addInput(formWrapper, "주유소", stationF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "가격 (원)", priceF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "주유량 (L)", litersF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "누적 주행 거리 (km)", mileageF = new JTextField(), labelFont, fieldSize);
+        addInput(formWrapper, "마지막 교체 시점 (km)", lastReplaceField = new JTextField(String.valueOf(lastKm)), labelFont, fieldSize);
+        JLabel infoLabel = new JLabel(itemName + "의 권장 교체 주기는 " + cycle + "km 입니다.");
+        infoLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        infoLabel.setForeground(new Color(75, 85, 99)); 
+        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formWrapper.add(infoLabel);
 
-        /* ===== 저장 버튼 및 로직 ===== */
-        saveBtn = new JButton("추가");
+        /* ===== 하단 버튼 ===== */
+        saveBtn = new JButton("저장");
         saveBtn.setBackground(new Color(37, 99, 235));
         saveBtn.setForeground(Color.WHITE);
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
@@ -87,17 +91,23 @@ public class AddStationDialog extends JDialog {
 
         saveBtn.addActionListener(e -> {
             try {
-                String date = dateF.getText();
-                String station = stationF.getText();
-                int price = Integer.parseInt(priceF.getText());
-                double liters = Double.parseDouble(litersF.getText());
-                int mileage = Integer.parseInt(mileageF.getText());
-                isUpdated = true;
+                updatedLastKm = Integer.parseInt(lastReplaceField.getText());
 
-                JOptionPane.showMessageDialog(this, "주유 기록이 성공적으로 추가되었습니다.");
+                /* [DB Point] cycle은 기존값을 그대로 사용하거나 필요한 쿼리에 적용
+                 * String sql = "UPDATE maintenance SET last_replace_km = ? WHERE item_name = ?";
+                 * try (Connection conn = DBUtil.getConnection(); 
+                 * PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                 * pstmt.setInt(1, updatedLastKm);
+                 * pstmt.setString(2, itemName);
+                 * pstmt.executeUpdate();
+                 * } catch (SQLException ex) { ex.printStackTrace(); }
+                 */
+
+                JOptionPane.showMessageDialog(this, itemName + " 정보가 정상적으로 저장되었습니다.", "저장 완료", JOptionPane.INFORMATION_MESSAGE);
+                isUpdated = true;
                 dispose();
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "가격, 리터, 주행거리는 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -110,15 +120,15 @@ public class AddStationDialog extends JDialog {
         cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         cancelBtn.addActionListener(e -> dispose());
 
-        /* ===== 컴포넌트 조립 ===== */
+        /* ===== 카드 조립 (Strut 수치 조정으로 간격 최적화) ===== */
         card.add(header);
-        card.add(Box.createVerticalStrut(10));
+        card.add(Box.createVerticalStrut(5));
         card.add(titleLabel);
-        card.add(Box.createVerticalStrut(25));
+        card.add(Box.createVerticalStrut(20));
         card.add(formWrapper);
         card.add(Box.createVerticalStrut(15));
         card.add(saveBtn);
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(10));
         card.add(cancelBtn);
 
         background.add(card, BorderLayout.CENTER);
@@ -126,25 +136,20 @@ public class AddStationDialog extends JDialog {
         setLocationRelativeTo(parent);
     }
 
-    public boolean isUpdated() {
-        return isUpdated;
-    }
-
     private void addInput(JPanel p, String title, JTextField tf, Font font, Dimension size) {
         JLabel lbl = new JLabel(title);
         lbl.setFont(font);
-        lbl.setForeground(new Color(55, 65, 81));
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(lbl);
-        p.add(Box.createVerticalStrut(5));
+        p.add(Box.createVerticalStrut(6));
 
         tf.setMaximumSize(size);
         tf.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tf.setBorder(new CompoundBorder(
-            new LineBorder(new Color(209, 213, 219), 1),
-            new EmptyBorder(0, 10, 0, 10)
-        ));
+        tf.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(0, 10, 0, 10)));
         p.add(tf);
-        p.add(Box.createVerticalStrut(12));
+        p.add(Box.createVerticalStrut(12)); 
     }
+
+    public boolean isUpdated() { return isUpdated; }
+    public int getLastKm() { return updatedLastKm; }
 }
