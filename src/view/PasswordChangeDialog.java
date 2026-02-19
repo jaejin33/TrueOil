@@ -18,6 +18,7 @@ public class PasswordChangeDialog extends JDialog {
 
     public PasswordChangeDialog(Frame parent) {
         super(parent, "비밀번호 변경", true);
+        setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
         setSize(420, 520);
@@ -25,7 +26,10 @@ public class PasswordChangeDialog extends JDialog {
         /* ===== 전체 배경 (메인 톤 유지) ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new EmptyBorder(20, 20, 20, 20));
+        background.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();

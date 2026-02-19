@@ -11,10 +11,13 @@ public class MainPage extends JFrame {
 
     public MainPage() {
         setTitle("TrueOil");
+        setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1100, 900);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+        JPanel mainBackgroundPanel = new JPanel(new BorderLayout());
+        mainBackgroundPanel.setBackground(Color.WHITE);
+        mainBackgroundPanel.setBorder(new LineBorder(Color.BLACK, 2));
 
         // [1] 상단 헤더 (로고 & 로그아웃)
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -26,21 +29,46 @@ public class MainPage extends JFrame {
         logoLabel.setBorder(new EmptyBorder(15, 20, 15, 20));
         headerPanel.add(logoLabel, BorderLayout.WEST);
 
+        JPanel btnGroupPanel = new JPanel(new GridBagLayout()); 
+        btnGroupPanel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.VERTICAL;
+        gbc.insets = new Insets(0, 5, 0, 5); // 버튼 사이의 간격 추가
+        Color logoutColor = new Color(243, 244, 246);
+        Color exitColor = new Color(239, 68, 68);
+
         JButton logoutBtn = new JButton("로그아웃");
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        logoutBtn.setBorder(new EmptyBorder(0, 20, 0, 20));
-        logoutBtn.setContentAreaFilled(false);
+        logoutBtn.setBackground(logoutColor);
+        logoutBtn.setForeground(Color.DARK_GRAY);
+        logoutBtn.setFocusPainted(false); // 클릭 시 테두리 제거
+        logoutBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         logoutBtn.addActionListener(e -> {
-            // 1. 확인 다이얼로그 띄우기 (부모를 MainPage.this로 지정)
-            int confirm = JOptionPane.showConfirmDialog(
-                MainPage.this, "로그아웃 하시겠습니까?", "로그아웃 확인", 
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            int confirm = JOptionPane.showConfirmDialog(MainPage.this, "로그아웃 하시겠습니까?", "로그아웃 확인", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                new Login().setVisible(true); 
-                MainPage.this.dispose(); 
+                new Login().setVisible(true);
+                MainPage.this.dispose();
             }
         });
-        headerPanel.add(logoutBtn, BorderLayout.EAST);
+
+        JButton exitBtn = new JButton("종료");
+        exitBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        exitBtn.setBackground(exitColor);
+        exitBtn.setForeground(Color.WHITE); // 빨간 배경엔 흰색 글씨
+        exitBtn.setFocusPainted(false);
+        exitBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        exitBtn.setBorder(new EmptyBorder(5, 15, 5, 15));
+        exitBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(MainPage.this, "종료하시겠습니까?", "시스템 종료", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) System.exit(0);
+        });
+
+        gbc.gridx = 0;
+        btnGroupPanel.add(logoutBtn, gbc);
+        gbc.gridx = 1;
+        gbc.insets = new Insets(0, 5, 0, 20); // 종료 버튼 오른쪽 여백 확보
+        btnGroupPanel.add(exitBtn, gbc);
+        headerPanel.add(btnGroupPanel, BorderLayout.EAST);
 
         // [2] 네비게이션 탭 바 (각 페이지 전환 컨트롤)
         navBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -54,7 +82,8 @@ public class MainPage extends JFrame {
         JPanel topWrapper = new JPanel(new BorderLayout());
         topWrapper.add(headerPanel, BorderLayout.NORTH);
         topWrapper.add(navBar, BorderLayout.CENTER);
-        add(topWrapper, BorderLayout.NORTH);
+        
+        mainBackgroundPanel.add(topWrapper, BorderLayout.NORTH);
 
         // [3] 중앙 컨텐츠 영역 (CardLayout 적용)
         cardLayout = new CardLayout();
@@ -66,7 +95,10 @@ public class MainPage extends JFrame {
         contentArea.add(new RepairPage(), "REPAIR");   // 정비소 목록 및 예약 스케줄 데이터
         contentArea.add(new MyPage(), "MYPAGE");       // 개인정보(PW, 이메일) 수정 기능
 
-        add(contentArea, BorderLayout.CENTER);
+        mainBackgroundPanel.add(contentArea, BorderLayout.CENTER);
+        
+        // 최종적으로 프레임에 루트 패널 설정
+        setContentPane(mainBackgroundPanel);
     }
 
     /**
@@ -107,7 +139,6 @@ public class MainPage extends JFrame {
         });
         navBar.add(btn);
     }
-
     // [기능] 탭 선택 해제 시각화 처리
     private void clearNavSelection() {
         for (Component c : navBar.getComponents()) {
@@ -118,7 +149,6 @@ public class MainPage extends JFrame {
             }
         }
     }
-
     // [기능] 특정 탭 강제 활성화 (상세페이지 등에서 돌아올 때 사용)
     private void highlightNavButton(String btnText) {
         for (Component c : navBar.getComponents()) {
@@ -130,12 +160,5 @@ public class MainPage extends JFrame {
                 }
             }
         }
-    }
-
-    // 임시 패널 생성 로직 (현재는 실제 페이지 클래스로 대체됨)
-    private JPanel createTempPanel(String msg) {
-        JPanel p = new JPanel(new GridBagLayout());
-        p.add(new JLabel(msg));
-        return p;
     }
 }
