@@ -1,4 +1,4 @@
-package fuel;
+package fuel.dto;
 
 public class GasStationDto {
 	

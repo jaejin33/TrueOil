@@ -1,4 +1,4 @@
-package maintenance;
+package maintenance.dto;
 
 public class MaintenanceStatusDto {
 	

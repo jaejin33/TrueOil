@@ -1,4 +1,4 @@
-package fuel;
+package fuel.dto;
 
 import java.time.LocalDateTime;
 
@@ -9,7 +9,7 @@ public class FuelLogDto {
     private int totalPrice;
     private int unitPrice;
     private int currentMileage;
-    private LocalDateTime fuelDate; // 주유한 시점
+    private String fuelDate; // 주유한 시점
 	public int getLogId() {
 		return logId;
 	}
@@ -46,10 +46,10 @@ public class FuelLogDto {
 	public void setCurrentMileage(int currentMileage) {
 		this.currentMileage = currentMileage;
 	}
-	public LocalDateTime getFuelDate() {
+	public String getFuelDate() {
 		return fuelDate;
 	}
-	public void setFuelDate(LocalDateTime fuelDate) {
+	public void setFuelDate(String fuelDate) {
 		this.fuelDate = fuelDate;
 	}
     
