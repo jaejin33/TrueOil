@@ -1,4 +1,4 @@
-package dto;
+package fuel;
 
 import java.time.LocalDateTime;
 
