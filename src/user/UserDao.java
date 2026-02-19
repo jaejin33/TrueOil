@@ -1,7 +1,6 @@
-package user.dao;
+package user;
 
 import database.DBConnectionMgr;
-import user.*;
 import user.dto.UserDto;
 import user.dto.UserSessionDto;
 
