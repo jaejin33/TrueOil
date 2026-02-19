@@ -1,9 +1,9 @@
-package dto;
+package maintenance.dto;
 
 public class MaintenanceItemDto {
     private int itemId;
     private String itemName;
-    private int cycleMileage;
+    private int cycleMileage; // 권장 교체 주기
     private String description;
     
 	public int getItemId() {

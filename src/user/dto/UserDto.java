@@ -1,4 +1,4 @@
-package dto;
+package user.dto;
 
 import java.time.LocalDateTime;
 
@@ -11,7 +11,7 @@ public class UserDto {
     private double efficiency;
     private int currentMileage;
     private String profileImg;
-    private LocalDateTime createdAt;
+    private String createdAt;
 	public int getUserId() {
 		return userId;
 	}
@@ -54,10 +54,10 @@ public class UserDto {
 	public void setProfileImg(String profileImg) {
 		this.profileImg = profileImg;
 	}
-	public LocalDateTime getCreatedAt() {
+	public String getCreatedAt() {
 		return createdAt;
 	}
-	public void setCreatedAt(LocalDateTime createdAt) {
+	public void setCreatedAt(String createdAt) {
 		this.createdAt = createdAt;
 	} 
 

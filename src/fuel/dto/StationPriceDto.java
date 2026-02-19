@@ -1,4 +1,4 @@
-package dto;
+package fuel.dto;
 
 import java.time.LocalDateTime;
 
@@ -6,7 +6,8 @@ public class StationPriceDto {
     private String stationId;
     private String fuelType;
     private int price;
-    private LocalDateTime updatedAt; // 가격 수정 시점
+    private String updatedAt; // 가격 수정 시점
+    
 	public String getStationId() {
 		return stationId;
 	}
@@ -25,10 +26,10 @@ public class StationPriceDto {
 	public void setPrice(int price) {
 		this.price = price;
 	}
-	public LocalDateTime getUpdatedAt() {
+	public String getUpdatedAt() {
 		return updatedAt;
 	}
-	public void setUpdatedAt(LocalDateTime updatedAt) {
+	public void setUpdatedAt(String updatedAt) {
 		this.updatedAt = updatedAt;
 	}
     

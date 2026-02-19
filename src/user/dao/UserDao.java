@@ -1,7 +1,10 @@
-package dao;
+package user.dao;
 
 import database.DBConnectionMgr;
-import dto.UserDto;
+import user.*;
+import user.dto.UserDto;
+import user.dto.UserSessionDto;
+
 import java.sql.*;
 
 public class UserDao {
@@ -63,45 +66,35 @@ public class UserDao {
 		return exists;
 	}
 
-	// 로그인 기능 (추가됨)
-	public UserDto loginUser(String email, String password) {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		UserDto user = null;
+	// 로그인 기능 
+	public UserSessionDto loginUser(String email, String password) {
+	    Connection con = null;
+	    PreparedStatement pstmt = null;
+	    ResultSet rs = null;
+	    UserSessionDto sessionUser = null;
 
-		// 입력받은 이메일과 비밀번호가 일치하는 행을 찾음
-		String sql = "SELECT * FROM users WHERE email = ? AND password = ?";
+	    // 식별에 필요한 최소한의 컬럼만 조회
+	    String sql = "SELECT user_id, email, profile_img FROM users WHERE email = ? AND password = ?";
 
-		try {
-			con = pool.getConnection();
-			pstmt = con.prepareStatement(sql);
-			pstmt.setString(1, email);
-			pstmt.setString(2, password); // TODO: 암호화 적용 후에는 로직 변경 필요
+	    try {
+	        con = pool.getConnection();
+	        pstmt = con.prepareStatement(sql);
+	        pstmt.setString(1, email);
+	        pstmt.setString(2, password);
 
-			rs = pstmt.executeQuery();
+	        rs = pstmt.executeQuery();
 
-			if (rs.next()) {
-				// 로그인 성공 시 Dto 객체 생성 및 데이터 담기
-				user = new UserDto();
-				user.setUserId(rs.getInt("user_id"));
-				user.setEmail(rs.getString("email"));
-				user.setFuelType(rs.getString("fuel_type"));
-				user.setEfficiency(rs.getDouble("efficiency"));
-				user.setCurrentMileage(rs.getInt("current_mileage"));
-				user.setProfileImg(rs.getString("profile_img"));
-
-				// LocalDateTime 변환
-				Timestamp ts = rs.getTimestamp("created_at");
-				if (ts != null) {
-					user.setCreatedAt(ts.toLocalDateTime());
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			pool.freeConnection(con, pstmt, rs);
-		}
-		return user; // 성공 시 유저 객체, 실패 시 null 반환
+	        if (rs.next()) {
+	            sessionUser = new UserSessionDto();
+	            sessionUser.userId = rs.getInt("user_id");
+	            sessionUser.email = rs.getString("email");
+	            sessionUser.profileImg = rs.getString("profile_img");
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    } finally {
+	        pool.freeConnection(con, pstmt, rs);
+	    }
+	    return sessionUser; // 가벼운 세션용 객체 리턴
 	}
 }

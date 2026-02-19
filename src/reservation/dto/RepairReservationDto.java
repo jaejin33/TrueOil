@@ -1,4 +1,4 @@
-package dto;
+package reservation.dto;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
