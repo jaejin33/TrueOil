@@ -1,11 +1,20 @@
 package TrueOil_View;
 
+import TrueOil_Utils.EnvLoader;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
+import java.net.URL;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 
 public class StationPage extends JScrollPane {
+
+    // .env 파일의 '=' 왼쪽에 적힌 '변수 이름'을 정확히 적어야 합니다.
+    private final String NAVER_CLIENT_ID = EnvLoader.get("NAVER_CLIENT_ID");
+    private final String NAVER_CLIENT_SECRET = EnvLoader.get("NAVER_CLIENT_SECRET");
 
     public StationPage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -23,7 +32,7 @@ public class StationPage extends JScrollPane {
         gbc.insets = new Insets(10, 50, 10, 50);
 
         JLabel title = new JLabel("주유소 찾기");
-        title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+        title.setFont(new Font("맑은 고딕", Font.BOLD, 28));
         gbc.insets = new Insets(30, 50, 20, 50);
         contentPanel.add(title, gbc);
 
@@ -40,17 +49,53 @@ public class StationPage extends JScrollPane {
 
     private JPanel createMapSection() {
         JPanel card = createBaseCard("🗺️ 주변 지도 확인");
+        JPanel body = (JPanel) card.getComponent(1);
         
-        /** [API/DB POINT] 지도 연동
-         * - Naver/Kakao Static Map API 사용 시: 현재 위치 좌표를 기반으로 지도 이미지 URL 생성 및 로드
-         * - WebView(JCEF) 사용 시: 지도 API HTML 가이드를 통해 현재 위치 마커 표시
-         */
-        JPanel mapBox = new JPanel(new GridBagLayout());
-        mapBox.setBackground(new Color(229, 231, 235));
-        mapBox.setPreferredSize(new Dimension(0, 320));
-        mapBox.add(new JLabel("📍 지도 데이터 로딩 중..."));
-        
-        ((JPanel)card.getComponent(1)).add(mapBox);
+        JLabel mapLabel = new JLabel("📍 지도 로딩 중...", SwingConstants.CENTER);
+        mapLabel.setPreferredSize(new Dimension(0, 320));
+        mapLabel.setOpaque(true);
+        mapLabel.setBackground(new Color(229, 231, 235));
+        mapLabel.setBorder(new RoundBorder(new Color(209, 213, 219), 1, 15));
+
+        new Thread(() -> {
+            try {
+                // 테스트 좌표 (서울역)
+                String lon = "126.9706";
+                String lat = "37.5547";
+                int w = 800;
+                int h = 320;
+                
+                // 공식 문서 가이드에 명시된 Static Map v2 raster 엔드포인트 적용
+                String apiURL = "https://maps.apigw.ntruss.com/map-static/v2/raster"
+                        + "?w=" + w + "&h=" + h + "&center=" + lon + "," + lat + "&level=14"
+                        + "&markers=type:d|size:mid|pos:" + lon + "%20" + lat;
+
+                URL url = new URL(apiURL);
+                java.net.HttpURLConnection con = (java.net.HttpURLConnection) url.openConnection();
+                con.setRequestMethod("GET");
+                
+                // 필수 요청 헤더 설정
+                con.setRequestProperty("X-NCP-APIGW-API-KEY-ID", NAVER_CLIENT_ID);
+                con.setRequestProperty("X-NCP-APIGW-API-KEY", NAVER_CLIENT_SECRET);
+                
+                int responseCode = con.getResponseCode();
+                if (responseCode == 200) {
+                    BufferedImage img = ImageIO.read(con.getInputStream());
+                    if (img != null) {
+                        mapLabel.setText("");
+                        mapLabel.setIcon(new ImageIcon(img));
+                    }
+                } else {
+                    System.out.println("Ncloud API Response Code: " + responseCode);
+                    mapLabel.setText("지도 로드 실패 (에러 코드: " + responseCode + ")");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                mapLabel.setText("네트워크 연결 오류 발생");
+            }
+        }).start();
+
+        body.add(mapLabel);
         return card;
     }
 
@@ -63,51 +108,91 @@ public class StationPage extends JScrollPane {
         searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         
         JTextField searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
+        searchInput.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
         searchInput.setForeground(Color.GRAY);
+        searchInput.setBorder(new CompoundBorder(
+            new RoundBorder(new Color(226, 232, 240), 1, 15),
+            new EmptyBorder(0, 10, 0, 10)
+        ));
         
-        JButton searchBtn = new JButton("검색");
+        JButton searchBtn = new JButton("검색") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.setColor(getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
         searchBtn.setPreferredSize(new Dimension(100, 0));
         searchBtn.setBackground(new Color(37, 99, 235));
         searchBtn.setForeground(Color.WHITE);
+        searchBtn.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+        searchBtn.setContentAreaFilled(false);
         searchBtn.setFocusPainted(false);
         searchBtn.setBorderPainted(false);
-
-        /** [기능 포인트] 검색 실행 로직
-         * - ActionListener를 등록하여 검색어(searchInput.getText()) 추출
-         * - 검색어를 기반으로 오피넷 API 재호출 및 createStationListSection 갱신(revalidate/repaint)
-         */
 
         searchBar.add(searchInput, BorderLayout.CENTER);
         searchBar.add(searchBtn, BorderLayout.EAST);
         
         body.add(searchBar);
-        body.add(Box.createVerticalStrut(20));
+        body.add(Box.createVerticalStrut(25));
         
-        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         filterRow.setOpaque(false);
-        filterRow.add(new JLabel("유종: "));
-        filterRow.add(new JComboBox<>(new String[]{"휘발유", "경유", "LPG"}));
+        filterRow.setBackground(new Color(249, 250, 251));
+        filterRow.setBorder(new CompoundBorder(
+            new RoundBorder(new Color(226, 232, 240), 1, 15),
+            new EmptyBorder(12, 15, 12, 15)
+        ));
+        
+        filterRow.add(createFilterLabel("유종"));
+        filterRow.add(createCommonCombo(new String[]{"휘발유", "경유", "LPG"}));
         filterRow.add(Box.createHorizontalStrut(15));
-        filterRow.add(new JLabel("정렬: "));
-        filterRow.add(new JComboBox<>(new String[]{"가격순", "거리순"}));
+        filterRow.add(createFilterLabel("정렬"));
+        filterRow.add(createCommonCombo(new String[]{"가격순", "거리순"}));
         
         body.add(filterRow);
         return card;
     }
 
+    private JLabel createFilterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+        label.setForeground(new Color(100, 116, 139));
+        return label;
+    }
+
+    private JComboBox<String> createCommonCombo(String[] items) {
+        JComboBox<String> combo = new JComboBox<>(items);
+        combo.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
+        combo.setBackground(Color.WHITE);
+        combo.setPreferredSize(new Dimension(120, 34));
+        combo.setBorder(new RoundBorder(new Color(203, 213, 225), 1, 15));
+        return combo;
+    }
+
     private JPanel createStationListSection() {
         JPanel card = createBaseCard("📄 실시간 유가 목록");
         JPanel body = (JPanel) card.getComponent(1);
-
-        // 2열 그리드 배치 (잘림 방지를 위해 hgap/vgap 15 설정)
         JPanel gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
         gridContainer.setOpaque(false);
 
-        /** [API/DB POINT] 실시간 유가 데이터 수집
-         * - 대상: 오피넷(Opinet) 실시간 유가 API
-         * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
-         * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
-         */
         for (int i = 0; i < 6; i++) {
             gridContainer.add(createStationItem("주유소 " + (char)('A'+i), "서울시 강남구 역삼동", 1520 + (i*10), (1.1+i) + "km"));
         }
@@ -117,50 +202,50 @@ public class StationPage extends JScrollPane {
     }
 
     private JPanel createStationItem(String name, String addr, int price, String dist) {
-        JPanel item = new JPanel(new BorderLayout(10, 0));
+        JPanel item = new JPanel(new BorderLayout(10, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        item.setOpaque(false);
         item.setBackground(Color.WHITE);
         item.setBorder(new CompoundBorder(
-            new LineBorder(new Color(235, 237, 240)), 
-            new EmptyBorder(15, 15, 15, 15)
+            new RoundBorder(new Color(235, 237, 240), 1, 15), 
+            new EmptyBorder(15, 18, 15, 18)
         ));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JPanel info = new JPanel(new GridLayout(2, 1, 0, 5));
         info.setOpaque(false);
-        
         JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        
-        JLabel subLabel = new JLabel("<html>" + addr + "<br>" + dist + "</html>");
-        subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        subLabel.setForeground(Color.GRAY);
-        
+        nameLabel.setFont(new Font("맑은 고딕", Font.BOLD, 15));
+        nameLabel.setForeground(new Color(30, 41, 59));
+        JLabel subLabel = new JLabel("<html><body style='font-family:맑은 고딕;'>" + addr + "<br>" + dist + "</body></html>");
+        subLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+        subLabel.setForeground(new Color(100, 116, 139));
         info.add(nameLabel);
         info.add(subLabel);
 
         JLabel priceLabel = new JLabel(String.format("%,d원", price), SwingConstants.RIGHT);
-        priceLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        priceLabel.setFont(new Font("맑은 고딕", Font.BOLD, 18));
         priceLabel.setForeground(new Color(37, 99, 235));
 
         item.add(info, BorderLayout.CENTER);
         item.add(priceLabel, BorderLayout.EAST);
 
-        /** [기능 포인트] 상세 페이지 이동 및 즐겨찾기 연동
-         * - 클릭 시 해당 주유소의 고유 ID(또는 명칭)를 StationDetail 페이지로 전달
-         * - [DB 연동]: 상세 페이지 진입 시 해당 주유소가 사용자의 '즐겨찾기' 테이블에 있는지 확인 필요
-         */
         item.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                Window win = SwingUtilities.getWindowAncestor(item);
-                if (win instanceof MainPage) ((MainPage) win).showStationDetail(name);
-            }
             public void mouseEntered(MouseEvent e) { 
                 item.setBackground(new Color(248, 250, 252));
-                item.setBorder(new CompoundBorder(new LineBorder(new Color(37, 99, 235)), new EmptyBorder(15, 15, 15, 15)));
+                item.setBorder(new CompoundBorder(new RoundBorder(new Color(37, 99, 235), 1, 15), new EmptyBorder(15, 18, 15, 18)));
             }
             public void mouseExited(MouseEvent e) { 
                 item.setBackground(Color.WHITE);
-                item.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 15, 15, 15)));
+                item.setBorder(new CompoundBorder(new RoundBorder(new Color(235, 237, 240), 1, 15), new EmptyBorder(15, 18, 15, 18)));
             }
         });
 
@@ -168,16 +253,26 @@ public class StationPage extends JScrollPane {
     }
 
     private JPanel createBaseCard(String titleText) {
-        JPanel card = new JPanel(new BorderLayout());
+        JPanel card = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        card.setOpaque(false);
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(229, 231, 235), 1, true),
-            new EmptyBorder(25, 25, 25, 25)
+            new RoundBorder(new Color(232, 235, 240), 1, 15),
+            new EmptyBorder(30, 35, 30, 35)
         ));
 
         JLabel label = new JLabel(titleText);
-        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        label.setForeground(new Color(55, 65, 81));
+        label.setFont(new Font("맑은 고딕", Font.BOLD, 19));
+        label.setForeground(new Color(15, 23, 42));
         label.setBorder(new EmptyBorder(0, 0, 20, 0));
         card.add(label, BorderLayout.NORTH);
 
@@ -187,5 +282,29 @@ public class StationPage extends JScrollPane {
         card.add(body, BorderLayout.CENTER);
 
         return card;
+    }
+
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        } 
+        @Override
+        public Insets getBorderInsets(Component c) { return new Insets(thickness, thickness, thickness, thickness); }
+        @Override
+        public boolean isBorderOpaque() { return false; }
     }
 }

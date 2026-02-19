@@ -3,6 +3,7 @@ package TrueOil_View;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 
 /**
  * 메인 홈 화면 클래스
@@ -110,11 +111,21 @@ public class HomePage extends JScrollPane {
     /* --- UI 헬퍼 메서드 (디자인 유지용) --- */
     
     private JPanel createBaseCard(String titleText) {
-        JPanel card = new JPanel();
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setOpaque(false);
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(209, 213, 219), 1), 
+            new RoundBorder(new Color(209, 213, 219), 1, 15), 
             new EmptyBorder(25, 25, 25, 25)
         ));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -130,9 +141,19 @@ public class HomePage extends JScrollPane {
     }
 
     private JPanel createGasRow(String name, String addr, String price, String dist) {
-        JPanel row = new JPanel(new BorderLayout());
+        JPanel row = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.dispose();
+            }
+        };
+        row.setOpaque(false);
         row.setBackground(new Color(249, 250, 251));
-        row.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235)), new EmptyBorder(15, 20, 15, 20)));
+        row.setBorder(new CompoundBorder(new RoundBorder(new Color(229, 231, 235), 1, 8), new EmptyBorder(15, 20, 15, 20)));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
@@ -153,10 +174,20 @@ public class HomePage extends JScrollPane {
     }
 
     private JPanel createNestedBox(String label, String name, String val, Color valCol) {
-        JPanel b = new JPanel();
+        JPanel b = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         b.setLayout(new BoxLayout(b, BoxLayout.Y_AXIS));
+        b.setOpaque(false);
         b.setBackground(new Color(252, 252, 253));
-        b.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235)), new EmptyBorder(15, 15, 15, 15)));
+        b.setBorder(new CompoundBorder(new RoundBorder(new Color(229, 231, 235), 1, 15), new EmptyBorder(15, 15, 15, 15)));
         b.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel l = new JLabel(label); l.setForeground(Color.GRAY);
@@ -175,9 +206,19 @@ public class HomePage extends JScrollPane {
     }
 
     private JPanel createStatBox(String label, String value, Color valCol) {
-        JPanel b = new JPanel(new GridLayout(2, 1, 0, 5));
+        JPanel b = new JPanel(new GridLayout(2, 1, 0, 5)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        b.setOpaque(false);
         b.setBackground(new Color(252, 252, 253));
-        b.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235)), new EmptyBorder(15, 10, 15, 10)));
+        b.setBorder(new CompoundBorder(new RoundBorder(new Color(229, 231, 235), 1, 15), new EmptyBorder(15, 10, 15, 10)));
         b.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel l = new JLabel(label, SwingConstants.CENTER); 
@@ -190,5 +231,38 @@ public class HomePage extends JScrollPane {
 
         b.add(l); b.add(v);
         return b;
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }

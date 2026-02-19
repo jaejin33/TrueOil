@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -116,12 +117,29 @@ public class RepairPage extends JScrollPane {
         body.add(Box.createVerticalStrut(20));
 
         // 5. 버튼 및 API 연동
-        JButton submitBtn = new JButton("예약하기");
+        JButton submitBtn = new JButton("예약하기") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.setColor(getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
         submitBtn.setBackground(new Color(37, 99, 235));
         submitBtn.setForeground(Color.WHITE);
         submitBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         submitBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
         submitBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        submitBtn.setOpaque(false);
+        submitBtn.setFocusPainted(false);
+        submitBtn.setBorderPainted(false);
         
         submitBtn.addActionListener(e -> {
             // [API/DB 포인트]
@@ -156,9 +174,19 @@ public class RepairPage extends JScrollPane {
     }
 
     private JPanel createShopItem(String id, String name, String addr, String dist, String rate) {
-        JPanel item = new JPanel(new BorderLayout());
+        JPanel item = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        item.setOpaque(false);
         item.setBackground(Color.WHITE);
-        item.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+        item.setBorder(new RoundBorder(new Color(229, 231, 235), 1, 15));
         item.setPreferredSize(new Dimension(0, 80));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
@@ -180,10 +208,10 @@ public class RepairPage extends JScrollPane {
         for (Component c : shopListPanel.getComponents()) {
             JPanel item = (JPanel) c;
             item.setBackground(Color.WHITE);
-            item.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+            item.setBorder(new RoundBorder(new Color(229, 231, 235), 1, 15));
             if (((JLabel)item.getComponent(0)).getText().contains(selectedShopName)) {
                 item.setBackground(new Color(239, 246, 255));
-                item.setBorder(new LineBorder(new Color(37, 99, 235), 2));
+                item.setBorder(new RoundBorder(new Color(37, 99, 235), 2, 15));
             }
         }
     }
@@ -198,9 +226,19 @@ public class RepairPage extends JScrollPane {
     }
 
     private JPanel createBaseCard(String titleText) {
-        JPanel p = new JPanel(new BorderLayout());
+        JPanel p = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235), 2), new EmptyBorder(20, 25, 20, 25)));
+        p.setBorder(new CompoundBorder(new RoundBorder(new Color(229, 231, 235), 2, 15), new EmptyBorder(20, 25, 20, 25)));
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel t = new JLabel(titleText);
@@ -214,5 +252,38 @@ public class RepairPage extends JScrollPane {
         p.add(body, BorderLayout.CENTER);
         
         return p;
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }

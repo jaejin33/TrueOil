@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
 import java.net.URI;
 
 public class StationDetailPage extends JScrollPane {
@@ -79,10 +80,21 @@ public class StationDetailPage extends JScrollPane {
         JLabel title = new JLabel("주유소 상세 정보 (" + name + ")"); 
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
         
-        JButton backBtn = new JButton("← 뒤로가기");
+        JButton backBtn = new JButton("← 뒤로가기") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        backBtn.setOpaque(false);
         backBtn.setBackground(Color.WHITE);
         backBtn.setFocusPainted(false);
-        backBtn.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(8, 15, 8, 15)));
+        backBtn.setBorder(new CompoundBorder(new RoundBorder(new Color(209, 213, 219), 1, 8), new EmptyBorder(8, 15, 8, 15)));
         
         /** [기능 포인트] 화면 전환 액션
          * - 메인 페이지 인스턴스를 통해 주유소 리스트로 복귀
@@ -157,10 +169,20 @@ public class StationDetailPage extends JScrollPane {
     /* ===== 공통 UI 빌더 메서드 ===== */
 
     private JPanel createBaseCard(String title) {
-        JPanel p = new JPanel();
+        JPanel p = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setOpaque(false);
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(225, 228, 232)), new EmptyBorder(30, 40, 30, 40)));
+        p.setBorder(new CompoundBorder(new RoundBorder(new Color(225, 228, 232), 1, 15), new EmptyBorder(30, 40, 30, 40)));
         p.setAlignmentX(Component.CENTER_ALIGNMENT);
         JLabel t = new JLabel(title, SwingConstants.CENTER);
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
@@ -171,9 +193,19 @@ public class StationDetailPage extends JScrollPane {
     }
 
     private JPanel createSubInfoBox(String title, String value) {
-        JPanel p = new JPanel(new GridLayout(2, 1, 0, 5));
+        JPanel p = new JPanel(new GridLayout(2, 1, 0, 5)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 20, 15, 20)));
+        p.setBorder(new CompoundBorder(new RoundBorder(new Color(235, 237, 240), 1, 8), new EmptyBorder(15, 20, 15, 20)));
         JLabel t = new JLabel(title);
         t.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         t.setForeground(Color.GRAY);
@@ -184,9 +216,19 @@ public class StationDetailPage extends JScrollPane {
     }
 
     private JPanel createPriceDetailBox(String type, String price, String compare) {
-        JPanel p = new JPanel(new GridLayout(3, 1, 0, 3));
+        JPanel p = new JPanel(new GridLayout(3, 1, 0, 3)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 20, 15, 20)));
+        p.setBorder(new CompoundBorder(new RoundBorder(new Color(235, 237, 240), 1, 15), new EmptyBorder(15, 20, 15, 20)));
         JLabel t = new JLabel(type); t.setForeground(Color.GRAY);
         JLabel v = new JLabel(price); v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22)); v.setForeground(new Color(37, 99, 235));
         JLabel c = new JLabel(compare); c.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12)); c.setForeground(new Color(59, 130, 246));
@@ -195,13 +237,61 @@ public class StationDetailPage extends JScrollPane {
     }
 
     private JButton createStyledButton(String text, Color bg) {
-        JButton b = new JButton(text);
+        JButton b = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.setColor(getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
         b.setBackground(bg);
         b.setForeground(Color.WHITE);
         b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         b.setBorderPainted(false);
         b.setFocusPainted(false);
+        b.setOpaque(false);
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return b;
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }

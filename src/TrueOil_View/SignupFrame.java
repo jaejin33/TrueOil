@@ -5,6 +5,7 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 
 public class SignupFrame extends JFrame {
 
@@ -25,11 +26,21 @@ public class SignupFrame extends JFrame {
         centerWrapper.setBackground(new Color(243, 244, 246));
 
         /* ===== 카드 (메인 컨테이너) ===== */
-        JPanel card = new JPanel();
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setOpaque(false);
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
+                new RoundBorder(new Color(209, 213, 219), 2, 15),
                 new EmptyBorder(24, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -111,11 +122,27 @@ public class SignupFrame extends JFrame {
         carPanel.add(makeField("현재 주행거리 (선택)", mileageWrapper));
 
         /* ===== 가입 버튼 (TODO 주석 추가) ===== */
-        JButton signupButton = new JButton("가입하기");
+        JButton signupButton = new JButton("가입하기") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.setColor(getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
         signupButton.setBackground(new Color(37, 99, 235));
         signupButton.setForeground(Color.WHITE);
         signupButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         signupButton.setFocusPainted(false);
+        signupButton.setOpaque(false);
+        signupButton.setBorderPainted(false);
         signupButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         signupButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         signupButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
@@ -200,5 +227,38 @@ public class SignupFrame extends JFrame {
         panel.add(field);
         panel.add(Box.createVerticalStrut(10));
         return panel;
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }

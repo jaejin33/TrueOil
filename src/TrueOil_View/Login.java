@@ -5,6 +5,7 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 
 public class Login extends JFrame {
 
@@ -25,11 +26,21 @@ public class Login extends JFrame {
         centerWrapper.setBackground(new Color(243, 244, 246));
 
         /* ===== 카드 패널 ===== */
-        JPanel card = new JPanel();
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setOpaque(false);
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
+                new RoundBorder(new Color(209, 213, 219), 2, 15),
                 new EmptyBorder(16, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -123,11 +134,27 @@ public class Login extends JFrame {
         formWrapper.add(passwordField);
 
         /* ===== 로그인 버튼 및 로직 ===== */
-        JButton loginButton = new JButton("로그인");
+        JButton loginButton = new JButton("로그인") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.setColor(getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
         loginButton.setBackground(new Color(37, 99, 235));
         loginButton.setForeground(Color.WHITE);
         loginButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         loginButton.setFocusPainted(false);
+        loginButton.setOpaque(false);
+        loginButton.setBorderPainted(false);
         loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         loginButton.setMaximumSize(new Dimension(320, 45));
@@ -199,5 +226,38 @@ public class Login extends JFrame {
     public static void main(String[] args) {
         // [API Point] 오피넷 API 키 및 DB 연결 상태(JDBC 드라이버 로딩 등)를 체크하는 Pre-Check 로직 필요
         SwingUtilities.invokeLater(() -> new Login().setVisible(true));
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }

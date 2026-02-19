@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
 
 /**
  * [MyPage]
@@ -36,9 +37,19 @@ public class MyPage extends JPanel {
         profileHeader.setBackground(Color.WHITE);
         profileHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        JLabel avatar = new JLabel("👤", SwingConstants.CENTER);
+        JLabel avatar = new JLabel("👤", SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
         avatar.setPreferredSize(new Dimension(80, 80));
-        avatar.setOpaque(true);
+        avatar.setOpaque(false);
         avatar.setBackground(new Color(243, 244, 246));
         avatar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 40));
         
@@ -122,10 +133,20 @@ public class MyPage extends JPanel {
     /* --- UI 유틸리티 메서드 --- */
 
     private JPanel createCardFrame(String titleText) {
-        JPanel p = new JPanel();
+        JPanel p = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setOpaque(false);
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219), 1), new EmptyBorder(25, 25, 25, 25)));
+        p.setBorder(new CompoundBorder(new RoundBorder(new Color(209, 213, 219), 1, 15), new EmptyBorder(25, 25, 25, 25)));
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 600));
 
@@ -138,9 +159,19 @@ public class MyPage extends JPanel {
     }
 
     private JPanel createDataRow(String label, String value) {
-        JPanel r = new JPanel(new BorderLayout());
+        JPanel r = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 8, 8));
+                g2.dispose();
+            }
+        };
+        r.setOpaque(false);
         r.setBackground(new Color(252, 252, 253));
-        r.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235)), new EmptyBorder(12, 15, 12, 15)));
+        r.setBorder(new CompoundBorder(new RoundBorder(new Color(229, 231, 235), 1, 8), new EmptyBorder(12, 15, 12, 15)));
         r.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         r.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -154,9 +185,19 @@ public class MyPage extends JPanel {
     }
 
     private JPanel createStatItem(String label, String val) {
-        JPanel b = new JPanel(new GridLayout(2, 1, 0, 5));
+        JPanel b = new JPanel(new GridLayout(2, 1, 0, 5)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.dispose();
+            }
+        };
+        b.setOpaque(false);
         b.setBackground(new Color(250, 250, 251));
-        b.setBorder(new LineBorder(new Color(229, 231, 235)));
+        b.setBorder(new RoundBorder(new Color(229, 231, 235), 1, 15));
         
         JLabel l = new JLabel(label, SwingConstants.CENTER);
         l.setForeground(Color.GRAY);
@@ -173,13 +214,54 @@ public class MyPage extends JPanel {
         b.setBackground(Color.WHITE);
         b.setFocusPainted(false);
         b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        b.setBorder(new LineBorder(new Color(209, 213, 219)));
+        b.setBorder(new RoundBorder(new Color(209, 213, 219), 1, 8));
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
         b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50)); 
+        b.setOpaque(false);
+        b.setContentAreaFilled(false);
 
         b.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { b.setBackground(new Color(249, 250, 251)); }
-            public void mouseExited(MouseEvent e) { b.setBackground(Color.WHITE); }
+            public void mouseEntered(MouseEvent e) { 
+                b.setBackground(new Color(249, 250, 251));
+                b.setContentAreaFilled(true);
+            }
+            public void mouseExited(MouseEvent e) { 
+                b.setBackground(Color.WHITE);
+                b.setContentAreaFilled(false);
+            }
         });
+    }
+
+    // 라운드 보더 클래스
+    class RoundBorder implements Border {
+        private Color color;
+        private int thickness;
+        private int radius;
+
+        public RoundBorder(Color color, int thickness, int radius) {
+            this.color = color;
+            this.thickness = thickness;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new BasicStroke(thickness));
+            g2.draw(new RoundRectangle2D.Float(x + thickness/2f, y + thickness/2f, width - thickness, height - thickness, radius, radius));
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(thickness, thickness, thickness, thickness);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 }
