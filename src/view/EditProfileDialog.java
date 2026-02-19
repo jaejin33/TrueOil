@@ -14,6 +14,7 @@ public class EditProfileDialog extends JDialog {
 
     public EditProfileDialog(Frame parent) {
         super(parent, "정보 수정", true);
+        setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
         setSize(420, 680);
@@ -21,7 +22,10 @@ public class EditProfileDialog extends JDialog {
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new EmptyBorder(20, 20, 20, 20));
+        background.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();

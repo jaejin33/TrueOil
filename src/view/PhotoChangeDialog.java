@@ -14,13 +14,17 @@ public class PhotoChangeDialog extends JDialog {
 
     public PhotoChangeDialog(Frame parent) {
         super(parent, "프로필 사진 변경", true);
+        setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
 
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
         container.setBackground(Color.WHITE);
-        container.setBorder(new EmptyBorder(24, 24, 24, 24));
+        container.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         // 1. 헤더
         JPanel header = new JPanel(new BorderLayout());

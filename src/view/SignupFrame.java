@@ -10,6 +10,7 @@ public class SignupFrame extends JFrame {
 
     public SignupFrame() {
         setTitle("회원가입");
+        setUndecorated(true);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(460, 780);
         setLocationRelativeTo(null);
@@ -18,7 +19,10 @@ public class SignupFrame extends JFrame {
         /* ===== 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new EmptyBorder(20, 20, 20, 20));
+        background.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));

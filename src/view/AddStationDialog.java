@@ -20,13 +20,17 @@ public class AddStationDialog extends JDialog {
 
     public AddStationDialog(Frame parent) {
         super(parent, "주유 기록 추가", true);
+        setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
         setSize(420, 620);
 
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new EmptyBorder(20, 20, 20, 20));
+        background.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));

@@ -10,6 +10,7 @@ public class Login extends JFrame {
 
     public Login() {
         setTitle("TrueOil");
+        setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(420, 600);
         setLocationRelativeTo(null);
@@ -18,7 +19,10 @@ public class Login extends JFrame {
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new EmptyBorder(20, 20, 20, 20));
+        background.setBorder(new CompoundBorder(
+                new LineBorder(Color.BLACK, 2),
+                new EmptyBorder(20, 20, 20, 20) 
+        ));
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
@@ -140,6 +144,7 @@ public class Login extends JFrame {
             // [기능] 입력 검증: emailField 가 공백이거나 password 가 비어있을 시 JOptionPane 경고창 띄우기
             
             // [기능] 인증 성공 시: MainPage 생성자에 사용자 닉네임 또는 고유 ID를 인자로 전달하여 로그인 상태 유지
+            
             new MainPage().setVisible(true);
             this.dispose(); 
         });
