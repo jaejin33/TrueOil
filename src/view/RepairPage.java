@@ -12,6 +12,14 @@ import java.util.List;
  * DB 포인트: 정비소 정보 불러오기(GET), 예약 정보 저장하기(POST)
  */
 public class RepairPage extends JScrollPane {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_TEXT_LIGHT = new Color(107, 114, 128);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
+    private static final Color COLOR_SELECTED_BG = new Color(239, 246, 255);
+
     private String selectedShopId = null;
     private String selectedShopName = "";
     
@@ -28,11 +36,12 @@ public class RepairPage extends JScrollPane {
 
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(new Color(243, 244, 246));
+        container.setBackground(COLOR_BG_GRAY);
         container.setBorder(new EmptyBorder(30, 60, 30, 60));
 
         JLabel title = new JLabel("정비소 예약");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+        title.setForeground(COLOR_TEXT_DARK);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         container.add(title);
         container.add(Box.createVerticalStrut(25));
@@ -54,7 +63,7 @@ public class RepairPage extends JScrollPane {
 
         JLabel label = new JLabel(labelText);
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        label.setForeground(new Color(107, 114, 128));
+        label.setForeground(COLOR_TEXT_LIGHT);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         label.setBorder(new EmptyBorder(0, 0, 5, 0));
 
@@ -109,7 +118,7 @@ public class RepairPage extends JScrollPane {
 
         // 4. 요청사항
         noteArea = new JTextArea(4, 20);
-        noteArea.setBorder(new LineBorder(new Color(229, 231, 235)));
+        noteArea.setBorder(new LineBorder(COLOR_DIVIDER));
         JScrollPane noteScroll = new JScrollPane(noteArea);
         noteScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         body.add(createInputGroup("요청사항", noteScroll));
@@ -117,7 +126,7 @@ public class RepairPage extends JScrollPane {
 
         // 5. 버튼 및 API 연동
         JButton submitBtn = new JButton("예약하기");
-        submitBtn.setBackground(new Color(37, 99, 235));
+        submitBtn.setBackground(COLOR_PRIMARY);
         submitBtn.setForeground(Color.WHITE);
         submitBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         submitBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -156,7 +165,7 @@ public class RepairPage extends JScrollPane {
     private JPanel createShopItem(String id, String name, String addr, String dist, String rate) {
         JPanel item = new JPanel(new BorderLayout());
         item.setBackground(Color.WHITE);
-        item.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+        item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
         item.setPreferredSize(new Dimension(0, 80));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
@@ -178,10 +187,10 @@ public class RepairPage extends JScrollPane {
         for (Component c : shopListPanel.getComponents()) {
             JPanel item = (JPanel) c;
             item.setBackground(Color.WHITE);
-            item.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+            item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
             if (((JLabel)item.getComponent(0)).getText().contains(selectedShopName)) {
-                item.setBackground(new Color(239, 246, 255));
-                item.setBorder(new LineBorder(new Color(37, 99, 235), 2));
+                item.setBackground(COLOR_SELECTED_BG);
+                item.setBorder(new LineBorder(COLOR_PRIMARY, 2));
             }
         }
     }
@@ -198,11 +207,12 @@ public class RepairPage extends JScrollPane {
     private JPanel createBaseCard(String titleText) {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235), 2), new EmptyBorder(20, 25, 20, 25)));
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER, 2), new EmptyBorder(20, 25, 20, 25)));
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel t = new JLabel(titleText);
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        t.setForeground(COLOR_TEXT_DARK);
         t.setBorder(new EmptyBorder(0, 0, 20, 0));
         p.add(t, BorderLayout.NORTH);
 

@@ -6,6 +6,14 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class StationPage extends JScrollPane {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_TEXT_GRAY = Color.GRAY;
+    private static final Color COLOR_LABEL_DARK = new Color(55, 65, 81);
+    private static final Color COLOR_BORDER_LIGHT = new Color(229, 231, 235);
+    private static final Color COLOR_ITEM_BORDER = new Color(235, 237, 240);
+    private static final Color COLOR_HOVER_BG = new Color(248, 250, 252);
 
     public StationPage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -13,7 +21,7 @@ public class StationPage extends JScrollPane {
         setBorder(null);
 
         JPanel contentPanel = new JPanel(new GridBagLayout());
-        contentPanel.setBackground(new Color(243, 244, 246));
+        contentPanel.setBackground(COLOR_BG_GRAY);
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -46,7 +54,7 @@ public class StationPage extends JScrollPane {
          * - WebView(JCEF) 사용 시: 지도 API HTML 가이드를 통해 현재 위치 마커 표시
          */
         JPanel mapBox = new JPanel(new GridBagLayout());
-        mapBox.setBackground(new Color(229, 231, 235));
+        mapBox.setBackground(COLOR_BORDER_LIGHT);
         mapBox.setPreferredSize(new Dimension(0, 320));
         mapBox.add(new JLabel("📍 지도 데이터 로딩 중..."));
         
@@ -63,11 +71,11 @@ public class StationPage extends JScrollPane {
         searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         
         JTextField searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
-        searchInput.setForeground(Color.GRAY);
+        searchInput.setForeground(COLOR_TEXT_GRAY);
         
         JButton searchBtn = new JButton("검색");
         searchBtn.setPreferredSize(new Dimension(100, 0));
-        searchBtn.setBackground(new Color(37, 99, 235));
+        searchBtn.setBackground(COLOR_PRIMARY);
         searchBtn.setForeground(Color.WHITE);
         searchBtn.setFocusPainted(false);
         searchBtn.setBorderPainted(false);
@@ -118,7 +126,7 @@ public class StationPage extends JScrollPane {
         JPanel item = new JPanel(new BorderLayout(10, 0));
         item.setBackground(Color.WHITE);
         item.setBorder(new CompoundBorder(
-            new LineBorder(new Color(235, 237, 240)), 
+            new LineBorder(COLOR_ITEM_BORDER), 
             new EmptyBorder(15, 15, 15, 15)
         ));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -131,14 +139,14 @@ public class StationPage extends JScrollPane {
         
         JLabel subLabel = new JLabel("<html>" + addr + "<br>" + dist + "</html>");
         subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        subLabel.setForeground(Color.GRAY);
+        subLabel.setForeground(COLOR_TEXT_GRAY);
         
         info.add(nameLabel);
         info.add(subLabel);
 
         JLabel priceLabel = new JLabel(String.format("%,d원", price), SwingConstants.RIGHT);
         priceLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        priceLabel.setForeground(new Color(37, 99, 235));
+        priceLabel.setForeground(COLOR_PRIMARY);
 
         item.add(info, BorderLayout.CENTER);
         item.add(priceLabel, BorderLayout.EAST);
@@ -148,17 +156,20 @@ public class StationPage extends JScrollPane {
          * - [DB 연동]: 상세 페이지 진입 시 해당 주유소가 사용자의 '즐겨찾기' 테이블에 있는지 확인 필요
          */
         item.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseClicked(MouseEvent e) {
                 Window win = SwingUtilities.getWindowAncestor(item);
                 if (win instanceof MainPage) ((MainPage) win).showStationDetail(name);
             }
+            @Override
             public void mouseEntered(MouseEvent e) { 
-                item.setBackground(new Color(248, 250, 252));
-                item.setBorder(new CompoundBorder(new LineBorder(new Color(37, 99, 235)), new EmptyBorder(15, 15, 15, 15)));
+                item.setBackground(COLOR_HOVER_BG);
+                item.setBorder(new CompoundBorder(new LineBorder(COLOR_PRIMARY), new EmptyBorder(15, 15, 15, 15)));
             }
+            @Override
             public void mouseExited(MouseEvent e) { 
                 item.setBackground(Color.WHITE);
-                item.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 15, 15, 15)));
+                item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
             }
         });
 
@@ -169,13 +180,13 @@ public class StationPage extends JScrollPane {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(229, 231, 235), 1, true),
+            new LineBorder(COLOR_BORDER_LIGHT, 1, true),
             new EmptyBorder(25, 25, 25, 25)
         ));
 
         JLabel label = new JLabel(titleText);
         label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        label.setForeground(new Color(55, 65, 81));
+        label.setForeground(COLOR_LABEL_DARK);
         label.setBorder(new EmptyBorder(0, 0, 20, 0));
         card.add(label, BorderLayout.NORTH);
 

@@ -7,6 +7,15 @@ import java.awt.event.*;
 import java.net.URI;
 
 public class StationDetailPage extends JScrollPane {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_BORDER_LIGHT = new Color(225, 228, 232);
+    private static final Color COLOR_ITEM_BORDER = new Color(235, 237, 240);
+    private static final Color COLOR_MAP_BG = new Color(230, 233, 237);
+    private static final Color COLOR_MAP_BORDER = new Color(210, 214, 219);
+    private static final Color COLOR_NAVER_GREEN = new Color(0, 199, 60);
+    private static final Color COLOR_BLUE_LIGHT = new Color(59, 130, 246);
+    private static final Color COLOR_GRAY_BORDER = new Color(209, 213, 219);
 
     public StationDetailPage(String stationName) {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -15,7 +24,7 @@ public class StationDetailPage extends JScrollPane {
 
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(new Color(243, 244, 246));
+        container.setBackground(COLOR_BG_GRAY);
         container.setBorder(new EmptyBorder(40, 100, 40, 100)); 
 
         container.add(createHeader(stationName));
@@ -38,8 +47,8 @@ public class StationDetailPage extends JScrollPane {
         JPanel mapArea = new JPanel(new GridBagLayout());
         mapArea.setPreferredSize(new Dimension(0, 300));
         mapArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
-        mapArea.setBackground(new Color(230, 233, 237));
-        mapArea.setBorder(new LineBorder(new Color(210, 214, 219)));
+        mapArea.setBackground(COLOR_MAP_BG);
+        mapArea.setBorder(new LineBorder(COLOR_MAP_BORDER));
         
         // [API Point] 네이버 지도 정적/동적 지도 API 로드
         // - DB에서 가져온 주유소의 위도(Lat), 경도(Lng) 값을 기반으로 지도 렌더링
@@ -49,8 +58,8 @@ public class StationDetailPage extends JScrollPane {
         btnGrid.setOpaque(false);
         btnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         
-        JButton naviBtn = createStyledButton("네이버 지도에서 보기", new Color(0, 199, 60));
-        JButton routeBtn = createStyledButton("길찾기", new Color(37, 99, 235));
+        JButton naviBtn = createStyledButton("네이버 지도에서 보기", COLOR_NAVER_GREEN);
+        JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
 
         // [API/System Point] 외부 브라우저 호출
         naviBtn.addActionListener(e -> {
@@ -85,7 +94,7 @@ public class StationDetailPage extends JScrollPane {
         JButton backBtn = new JButton("← 뒤로가기");
         backBtn.setBackground(Color.WHITE);
         backBtn.setFocusPainted(false);
-        backBtn.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(8, 15, 8, 15)));
+        backBtn.setBorder(new CompoundBorder(new LineBorder(COLOR_GRAY_BORDER), new EmptyBorder(8, 15, 8, 15)));
         
         backBtn.addActionListener(e -> {
             Window win = SwingUtilities.getWindowAncestor(this);
@@ -171,11 +180,11 @@ public class StationDetailPage extends JScrollPane {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(225, 228, 232)), new EmptyBorder(30, 40, 30, 40)));
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT), new EmptyBorder(30, 40, 30, 40)));
         p.setAlignmentX(Component.CENTER_ALIGNMENT);
         JLabel t = new JLabel(title, SwingConstants.CENTER);
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        t.setForeground(new Color(37, 99, 235));
+        t.setForeground(COLOR_PRIMARY);
         t.setAlignmentX(Component.CENTER_ALIGNMENT);
         p.add(t); p.add(Box.createVerticalStrut(20));
         return p;
@@ -184,7 +193,7 @@ public class StationDetailPage extends JScrollPane {
     private JPanel createSubInfoBox(String title, String value) {
         JPanel p = new JPanel(new GridLayout(2, 1, 0, 5));
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 20, 15, 20)));
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
         JLabel t = new JLabel(title);
         t.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         t.setForeground(Color.GRAY);
@@ -197,10 +206,10 @@ public class StationDetailPage extends JScrollPane {
     private JPanel createPriceDetailBox(String type, String price, String compare) {
         JPanel p = new JPanel(new GridLayout(3, 1, 0, 3));
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(235, 237, 240)), new EmptyBorder(15, 20, 15, 20)));
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
         JLabel t = new JLabel(type); t.setForeground(Color.GRAY);
-        JLabel v = new JLabel(price); v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22)); v.setForeground(new Color(37, 99, 235));
-        JLabel c = new JLabel(compare); c.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12)); c.setForeground(new Color(59, 130, 246));
+        JLabel v = new JLabel(price); v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22)); v.setForeground(COLOR_PRIMARY);
+        JLabel c = new JLabel(compare); c.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12)); c.setForeground(COLOR_BLUE_LIGHT);
         p.add(t); p.add(v); p.add(c);
         return p;
     }

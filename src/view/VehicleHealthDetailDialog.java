@@ -8,6 +8,12 @@ import java.awt.event.MouseEvent;
 import java.sql.*;
 
 public class VehicleHealthDetailDialog extends JDialog {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_CARD_BG = Color.WHITE;
+    private static final Color COLOR_BORDER_DEFAULT = new Color(225, 228, 232);
+    private static final Color COLOR_DANGER = new Color(239, 68, 68);
+
     private JTextField lastReplaceField;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
@@ -22,7 +28,7 @@ public class VehicleHealthDetailDialog extends JDialog {
 
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(new Color(243, 244, 246));
+        background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
@@ -31,16 +37,16 @@ public class VehicleHealthDetailDialog extends JDialog {
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
+        card.setBackground(COLOR_CARD_BG);
         card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
+                new LineBorder(COLOR_BORDER_DEFAULT, 2),
                 new EmptyBorder(16, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         /* ===== 상단 헤더 (✕ 버튼) ===== */
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(Color.WHITE);
+        header.setBackground(COLOR_CARD_BG);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
         JLabel closeLabel = new JLabel("✕");
@@ -51,7 +57,7 @@ public class VehicleHealthDetailDialog extends JDialog {
             @Override
             public void mouseClicked(MouseEvent e) { dispose(); }
             @Override
-            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(Color.RED); }
+            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
             @Override
             public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
         });
@@ -65,7 +71,7 @@ public class VehicleHealthDetailDialog extends JDialog {
         /* ===== 입력 폼 영역 ===== */
         JPanel formWrapper = new JPanel();
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
-        formWrapper.setBackground(Color.WHITE);
+        formWrapper.setBackground(COLOR_CARD_BG);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
         formWrapper.setMaximumSize(new Dimension(320, 100));
 
@@ -81,8 +87,8 @@ public class VehicleHealthDetailDialog extends JDialog {
 
         /* ===== 하단 버튼 ===== */
         saveBtn = new JButton("저장");
-        saveBtn.setBackground(new Color(37, 99, 235));
-        saveBtn.setForeground(Color.WHITE);
+        saveBtn.setBackground(COLOR_PRIMARY);
+        saveBtn.setForeground(COLOR_CARD_BG);
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         saveBtn.setFocusPainted(false);
         saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -145,7 +151,7 @@ public class VehicleHealthDetailDialog extends JDialog {
 
         tf.setMaximumSize(size);
         tf.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tf.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219)), new EmptyBorder(0, 10, 0, 10)));
+        tf.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_DEFAULT), new EmptyBorder(0, 10, 0, 10)));
         p.add(tf);
         p.add(Box.createVerticalStrut(12)); 
     }

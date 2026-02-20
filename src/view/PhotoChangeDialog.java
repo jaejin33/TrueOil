@@ -7,6 +7,15 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class PhotoChangeDialog extends JDialog {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DANGER = new Color(220, 38, 38);
+    private static final Color COLOR_SUCCESS = new Color(22, 163, 74);
+    private static final Color COLOR_GRAY_LIGHT = new Color(156, 163, 175);
+    private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
+
     private JLabel photoPreview;
     private JButton removeBtn;
     private JButton applyBtn;
@@ -36,7 +45,7 @@ public class PhotoChangeDialog extends JDialog {
         
         JButton closeBtn = new JButton("X");
         closeBtn.setFont(new Font("Arial", Font.PLAIN, 16));
-        closeBtn.setForeground(new Color(156, 163, 175));
+        closeBtn.setForeground(COLOR_GRAY_LIGHT);
         closeBtn.setBorderPainted(false);
         closeBtn.setContentAreaFilled(false);
         closeBtn.setFocusPainted(false);
@@ -51,15 +60,17 @@ public class PhotoChangeDialog extends JDialog {
         photoPreview.setPreferredSize(new Dimension(120, 120));
         photoPreview.setMaximumSize(new Dimension(120, 120));
         photoPreview.setOpaque(true);
-        photoPreview.setBackground(new Color(243, 244, 246));
+        photoPreview.setBackground(COLOR_BG_GRAY);
         photoPreview.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 55));
         photoPreview.setAlignmentX(Component.CENTER_ALIGNMENT);
-        photoPreview.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+        photoPreview.setBorder(new LineBorder(COLOR_DIVIDER, 1));
 
-        /* [DB 포인트 1: 초기 데이터 로드] 
-           - 사용자가 기존에 설정한 이미지가 있다면 updatePreview() 호출 
-           - 기존 이미지가 있다면 removeBtn과 applyBtn을 보이게 설정 가능
-        */
+        /**
+         * [DB Point 1: 초기 데이터 로드] 
+         * - SELECT profile_path FROM members WHERE user_id = ?
+         * - 사용자가 기존에 설정한 이미지가 있다면 updatePreview() 호출 
+         * - 기존 이미지가 있다면 removeBtn과 applyBtn을 보이게 설정 가능
+         */
 
         // 3. 버튼 그룹
         btnGroup = new JPanel();
@@ -67,16 +78,16 @@ public class PhotoChangeDialog extends JDialog {
         btnGroup.setOpaque(false);
         btnGroup.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton uploadBtn = createStyledBtn("사진 업로드", new Color(37, 99, 235), Color.WHITE, 280);
+        JButton uploadBtn = createStyledBtn("사진 업로드", COLOR_PRIMARY, Color.WHITE, 280);
 
         JPanel actionRow = new JPanel();
         actionRow.setLayout(new BoxLayout(actionRow, BoxLayout.X_AXIS));
         actionRow.setOpaque(false);
         actionRow.setMaximumSize(new Dimension(280, 42));
 
-        removeBtn = createStyledBtn("삭제", Color.WHITE, new Color(220, 38, 38), 135);
+        removeBtn = createStyledBtn("삭제", Color.WHITE, COLOR_DANGER, 135);
         removeBtn.setBorder(new LineBorder(new Color(252, 165, 165)));
-        applyBtn = createStyledBtn("적용", new Color(22, 163, 74), Color.WHITE, 135);
+        applyBtn = createStyledBtn("적용", COLOR_SUCCESS, Color.WHITE, 135);
         
         // 초기에는 숨김 처리
         removeBtn.setVisible(false);
@@ -86,8 +97,8 @@ public class PhotoChangeDialog extends JDialog {
         actionRow.add(Box.createHorizontalStrut(10));
         actionRow.add(applyBtn);
 
-        JButton cancelBtn = createStyledBtn("취소", Color.WHITE, new Color(55, 65, 81), 280);
-        cancelBtn.setBorder(new LineBorder(new Color(209, 213, 219)));
+        JButton cancelBtn = createStyledBtn("취소", Color.WHITE, COLOR_TEXT_DARK, 280);
+        cancelBtn.setBorder(new LineBorder(COLOR_BORDER));
 
         btnGroup.add(uploadBtn);
         btnGroup.add(Box.createVerticalStrut(10));
@@ -127,10 +138,12 @@ public class PhotoChangeDialog extends JDialog {
 
         // [ACTION] 최종 적용
         applyBtn.addActionListener(e -> {
-            /* [DB 포인트 2: 최종 데이터 저장] 
-               - 현재 photoPreview의 상태를 DB에 저장
-               - 마이페이지 UI 새로고침 메서드 호출
-            */
+            /**
+             * [DB Point 2: 최종 데이터 저장] 
+             * - UPDATE members SET profile_path = ? WHERE user_id = ?
+             * - 현재 photoPreview의 상태를 DB에 저장
+             * - 마이페이지 UI 새로고침 메서드 호출
+             */
             JOptionPane.showMessageDialog(this, "프로필 사진이 변경되었습니다.");
             dispose();
         });

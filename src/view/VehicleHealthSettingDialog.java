@@ -8,6 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class VehicleHealthSettingDialog extends JDialog {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_CARD_BG = Color.WHITE;
+    private static final Color COLOR_DANGER = new Color(239, 68, 68);
+    private static final Color COLOR_WARNING = new Color(234, 179, 8);
+
     private JButton saveBtn, cancelBtn;
     // DB 저장 시 값을 편하게 가져오기 위해 맵에 슬라이더를 담아둡니다.
     private Map<String, JSlider[]> sliderMap = new HashMap<>();
@@ -20,17 +26,17 @@ public class VehicleHealthSettingDialog extends JDialog {
         setSize(460, 820);
 
         JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(new Color(243, 244, 246));
+        background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
 
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
+        card.setBackground(COLOR_CARD_BG);
         card.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219), 2), new EmptyBorder(16, 24, 24, 24)));
 
         /* ===== 상단 헤더 ===== */
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(Color.WHITE);
+        header.setBackground(COLOR_CARD_BG);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         JLabel closeLabel = new JLabel("✕");
         closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
@@ -48,7 +54,7 @@ public class VehicleHealthSettingDialog extends JDialog {
 
         JPanel formWrapper = new JPanel();
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
-        formWrapper.setBackground(Color.WHITE);
+        formWrapper.setBackground(COLOR_CARD_BG);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         /* * [DB POINT 1] 초기 임계값 데이터 로드 (SELECT)
@@ -61,8 +67,8 @@ public class VehicleHealthSettingDialog extends JDialog {
 
         /* ===== 버튼 영역 ===== */
         saveBtn = new JButton("설정 저장");
-        saveBtn.setBackground(new Color(37, 99, 235));
-        saveBtn.setForeground(Color.WHITE);
+        saveBtn.setBackground(COLOR_PRIMARY);
+        saveBtn.setForeground(COLOR_CARD_BG);
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         saveBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -116,8 +122,8 @@ public class VehicleHealthSettingDialog extends JDialog {
         JTextField rField = new JTextField(String.valueOf(redVal), 3);
         JTextField yField = new JTextField(String.valueOf(yellowVal), 3);
 
-        JPanel redRow = createThresholdRow("위험", rSlider, rField, new Color(239, 68, 68));
-        JPanel yellowRow = createThresholdRow("주의", ySlider, yField, new Color(234, 179, 8));
+        JPanel redRow = createThresholdRow("위험", rSlider, rField, COLOR_DANGER);
+        JPanel yellowRow = createThresholdRow("주의", ySlider, yField, COLOR_WARNING);
         
         redRow.setAlignmentX(Component.CENTER_ALIGNMENT);
         yellowRow.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -149,7 +155,7 @@ public class VehicleHealthSettingDialog extends JDialog {
     private JPanel createThresholdRow(String labelText, JSlider slider, JTextField tf, Color themeColor) {
         JPanel row = new JPanel();
         row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
-        row.setBackground(Color.WHITE);
+        row.setBackground(COLOR_CARD_BG);
         row.setMaximumSize(new Dimension(380, 70));
 
         JPanel top = new JPanel(new BorderLayout());
@@ -176,7 +182,7 @@ public class VehicleHealthSettingDialog extends JDialog {
         top.add(nameLbl, BorderLayout.WEST);
         top.add(inputGroup, BorderLayout.EAST);
 
-        slider.setBackground(Color.WHITE);
+        slider.setBackground(COLOR_CARD_BG);
         slider.setMaximumSize(new Dimension(380, 35));
         
         tf.addKeyListener(new KeyAdapter() {
