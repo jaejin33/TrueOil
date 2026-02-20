@@ -15,6 +15,9 @@ public class StationPage extends JScrollPane {
     private static final Color COLOR_ITEM_BORDER = new Color(235, 237, 240);
     private static final Color COLOR_HOVER_BG = new Color(248, 250, 252);
 
+    private JPanel gridContainer; 
+    private JTextField searchInput; 
+
     public StationPage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         getVerticalScrollBar().setUnitIncrement(20);
@@ -44,6 +47,32 @@ public class StationPage extends JScrollPane {
         contentPanel.add(new JPanel() {{ setOpaque(false); }}, gbc);
 
         setViewportView(contentPanel);
+
+        this.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                refreshData();
+            }
+        });
+
+        refreshData();
+    }
+
+    public void refreshData() {
+        if (gridContainer != null) {
+            gridContainer.removeAll();
+            
+            /** [API/DB POINT] 실시간 유가 데이터 수집
+             * - 대상: 오피넷(Opinet) 실시간 유가 API
+             * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
+             * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
+             */
+            for (int i = 0; i < 6; i++) {
+                gridContainer.add(createStationItem("주유소 " + (char)('A'+i), "서울시 강남구 역삼동", 1520 + (i*10), (1.1+i) + "km"));
+            }
+            
+            gridContainer.revalidate();
+            gridContainer.repaint();
+        }
     }
 
     private JPanel createMapSection() {
@@ -70,7 +99,7 @@ public class StationPage extends JScrollPane {
         searchBar.setOpaque(false);
         searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         
-        JTextField searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
+        searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
         searchInput.setForeground(COLOR_TEXT_GRAY);
         
         JButton searchBtn = new JButton("검색");
@@ -82,8 +111,9 @@ public class StationPage extends JScrollPane {
 
         /** [기능 포인트] 검색 실행 로직
          * - ActionListener를 등록하여 검색어(searchInput.getText()) 추출
-         * - 검색어를 기반으로 오피넷 API 재호출 및 createStationListSection 갱신(revalidate/repaint)
+         * - 검색어를 기반으로 오피넷 API 재호출 및 refreshData() 실행으로 UI 갱신
          */
+        searchBtn.addActionListener(e -> refreshData());
 
         searchBar.add(searchInput, BorderLayout.CENTER);
         searchBar.add(searchBtn, BorderLayout.EAST);
@@ -106,18 +136,8 @@ public class StationPage extends JScrollPane {
     private JPanel createStationListSection() {
         JPanel card = createBaseCard("📄 실시간 유가 목록");
         JPanel body = (JPanel) card.getComponent(1);
-        JPanel gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
+        gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
         gridContainer.setOpaque(false);
-
-        /** [API/DB POINT] 실시간 유가 데이터 수집
-         * - 대상: 오피넷(Opinet) 실시간 유가 API
-         * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
-         * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
-         */
-        for (int i = 0; i < 6; i++) {
-            gridContainer.add(createStationItem("주유소 " + (char)('A'+i), "서울시 강남구 역삼동", 1520 + (i*10), (1.1+i) + "km"));
-        }
-
         body.add(gridContainer);
         return card;
     }
@@ -125,24 +145,17 @@ public class StationPage extends JScrollPane {
     private JPanel createStationItem(String name, String addr, int price, String dist) {
         JPanel item = new JPanel(new BorderLayout(10, 0));
         item.setBackground(Color.WHITE);
-        item.setBorder(new CompoundBorder(
-            new LineBorder(COLOR_ITEM_BORDER), 
-            new EmptyBorder(15, 15, 15, 15)
-        ));
+        item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JPanel info = new JPanel(new GridLayout(2, 1, 0, 5));
         info.setOpaque(false);
-        
         JLabel nameLabel = new JLabel(name);
         nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        
         JLabel subLabel = new JLabel("<html>" + addr + "<br>" + dist + "</html>");
         subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
         subLabel.setForeground(COLOR_TEXT_GRAY);
-        
-        info.add(nameLabel);
-        info.add(subLabel);
+        info.add(nameLabel); info.add(subLabel);
 
         JLabel priceLabel = new JLabel(String.format("%,d원", price), SwingConstants.RIGHT);
         priceLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
@@ -159,7 +172,9 @@ public class StationPage extends JScrollPane {
             @Override
             public void mouseClicked(MouseEvent e) {
                 Window win = SwingUtilities.getWindowAncestor(item);
-                if (win instanceof MainPage) ((MainPage) win).showStationDetail(name);
+                if (win instanceof MainPage) {
+                    ((MainPage) win).showStationDetail(name);
+                }
             }
             @Override
             public void mouseEntered(MouseEvent e) { 
@@ -179,22 +194,16 @@ public class StationPage extends JScrollPane {
     private JPanel createBaseCard(String titleText) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-            new LineBorder(COLOR_BORDER_LIGHT, 1, true),
-            new EmptyBorder(25, 25, 25, 25)
-        ));
-
+        card.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT, 1, true), new EmptyBorder(25, 25, 25, 25)));
         JLabel label = new JLabel(titleText);
         label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
         label.setForeground(COLOR_LABEL_DARK);
         label.setBorder(new EmptyBorder(0, 0, 20, 0));
         card.add(label, BorderLayout.NORTH);
-
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setOpaque(false);
         card.add(body, BorderLayout.CENTER);
-
         return card;
     }
 }
