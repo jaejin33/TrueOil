@@ -7,7 +7,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class Login extends JFrame {
-
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DANGER = new Color(239, 68, 68); 
+    
     public Login() {
         setTitle("TrueOil");
         setUndecorated(true);
@@ -18,7 +23,7 @@ public class Login extends JFrame {
 
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(new Color(243, 244, 246));
+        background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
@@ -26,14 +31,14 @@ public class Login extends JFrame {
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
-        centerWrapper.setBackground(new Color(243, 244, 246));
+        centerWrapper.setBackground(COLOR_BG_GRAY);
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
+                new LineBorder(COLOR_BORDER, 2),
                 new EmptyBorder(16, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -56,7 +61,7 @@ public class Login extends JFrame {
             }
             @Override
             public void mouseEntered(MouseEvent e) {
-                closeLabel.setForeground(Color.RED);
+                closeLabel.setForeground(COLOR_DANGER);
             }
             @Override
             public void mouseExited(MouseEvent e) {
@@ -77,11 +82,12 @@ public class Login extends JFrame {
 
         JLabel titleLabel = new JLabel("TrueOil");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+        titleLabel.setForeground(COLOR_TEXT_DARK);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("저렴한 주유소를 찾아보세요");
         subtitleLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        subtitleLabel.setForeground(Color.GRAY);
+        subtitleLabel.setForeground(Color.BLACK);
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         logoPanel.add(iconLabel);
@@ -93,6 +99,7 @@ public class Login extends JFrame {
         /* ===== 로그인 제목 ===== */
         JLabel loginTitle = new JLabel("로그인");
         loginTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        loginTitle.setForeground(COLOR_TEXT_DARK);
         loginTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         /* ===== 입력 폼 ===== */
@@ -104,6 +111,7 @@ public class Login extends JFrame {
 
         JLabel emailLabel = new JLabel("이메일");
         emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        emailLabel.setForeground(COLOR_TEXT_DARK);
         emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JTextField emailField = new JTextField();
@@ -112,6 +120,7 @@ public class Login extends JFrame {
 
         JLabel passwordLabel = new JLabel("비밀번호");
         passwordLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        passwordLabel.setForeground(COLOR_TEXT_DARK);
         passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPasswordField passwordField = new JPasswordField();
@@ -128,7 +137,7 @@ public class Login extends JFrame {
 
         /* ===== 로그인 버튼 및 로직 ===== */
         JButton loginButton = new JButton("로그인");
-        loginButton.setBackground(new Color(37, 99, 235));
+        loginButton.setBackground(COLOR_PRIMARY);
         loginButton.setForeground(Color.WHITE);
         loginButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         loginButton.setFocusPainted(false);
@@ -160,14 +169,14 @@ public class Login extends JFrame {
 
         JLabel signupLink = new JLabel("회원가입");
         signupLink.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        signupLink.setForeground(new Color(37, 99, 235));
+        signupLink.setForeground(COLOR_PRIMARY);
         signupLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         signupLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // [기능] 회원가입 완료 후 로그인 페이지로 자동 리다이렉트 되는 구조 확인
-                new SignupFrame().setVisible(true);
+                new SignupDialog().setVisible(true);
                 dispose();
             }
             @Override

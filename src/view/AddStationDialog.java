@@ -8,6 +8,13 @@ import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 
 public class AddStationDialog extends JDialog {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DANGER = new Color(220, 38, 38);
+    private static final Color COLOR_LABEL = new Color(55, 65, 81);
+
     private JTextField dateF, stationF, priceF, litersF, mileageF;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
@@ -20,7 +27,7 @@ public class AddStationDialog extends JDialog {
         setSize(420, 620);
 
         JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(new Color(243, 244, 246));
+        background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
@@ -30,7 +37,7 @@ public class AddStationDialog extends JDialog {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
+                new LineBorder(COLOR_BORDER, 2),
                 new EmptyBorder(16, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -49,7 +56,7 @@ public class AddStationDialog extends JDialog {
             @Override
             public void mouseClicked(MouseEvent e) { dispose(); }
             @Override
-            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(Color.RED); }
+            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
             @Override
             public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
         });
@@ -57,6 +64,7 @@ public class AddStationDialog extends JDialog {
 
         JLabel titleLabel = new JLabel("주유 기록 추가");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        titleLabel.setForeground(COLOR_TEXT_DARK);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         /* ===== 입력 폼 영역 ===== */
@@ -77,7 +85,7 @@ public class AddStationDialog extends JDialog {
 
         /* ===== 저장 버튼 및 로직 ===== */
         saveBtn = new JButton("추가");
-        saveBtn.setBackground(new Color(37, 99, 235));
+        saveBtn.setBackground(COLOR_PRIMARY);
         saveBtn.setForeground(Color.WHITE);
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         saveBtn.setFocusPainted(false);
@@ -87,13 +95,30 @@ public class AddStationDialog extends JDialog {
 
         saveBtn.addActionListener(e -> {
             try {
-                String date = dateF.getText();
-                String station = stationF.getText();
-                int price = Integer.parseInt(priceF.getText());
-                double liters = Double.parseDouble(litersF.getText());
-                int mileage = Integer.parseInt(mileageF.getText());
-                isUpdated = true;
+                // 1. 입력 데이터 추출
+                String date = dateF.getText();          // fuel_date
+                String station = stationF.getText();    // station_name
+                int price = Integer.parseInt(priceF.getText());    // unit_price
+                double liters = Double.parseDouble(litersF.getText()); // liters
+                int mileage = Integer.parseInt(mileageF.getText()); // total_mileage
+                
+                /**
+                 * [DB 연동 포인트 1: 데이터 삽입]
+                 * SQL: INSERT INTO fuel_logs (user_id, fuel_date, station_name, unit_price, liters, total_mileage) 
+                 * VALUES (?, ?, ?, ?, ?, ?)
+                 * - 현재 로그인한 사용자(Session)의 ID를 외래키로 반드시 포함해야 함.
+                 * - '총 주유 금액'은 (unit_price * liters)로 계산하여 DB 컬럼에 따로 저장하거나, 
+                 * 조회 시(SELECT) 계산하도록 설계.
+                 */
 
+                /**
+                 * [DB 연동 포인트 2: 차량 정보 업데이트]
+                 * SQL: UPDATE car_info SET mileage = ? WHERE user_id = ?
+                 * - 주유 시 입력한 '누적 주행 거리'가 기존 DB에 저장된 거리보다 크다면 
+                 * 차량 테이블의 최신 주행 거리를 함께 업데이트하는 로직이 필요함.
+                 */
+
+                isUpdated = true;
                 JOptionPane.showMessageDialog(this, "주유 기록이 성공적으로 추가되었습니다.");
                 dispose();
             } catch (NumberFormatException ex) {
@@ -133,7 +158,7 @@ public class AddStationDialog extends JDialog {
     private void addInput(JPanel p, String title, JTextField tf, Font font, Dimension size) {
         JLabel lbl = new JLabel(title);
         lbl.setFont(font);
-        lbl.setForeground(new Color(55, 65, 81));
+        lbl.setForeground(COLOR_LABEL);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(lbl);
         p.add(Box.createVerticalStrut(5));
@@ -141,7 +166,7 @@ public class AddStationDialog extends JDialog {
         tf.setMaximumSize(size);
         tf.setAlignmentX(Component.LEFT_ALIGNMENT);
         tf.setBorder(new CompoundBorder(
-            new LineBorder(new Color(209, 213, 219), 1),
+            new LineBorder(COLOR_BORDER, 1),
             new EmptyBorder(0, 10, 0, 10)
         ));
         p.add(tf);

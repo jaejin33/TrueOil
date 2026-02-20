@@ -5,26 +5,39 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
 
-/**
- * [MyPage]
- * 핵심 역할:
- * 1. DB 조회: 현재 로그인된 사용자의 상세 정보 및 활동 데이터(통계) 출력
- * 2. 화면 연결: 정보 수정, 비밀번호 변경, 프로필 사진 변경 다이얼로그 호출
- */
 public class MyPage extends JPanel {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
+    private static final Color COLOR_ROW_BG = new Color(252, 252, 253);
+
     public MyPage() {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBackground(new Color(243, 244, 246)); 
+        setBackground(COLOR_BG_GRAY); 
         setBorder(new EmptyBorder(30, 60, 30, 60));
 
         JLabel title = new JLabel("마이페이지");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+        title.setForeground(COLOR_TEXT_DARK);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(title);
         add(Box.createVerticalStrut(25));
 
+        /**
+         * [DB 포인트 1: 사용자 정보 로드]
+         * - 기능: 세션 유저의 이름, 이메일, 차량번호, 가입일 등 상세 정보 조회
+         * - 연결: 아래 createProfileBox 내의 각 데이터 필드에 연결 필요
+         */
         add(createProfileBox());
         add(Box.createVerticalStrut(25));
+        
+        /**
+         * [DB 포인트 2: 활동 통계 데이터 집계]
+         * - 기능: 주유 기록 건수, 누적 주유 금액 합계, 즐겨찾기 등록 수 조회
+         * - 연결: 아래 createActivityBox 내의 통계 항목에 데이터 바인딩
+         */
         add(createActivityBox());
     }
 
@@ -32,50 +45,49 @@ public class MyPage extends JPanel {
     private JPanel createProfileBox() {
         JPanel card = createCardFrame("👤 내 정보");
         
-        // 사진과 정보 세트를 감싸는 패널 (왼쪽 정렬)
         JPanel profileHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         profileHeader.setBackground(Color.WHITE);
         profileHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         profileHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-        // 1. 프로필 이미지 아바타
+        // 아바타 영역
         JLabel avatar = new JLabel("👤", SwingConstants.CENTER);
         avatar.setPreferredSize(new Dimension(80, 80));
         avatar.setOpaque(true);
-        avatar.setBackground(new Color(243, 244, 246));
+        avatar.setBackground(COLOR_BG_GRAY);
         avatar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 40));
-        avatar.setBorder(new LineBorder(new Color(229, 231, 235), 1));
+        avatar.setBorder(new LineBorder(COLOR_DIVIDER, 1));
         
-        // 2. 이름 + ID + 사진 변경 버튼을 담는 수직 패널
         JPanel infoAndBtnTexts = new JPanel();
         infoAndBtnTexts.setLayout(new BoxLayout(infoAndBtnTexts, BoxLayout.Y_AXIS));
         infoAndBtnTexts.setOpaque(false);
         
         JLabel nameLbl = new JLabel("홍길동"); 
         nameLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+        nameLbl.setForeground(COLOR_TEXT_DARK);
         
         JLabel idLbl = new JLabel("회원 ID: USER12345");
         idLbl.setForeground(Color.GRAY);
         idLbl.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 
-        // [핵심] 사진 변경 버튼 - 이름/ID 바로 아래 배치
         JButton changePhotoBtn = new JButton("📷 사진 변경");
         changePhotoBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
         changePhotoBtn.setBackground(Color.WHITE);
         changePhotoBtn.setFocusPainted(false);
         changePhotoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        changePhotoBtn.setBorder(new CompoundBorder(
-            new LineBorder(new Color(229, 231, 235)), 
-            new EmptyBorder(3, 8, 3, 8)
-        ));
+        changePhotoBtn.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER), new EmptyBorder(3, 8, 3, 8)));
         
         changePhotoBtn.addActionListener(e -> {
+            /**
+             * [DB 포인트 3: 프로필 이미지 수정]
+             * - 기능: 새 이미지 경로를 DB(members 테이블)에 UPDATE
+             * - 연결: 수정 성공 시 화면 아바타 이미지 새로고침 연동
+             */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             PhotoChangeDialog dialog = new PhotoChangeDialog(parentFrame);
             dialog.setVisible(true);
         });
 
-        // 수직 정렬 조립
         infoAndBtnTexts.add(nameLbl);
         infoAndBtnTexts.add(Box.createVerticalStrut(4));
         infoAndBtnTexts.add(idLbl);
@@ -88,7 +100,7 @@ public class MyPage extends JPanel {
         card.add(profileHeader);
         card.add(Box.createVerticalStrut(25));
 
-        // 상세 정보 데이터 행 (이메일, 차량번호, 가입일)
+        // 데이터 행
         card.add(createDataRow("✉️ 이메일", "hong@example.com"));
         card.add(Box.createVerticalStrut(10));
         card.add(createDataRow("🚗 차량번호", "12가 3456"));
@@ -96,7 +108,7 @@ public class MyPage extends JPanel {
         card.add(createDataRow("📅 가입일", "2025-12-15"));
         card.add(Box.createVerticalStrut(25));
 
-        /* ===== 하단 버튼 영역 (정보 수정 / 비밀번호 변경) ===== */
+        // 하단 버튼 영역
         JPanel btns = new JPanel(new GridLayout(1, 2, 15, 0));
         btns.setOpaque(false);
         btns.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
@@ -105,6 +117,11 @@ public class MyPage extends JPanel {
         JButton b1 = new JButton("정보 수정"); 
         styleBtn(b1);
         b1.addActionListener(e -> {
+            /**
+             * [DB 포인트 4: 회원 정보 수정 반영]
+             * - 기능: 다이얼로그에서 입력된 정보를 DB에 UPDATE
+             * - 연결: 수정 완료 후 현재 페이지의 정보(이름, 차량번호 등) 재조회 및 UI 반영
+             */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             EditProfileDialog dialog = new EditProfileDialog(parentFrame);
             dialog.setVisible(true);
@@ -147,12 +164,13 @@ public class MyPage extends JPanel {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(Color.WHITE);
-        p.setBorder(new CompoundBorder(new LineBorder(new Color(209, 213, 219), 1), new EmptyBorder(25, 25, 25, 25)));
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER, 1), new EmptyBorder(25, 25, 25, 25)));
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 600));
 
         JLabel t = new JLabel(titleText);
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        t.setForeground(COLOR_TEXT_DARK);
         t.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(t);
         p.add(Box.createVerticalStrut(20));
@@ -161,14 +179,16 @@ public class MyPage extends JPanel {
 
     private JPanel createDataRow(String label, String value) {
         JPanel r = new JPanel(new BorderLayout());
-        r.setBackground(new Color(252, 252, 253));
-        r.setBorder(new CompoundBorder(new LineBorder(new Color(229, 231, 235)), new EmptyBorder(12, 15, 12, 15)));
+        r.setBackground(COLOR_ROW_BG);
+        r.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER), new EmptyBorder(12, 15, 12, 15)));
         r.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         r.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel l = new JLabel(label);
+        l.setForeground(COLOR_TEXT_DARK);
         JLabel v = new JLabel(value); 
         v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        v.setForeground(COLOR_PRIMARY);
         
         r.add(l, BorderLayout.WEST);
         r.add(v, BorderLayout.EAST);
@@ -178,7 +198,7 @@ public class MyPage extends JPanel {
     private JPanel createStatItem(String label, String val) {
         JPanel b = new JPanel(new GridLayout(2, 1, 0, 5));
         b.setBackground(new Color(250, 250, 251));
-        b.setBorder(new LineBorder(new Color(229, 231, 235)));
+        b.setBorder(new LineBorder(COLOR_DIVIDER));
         
         JLabel l = new JLabel(label, SwingConstants.CENTER);
         l.setForeground(Color.GRAY);
@@ -186,6 +206,7 @@ public class MyPage extends JPanel {
         
         JLabel v = new JLabel(val, SwingConstants.CENTER);
         v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        v.setForeground(COLOR_TEXT_DARK);
         
         b.add(l); b.add(v);
         return b;
@@ -195,14 +216,19 @@ public class MyPage extends JPanel {
         b.setBackground(Color.WHITE);
         b.setFocusPainted(false);
         b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        b.setBorder(new LineBorder(new Color(209, 213, 219)));
+        b.setForeground(COLOR_TEXT_DARK);
+        b.setBorder(new LineBorder(COLOR_BORDER));
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        b.setPreferredSize(new Dimension(b.getPreferredSize().width, 60));
-        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60)); 
 
         b.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { b.setBackground(new Color(249, 250, 251)); }
-            public void mouseExited(MouseEvent e) { b.setBackground(Color.WHITE); }
+            public void mouseEntered(MouseEvent e) { 
+                b.setBackground(COLOR_BG_GRAY); 
+                b.setForeground(COLOR_PRIMARY);
+            }
+            public void mouseExited(MouseEvent e) { 
+                b.setBackground(Color.WHITE); 
+                b.setForeground(COLOR_TEXT_DARK);
+            }
         });
     }
 }

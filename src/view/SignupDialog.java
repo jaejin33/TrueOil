@@ -2,44 +2,43 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-public class SignupFrame extends JFrame {
+public class SignupDialog extends JFrame {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DANGER = new Color(220, 38, 38);
+    private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
 
-    public SignupFrame() {
+    public SignupDialog() {
         setTitle("회원가입");
         setUndecorated(true);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(460, 780);
+        setSize(460, 800);
         setLocationRelativeTo(null);
         setResizable(false);
 
-        /* ===== 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(new Color(243, 244, 246));
-        background.setBorder(new CompoundBorder(
-                new LineBorder(Color.BLACK, 2),
-                new EmptyBorder(20, 20, 20, 20) 
-        ));
+        background.setBackground(COLOR_BG_GRAY);
+        background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
-        centerWrapper.setBackground(new Color(243, 244, 246));
+        centerWrapper.setBackground(COLOR_BG_GRAY);
 
-        /* ===== 카드 (메인 컨테이너) ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(209, 213, 219), 2),
-                new EmptyBorder(24, 24, 24, 24)
-        ));
+        card.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER, 2), new EmptyBorder(24, 24, 24, 24)));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.setMaximumSize(new Dimension(380, 700));
+        card.setMaximumSize(new Dimension(380, 750));
 
-        /* ===== 상단 (제목 왼쪽, 뒤로가기 오른쪽) ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -47,6 +46,7 @@ public class SignupFrame extends JFrame {
 
         JLabel title = new JLabel("회원가입");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+        title.setForeground(COLOR_TEXT_DARK);
 
         JLabel backLabel = new JLabel("←");
         backLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
@@ -63,60 +63,73 @@ public class SignupFrame extends JFrame {
         header.add(title, BorderLayout.WEST);
         header.add(backLabel, BorderLayout.EAST);
 
-        /* ===== 기본 정보 (필드 생성) ===== */
+        /* ----- 1. 기본 정보 영역 ----- */
         JPanel basicPanel = new JPanel();
         basicPanel.setLayout(new BoxLayout(basicPanel, BoxLayout.Y_AXIS));
         basicPanel.setBackground(Color.WHITE);
         basicPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        basicPanel.setBorder(new CompoundBorder(
-                new MatteBorder(0, 0, 1, 0, new Color(229, 231, 235)),
-                new EmptyBorder(10, 0, 16, 0)
-        ));
-
-        JLabel basicTitle = new JLabel("기본 정보");
-        basicTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        basicTitle.setForeground(new Color(55, 65, 81));
+        basicPanel.setBorder(new CompoundBorder(new MatteBorder(0, 0, 1, 0, COLOR_DIVIDER), new EmptyBorder(10, 0, 16, 0)));
 
         JTextField nameField = new JTextField();
         JTextField emailField = new JTextField();
         JPasswordField pwField = new JPasswordField();
         JPasswordField pwConfirmField = new JPasswordField();
 
-        basicPanel.add(basicTitle);
+        JLabel pwStatusLabel = new JLabel(" ");
+        pwStatusLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        pwStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        DocumentListener pwListener = new DocumentListener() {
+            public void check() {
+                String pw = new String(pwField.getPassword());
+                String confirm = new String(pwConfirmField.getPassword());
+                if (pw.isEmpty() || confirm.isEmpty()) { pwStatusLabel.setText(" "); } 
+                else if (pw.equals(confirm)) {
+                    pwStatusLabel.setText("✓ 비밀번호가 서로 일치합니다.");
+                    pwStatusLabel.setForeground(COLOR_PRIMARY);
+                } else {
+                    pwStatusLabel.setText("✕ 비밀번호가 서로 일치하지 않습니다.");
+                    pwStatusLabel.setForeground(COLOR_DANGER);
+                }
+            }
+            @Override public void insertUpdate(DocumentEvent e) { check(); }
+            @Override public void removeUpdate(DocumentEvent e) { check(); }
+            @Override public void changedUpdate(DocumentEvent e) { check(); }
+        };
+        pwField.getDocument().addDocumentListener(pwListener);
+        pwConfirmField.getDocument().addDocumentListener(pwListener);
+
+        basicPanel.add(new JLabel("기본 정보") {{ setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14)); setForeground(COLOR_TEXT_DARK); }});
         basicPanel.add(Box.createVerticalStrut(12));
         basicPanel.add(makeField("이름 *", nameField));
         basicPanel.add(makeField("이메일 *", emailField));
         basicPanel.add(makeField("비밀번호 *", pwField));
         basicPanel.add(makeField("비밀번호 확인 *", pwConfirmField));
+        basicPanel.add(pwStatusLabel);
 
-        /* ===== 차량 정보 ===== */
+        /* ----- 2. 차량 정보 영역 ----- */
         JPanel carPanel = new JPanel();
         carPanel.setLayout(new BoxLayout(carPanel, BoxLayout.Y_AXIS));
         carPanel.setBackground(Color.WHITE);
         carPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel carTitle = new JLabel("차량 정보");
-        carTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        carTitle.setForeground(new Color(55, 65, 81));
-
         JTextField carNumberField = new JTextField();
         JComboBox<String> fuelTypeBox = new JComboBox<>(new String[]{"휘발유", "경유", "LPG", "전기", "하이브리드"});
         JTextField mileageField = new JTextField();
-
         JPanel mileageWrapper = new JPanel(new BorderLayout(6, 0));
         mileageWrapper.setBackground(Color.WHITE);
         mileageWrapper.add(mileageField, BorderLayout.CENTER);
-        mileageWrapper.add(new JLabel("km"), BorderLayout.EAST);
+        mileageWrapper.add(new JLabel("km") {{ setForeground(Color.GRAY); }}, BorderLayout.EAST);
 
-        carPanel.add(carTitle);
+        carPanel.add(new JLabel("차량 정보") {{ setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14)); setForeground(COLOR_TEXT_DARK); }});
         carPanel.add(Box.createVerticalStrut(12));
         carPanel.add(makeField("차량번호 *", carNumberField));
         carPanel.add(makeField("연료 타입 *", fuelTypeBox));
         carPanel.add(makeField("현재 주행거리 (선택)", mileageWrapper));
 
-        /* ===== 가입 버튼 (TODO 주석 추가) ===== */
+        /* ----- 3. 가입 버튼 (DB 연동 핵심 포인트) ----- */
         JButton signupButton = new JButton("가입하기");
-        signupButton.setBackground(new Color(37, 99, 235));
+        signupButton.setBackground(COLOR_PRIMARY);
         signupButton.setForeground(Color.WHITE);
         signupButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         signupButton.setFocusPainted(false);
@@ -125,37 +138,36 @@ public class SignupFrame extends JFrame {
         signupButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
         signupButton.addActionListener(e -> {
-            // TODO 1: 입력 데이터 추출
-            // - nameField, emailField, pwField, carNumberField 등 모든 필드 값 가져오기
-            
-            // TODO 2: 필수 입력값 유효성 검사
-            // - 이름, 이메일, 비밀번호, 차량번호 등 '*' 표시된 항목이 비어있는지 체크
-            // - 비밀번호와 비밀번호 확인 필드 값이 일치하는지 체크
-            
-            // TODO 3: 데이터베이스 연동 처리
-            // - 이메일 중복 체크 (DB에 동일한 이메일이 있는지 확인)
-            // - 회원 정보 INSERT (비밀번호는 반드시 해시 암호화하여 저장)
-            
-            // TODO 4: 가입 결과 처리
-            // - 성공: "회원가입이 완료되었습니다" 안내 후 Login 화면으로 이동
-            // - 실패: 실패 원인(중복 이메일 등) 알림창 띄우기
+            /**
+             * [DB 연동 포인트 1: 이메일 중복 체크]
+             * SQL: SELECT count(*) FROM users WHERE email = ?
+             * 작업: 입력받은 emailField의 값이 DB에 이미 존재하는지 확인. 
+             * 존재한다면 JOptionPane으로 "이미 가입된 이메일입니다" 알림 후 중단.
+             */
 
-            JOptionPane.showMessageDialog(this, "회원가입 처리 로직 구현 위치입니다.");
+            /**
+             * [DB 연동 포인트 2: 회원 및 차량 정보 저장]
+             * SQL 1 (사용자): INSERT INTO users (name, email, password) VALUES (?, ?, ?)
+             * SQL 2 (차량): INSERT INTO car_info (user_email, car_number, fuel_type, mileage) VALUES (?, ?, ?, ?)
+             * 작업: 
+             * 1. pwField와 pwConfirmField 일치 여부 최종 확인.
+             * 2. 비밀번호는 반드시 암호화(Hash)하여 저장 권장.
+             * 3. 두 INSERT 문은 하나의 트랜잭션(Transaction)으로 처리하여 둘 다 성공했을 때만 가입 완료.
+             */
+
+            JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
+            new Login().setVisible(true);
+            dispose();
         });
 
-        /* ===== 하단 로그인 이동 ===== */
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
         bottomPanel.setBackground(Color.WHITE);
-        bottomPanel.setAlignmentX(Component.LEFT_ALIGNMENT); 
+        bottomPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         bottomPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
-        JLabel loginText = new JLabel("이미 계정이 있으신가요?");
-        loginText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        loginText.setForeground(Color.GRAY);
 
         JLabel loginLink = new JLabel("로그인");
         loginLink.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        loginLink.setForeground(new Color(37, 99, 235));
+        loginLink.setForeground(COLOR_PRIMARY);
         loginLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         loginLink.addMouseListener(new MouseAdapter() {
             @Override
@@ -165,7 +177,7 @@ public class SignupFrame extends JFrame {
             }
         });
 
-        bottomPanel.add(loginText);
+        bottomPanel.add(new JLabel("이미 계정이 있으신가요?") {{ setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12)); setForeground(Color.GRAY); }});
         bottomPanel.add(loginLink);
 
         card.add(header);
@@ -188,17 +200,11 @@ public class SignupFrame extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         JLabel label = new JLabel(labelText);
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         label.setForeground(Color.GRAY);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        if (field instanceof JComponent) {
-            ((JComponent) field).setAlignmentX(Component.LEFT_ALIGNMENT);
-        }
+        if (field instanceof JComponent) { ((JComponent) field).setAlignmentX(Component.LEFT_ALIGNMENT); }
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
-
         panel.add(label);
         panel.add(Box.createVerticalStrut(4));
         panel.add(field);
