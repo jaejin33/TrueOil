@@ -39,10 +39,8 @@ public class VehiclePage extends JScrollPane {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
         container.setBackground(COLOR_BG_GRAY);
-        // HomePage와 동일한 여백 설정
         container.setBorder(new EmptyBorder(30, 60, 30, 60));
 
-        // HomePage와 동일한 제목 처리 방식
         JLabel title = new JLabel("차량 관리 / 차계부");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
         title.setForeground(COLOR_TEXT_DARK);
@@ -50,8 +48,6 @@ public class VehiclePage extends JScrollPane {
         
         container.add(title);
         container.add(Box.createVerticalStrut(25)); // HomePage와 동일한 간격
-        
-        // 섹션 추가 (setAlignmentX를 통해 제목과 수직 정렬 라인을 맞춤)
         JPanel s1 = createHealthSection();
         s1.setAlignmentX(Component.LEFT_ALIGNMENT);
         container.add(s1);
