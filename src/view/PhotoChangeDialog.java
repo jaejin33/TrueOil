@@ -13,55 +13,70 @@ public class PhotoChangeDialog extends JDialog {
     private static final Color COLOR_BORDER = new Color(209, 213, 219);
     private static final Color COLOR_DANGER = new Color(220, 38, 38);
     private static final Color COLOR_SUCCESS = new Color(22, 163, 74);
-    private static final Color COLOR_GRAY_LIGHT = new Color(156, 163, 175);
     private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
 
     private JLabel photoPreview;
     private JButton removeBtn;
     private JButton applyBtn;
-    private JPanel btnGroup;
+    private JPanel actionRow;
 
     public PhotoChangeDialog(Frame parent) {
         super(parent, "프로필 사진 변경", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
+        setSize(420, 480);
 
-        JPanel container = new JPanel();
-        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(Color.WHITE);
-        container.setBorder(new CompoundBorder(
+        /* ===== 전체 배경 ===== */
+        JPanel background = new JPanel(new BorderLayout());
+        background.setBackground(COLOR_BG_GRAY);
+        background.setBorder(new CompoundBorder(
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
 
-        // 1. 헤더
+        /* ===== 카드 패널 ===== */
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(Color.WHITE);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(COLOR_BORDER, 2),
+                new EmptyBorder(16, 24, 24, 24)
+        ));
+        card.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        /* ===== 상단 헤더 (우측 종료 버튼) ===== */
         JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
-        
-        JLabel titleLbl = new JLabel("프로필 사진 변경");
-        titleLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        
-        JButton closeBtn = new JButton("X");
-        closeBtn.setFont(new Font("Arial", Font.PLAIN, 16));
-        closeBtn.setForeground(COLOR_GRAY_LIGHT);
-        closeBtn.setBorderPainted(false);
-        closeBtn.setContentAreaFilled(false);
-        closeBtn.setFocusPainted(false);
-        closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        closeBtn.addActionListener(e -> dispose());
+        header.setBackground(Color.WHITE);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        header.add(titleLbl, BorderLayout.WEST);
-        header.add(closeBtn, BorderLayout.EAST);
+        JLabel closeLabel = new JLabel("✕");
+        closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        closeLabel.setForeground(Color.LIGHT_GRAY);
+        closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) { dispose(); }
+            @Override
+            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
+            @Override
+            public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
+        });
+        header.add(closeLabel, BorderLayout.EAST);
 
-        // 2. 사진 프리뷰
+        /* ===== 제목 섹션 ===== */
+        JLabel titleLabel = new JLabel("프로필 사진 변경");
+        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        titleLabel.setForeground(COLOR_TEXT_DARK);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        /* ===== 사진 프리뷰 영역 ===== */
         photoPreview = new JLabel("👤", SwingConstants.CENTER);
-        photoPreview.setPreferredSize(new Dimension(120, 120));
-        photoPreview.setMaximumSize(new Dimension(120, 120));
+        photoPreview.setPreferredSize(new Dimension(140, 140));
+        photoPreview.setMaximumSize(new Dimension(140, 140));
         photoPreview.setOpaque(true);
         photoPreview.setBackground(COLOR_BG_GRAY);
-        photoPreview.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 55));
+        photoPreview.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 65));
         photoPreview.setAlignmentX(Component.CENTER_ALIGNMENT);
         photoPreview.setBorder(new LineBorder(COLOR_DIVIDER, 1));
 
@@ -72,22 +87,19 @@ public class PhotoChangeDialog extends JDialog {
          * - 기존 이미지가 있다면 removeBtn과 applyBtn을 보이게 설정 가능
          */
 
-        // 3. 버튼 그룹
-        btnGroup = new JPanel();
-        btnGroup.setLayout(new BoxLayout(btnGroup, BoxLayout.Y_AXIS));
-        btnGroup.setOpaque(false);
-        btnGroup.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JButton uploadBtn = createStyledBtn("사진 업로드", COLOR_PRIMARY, Color.WHITE, 280);
-
-        JPanel actionRow = new JPanel();
+        /* ===== 버튼 영역 ===== */
+        JButton uploadBtn = new JButton("사진 업로드");
+        stylePrimaryBtn(uploadBtn, COLOR_PRIMARY);
+        
+        actionRow = new JPanel();
         actionRow.setLayout(new BoxLayout(actionRow, BoxLayout.X_AXIS));
         actionRow.setOpaque(false);
-        actionRow.setMaximumSize(new Dimension(280, 42));
+        actionRow.setMaximumSize(new Dimension(320, 45));
 
-        removeBtn = createStyledBtn("삭제", Color.WHITE, COLOR_DANGER, 135);
-        removeBtn.setBorder(new LineBorder(new Color(252, 165, 165)));
-        applyBtn = createStyledBtn("적용", COLOR_SUCCESS, Color.WHITE, 135);
+        removeBtn = new JButton("삭제");
+        styleSecondaryBtn(removeBtn, COLOR_DANGER);
+        applyBtn = new JButton("적용");
+        stylePrimaryBtn(applyBtn, COLOR_SUCCESS);
         
         // 초기에는 숨김 처리
         removeBtn.setVisible(false);
@@ -97,46 +109,28 @@ public class PhotoChangeDialog extends JDialog {
         actionRow.add(Box.createHorizontalStrut(10));
         actionRow.add(applyBtn);
 
-        JButton cancelBtn = createStyledBtn("취소", Color.WHITE, COLOR_TEXT_DARK, 280);
-        cancelBtn.setBorder(new LineBorder(COLOR_BORDER));
-
-        btnGroup.add(uploadBtn);
-        btnGroup.add(Box.createVerticalStrut(10));
-        btnGroup.add(actionRow);
-        btnGroup.add(Box.createVerticalStrut(10));
-        btnGroup.add(cancelBtn);
-
-        // [ACTION] 사진 업로드
+        /* ===== 액션 리스너 ===== */
         uploadBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
                 updatePreview(selectedPath);
-                
-                // 업로드 성공 시 삭제/적용 버튼 노출 및 크기 재조절
                 removeBtn.setVisible(true);
                 applyBtn.setVisible(true);
                 revalidate();
-                pack();
-                setLocationRelativeTo(parent);
+                repaint();
             }
         });
 
-        // [ACTION] 사진 삭제
         removeBtn.addActionListener(e -> {
             photoPreview.setIcon(null);
             photoPreview.setText("👤");
-            
-            // 삭제 시 액션 버튼 행을 통째로 숨기고 크기를 다시 줄임
             removeBtn.setVisible(false);
             applyBtn.setVisible(false);
-            
             revalidate();
-            pack(); // 이 부분이 다시 실행되어 창 크기가 작아집니다.
-            setLocationRelativeTo(parent);
+            repaint();
         });
 
-        // [ACTION] 최종 적용
         applyBtn.addActionListener(e -> {
             /**
              * [DB Point 2: 최종 데이터 저장] 
@@ -148,23 +142,27 @@ public class PhotoChangeDialog extends JDialog {
             dispose();
         });
 
-        cancelBtn.addActionListener(e -> dispose());
+        /* ===== 카드 조립 ===== */
+        card.add(header);
+        card.add(Box.createVerticalStrut(10));
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(30));
+        card.add(photoPreview);
+        card.add(Box.createVerticalStrut(35));
+        card.add(uploadBtn);
+        card.add(Box.createVerticalStrut(10));
+        card.add(actionRow);
+        card.add(Box.createVerticalStrut(10)); // 하단 여백
 
-        container.add(header);
-        container.add(Box.createVerticalStrut(20));
-        container.add(photoPreview);
-        container.add(Box.createVerticalStrut(24));
-        container.add(btnGroup);
-
-        add(container);
-        pack();
+        background.add(card, BorderLayout.CENTER);
+        add(background);
         setLocationRelativeTo(parent);
     }
 
     private void updatePreview(String path) {
         try {
             ImageIcon icon = new ImageIcon(path);
-            Image img = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+            Image img = icon.getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH);
             photoPreview.setText("");
             photoPreview.setIcon(new ImageIcon(img));
         } catch (Exception e) {
@@ -173,19 +171,25 @@ public class PhotoChangeDialog extends JDialog {
         }
     }
 
-    private JButton createStyledBtn(String text, Color bg, Color fg, int width) {
-        JButton b = new JButton(text);
-        b.setMaximumSize(new Dimension(width, 42));
-        b.setPreferredSize(new Dimension(width, 42));
+    private void stylePrimaryBtn(JButton b, Color bg) {
         b.setBackground(bg);
-        b.setForeground(fg);
-        b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        b.setForeground(Color.WHITE);
+        b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         b.setFocusPainted(false);
+        b.setBorderPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
-        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        if (bg != Color.WHITE) {
-            b.setBorderPainted(false);
-        }
-        return b;
+        b.setMaximumSize(new Dimension(320, 45));
+    }
+
+    private void styleSecondaryBtn(JButton b, Color fg) {
+        b.setBackground(Color.WHITE);
+        b.setForeground(fg);
+        b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+        b.setFocusPainted(false);
+        b.setBorder(new LineBorder(fg));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
+        b.setMaximumSize(new Dimension(320, 45));
     }
 }

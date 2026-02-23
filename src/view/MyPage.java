@@ -17,7 +17,6 @@ public class MyPage extends JScrollPane {
     private JPanel listPanel;
 
     public MyPage() {
-        // 스크롤판 설정
         setBorder(null);
         getVerticalScrollBar().setUnitIncrement(20);
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -27,13 +26,7 @@ public class MyPage extends JScrollPane {
         contentPanel.setBackground(COLOR_BG_GRAY); 
         contentPanel.setBorder(new EmptyBorder(40, 60, 40, 60));
 
-        // 초기 데이터 로드 및 UI 생성
         refreshPage();
-
-        /**
-         * [탭 전환 시 자동 갱신]
-         * 다른 탭에 있다가 마이페이지로 돌아올 때 최신 DB 정보를 다시 불러옵니다.
-         */
         this.addHierarchyListener(e -> {
             if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
                 refreshPage();
@@ -131,9 +124,11 @@ public class MyPage extends JScrollPane {
         card.add(createDataRow("📅 가입일", "2025-12-15"));
         card.add(Box.createVerticalStrut(25));
 
+        // 버튼들을 담는 패널 - GridLayout으로 좌우 균등 배치
         JPanel btns = new JPanel(new GridLayout(1, 2, 15, 0));
         btns.setOpaque(false);
-        btns.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        // 패널의 최대 높이를 50으로 설정하여 버튼이 세로로 길어지게 함
+        btns.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         btns.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JButton b1 = new JButton("정보 수정"); 
@@ -326,6 +321,7 @@ public class MyPage extends JScrollPane {
         b.setForeground(COLOR_TEXT_DARK);
         b.setBorder(new LineBorder(COLOR_BORDER));
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        b.setPreferredSize(new Dimension(b.getPreferredSize().width, 50));
 
         b.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) { 
