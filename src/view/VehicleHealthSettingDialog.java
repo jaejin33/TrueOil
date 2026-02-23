@@ -45,6 +45,10 @@ public class VehicleHealthSettingDialog extends JDialog {
         closeLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) { dispose(); }
+            @Override
+            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
+            @Override
+            public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
         });
         header.add(closeLabel, BorderLayout.EAST);
 
