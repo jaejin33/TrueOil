@@ -39,25 +39,30 @@ public class VehiclePage extends JScrollPane {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
         container.setBackground(COLOR_BG_GRAY);
-        container.setBorder(new EmptyBorder(40, 80, 40, 80));
+        container.setBorder(new EmptyBorder(30, 60, 30, 60));
 
-        JPanel titlePanel = new JPanel();
-        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.X_AXIS));
-        titlePanel.setOpaque(false);
-        titlePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         JLabel title = new JLabel("차량 관리 / 차계부");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-        titlePanel.add(Box.createHorizontalGlue());
-        titlePanel.add(title);
-        titlePanel.add(Box.createHorizontalGlue()); 
-        container.add(titlePanel);
-        container.add(Box.createVerticalStrut(30));
+        title.setForeground(COLOR_TEXT_DARK);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        container.add(createHealthSection());
+        container.add(title);
+        container.add(Box.createVerticalStrut(25)); // HomePage와 동일한 간격
+        JPanel s1 = createHealthSection();
+        s1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        container.add(s1);
+        
         container.add(Box.createVerticalStrut(25));
-        container.add(createFuelHistorySection());
+        
+        JPanel s2 = createFuelHistorySection();
+        s2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        container.add(s2);
+        
         container.add(Box.createVerticalStrut(25));
-        container.add(createStatsSection());
+        
+        JPanel s3 = createStatsSection();
+        s3.setAlignmentX(Component.LEFT_ALIGNMENT);
+        container.add(s3);
 
         container.add(Box.createVerticalStrut(60));
         setViewportView(container);
@@ -364,7 +369,7 @@ public class VehiclePage extends JScrollPane {
         JLabel t = new JLabel(titleText);
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 19));
         header.add(t);
-        if (subtitleText != null) {
+        if (subtitleText != null && !subtitleText.isEmpty()) {
             JLabel s = new JLabel(subtitleText);
             s.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
             s.setForeground(COLOR_TEXT_MUTED);
