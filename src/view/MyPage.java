@@ -12,6 +12,7 @@ public class MyPage extends JScrollPane {
     private static final Color COLOR_BORDER = new Color(209, 213, 219);
     private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
     private static final Color COLOR_ROW_BG = new Color(252, 252, 253);
+    private static final Color COLOR_DANGER = new Color(220, 38, 38);
 
     private JPanel contentPanel;
     private JPanel listPanel;
@@ -36,7 +37,6 @@ public class MyPage extends JScrollPane {
         setViewportView(contentPanel);
     }
 
-    // 화면의 모든 내용을 새로고침하는 메서드
     public void refreshPage() {
         contentPanel.removeAll();
 
@@ -58,7 +58,11 @@ public class MyPage extends JScrollPane {
         
         // [섹션 3] 활동 통계
         contentPanel.add(createActivityBox());
-        contentPanel.add(Box.createVerticalStrut(40));
+        contentPanel.add(Box.createVerticalStrut(20));
+
+        // [섹션 4] 회원 탈퇴 (하단 배치)
+        contentPanel.add(createWithdrawalPanel());
+        contentPanel.add(Box.createVerticalStrut(20));
 
         contentPanel.revalidate();
         contentPanel.repaint();
@@ -124,10 +128,8 @@ public class MyPage extends JScrollPane {
         card.add(createDataRow("📅 가입일", "2025-12-15"));
         card.add(Box.createVerticalStrut(25));
 
-        // 버튼들을 담는 패널 - GridLayout으로 좌우 균등 배치
         JPanel btns = new JPanel(new GridLayout(1, 2, 15, 0));
         btns.setOpaque(false);
-        // 패널의 최대 높이를 50으로 설정하여 버튼이 세로로 길어지게 함
         btns.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         btns.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -136,7 +138,7 @@ public class MyPage extends JScrollPane {
         b1.addActionListener(e -> {
             /** [DB 포인트 3: 회원 정보 UPDATE] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-            new EditProfileDialog(parentFrame).setVisible(true);
+            // new EditProfileDialog(parentFrame).setVisible(true);
         });
 
         JButton b2 = new JButton("비밀번호 변경"); 
@@ -164,7 +166,6 @@ public class MyPage extends JScrollPane {
         listPanel.setOpaque(false);
         listPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // 테스트 데이터 (실제 연동 시 반복문 사용)
         listPanel.add(createReservationItem("2026-02-25 14:00", "강남 주유소", "휘발유 50L"));
         listPanel.add(Box.createVerticalStrut(10));
         listPanel.add(createReservationItem("2026-03-01 10:30", "서초 정비소", "엔진오일 교체"));
@@ -199,7 +200,6 @@ public class MyPage extends JScrollPane {
         cancelBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         cancelBtn.addActionListener(e -> {
-            // 취소 확인 팝업
             int result = JOptionPane.showConfirmDialog(
                 this, 
                 "정말로 예약을 취소하시겠습니까?", 
@@ -209,31 +209,15 @@ public class MyPage extends JScrollPane {
             );
             
             if (result == JOptionPane.YES_OPTION) {
-                /** * [DB 포인트 6: 예약 데이터 삭제 또는 상태 변경] 
-                 * - 쿼리: DELETE FROM reservations WHERE reservation_id = ?
-                 * - 또는: UPDATE reservations SET status = 'CANCELLED' WHERE reservation_id = ?
-                 */
-                
-                // [UI 즉시 삭제 로직]
-                // 1. 해당 예약 항목(row)을 리스트 패널에서 즉시 제거
+                /** * [DB 포인트 6: 예약 데이터 삭제 또는 상태 변경] */
                 listPanel.remove(row); 
-                
-                // 2. UI 갱신: 컴포넌트가 삭제되었음을 레이아웃 매니저에 알림
                 listPanel.revalidate();
                 listPanel.repaint();
                 
-                /**
-                 * [DB 포인트 7: 통계 데이터 갱신 (선택 사항)]
-                 * - 예약 취소 후 섹션 3의 '활동 통계' 숫자를 다시 계산해야 한다면
-                 * - refreshPage()를 호출하거나 해당 라벨만 다시 SELECT 하여 텍스트 수정
-                 */
-                
-                // 3. 부모 카드 높이 재계산 (항목이 사라진 만큼 카드가 줄어들도록 설정)
                 Component cardFrame = listPanel.getParent();
                 if (cardFrame instanceof JPanel) {
                     cardFrame.setMaximumSize(new Dimension(Integer.MAX_VALUE, cardFrame.getPreferredSize().height));
                 }
-
                 JOptionPane.showMessageDialog(this, "예약이 정상적으로 취소되었습니다.");
             }
         });
@@ -261,7 +245,60 @@ public class MyPage extends JScrollPane {
         return card;
     }
 
-    /* --- UI 유틸리티 메서드 --- */
+    private JPanel createWithdrawalPanel() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        p.setOpaque(false);
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton withdrawBtn = new JButton("회원 탈퇴");
+        withdrawBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        withdrawBtn.setForeground(Color.GRAY);
+        withdrawBtn.setBorderPainted(false);
+        withdrawBtn.setContentAreaFilled(false);
+        withdrawBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        withdrawBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) { withdrawBtn.setForeground(COLOR_DANGER); }
+            @Override
+            public void mouseExited(MouseEvent e) { withdrawBtn.setForeground(Color.GRAY); }
+        });
+
+        withdrawBtn.addActionListener(e -> {
+            int firstCheck = JOptionPane.showConfirmDialog(
+                this,
+                "정말로 탈퇴하시겠습니까?",
+                "회원 탈퇴",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+            if (firstCheck == JOptionPane.YES_OPTION) {
+                int secondCheck = JOptionPane.showConfirmDialog(
+                    this,
+                    "탈퇴 시 모든 데이터가 삭제되며 다시 복구할 수 없습니다.\n정말로 모든 정보를 삭제하고 탈퇴하시겠습니까?",
+                    "회원 탈퇴 - 최종 확인",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.ERROR_MESSAGE
+                );
+
+                if (secondCheck == JOptionPane.YES_OPTION) {
+                    /** * [DB 포인트 8: 회원 탈퇴 처리] 
+                     * - DELETE FROM members WHERE user_id = ?
+                     */
+                    JOptionPane.showMessageDialog(this, "탈퇴 처리가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
+                    Window ancestor = SwingUtilities.getWindowAncestor(this);
+                    if (ancestor != null) {
+                        ancestor.dispose();
+                    }
+                    new Login().setVisible(true); 
+                }
+            }
+        });
+
+        p.add(withdrawBtn);
+        return p;
+    }
 
     private JPanel createCardFrame(String titleText) {
         JPanel p = new JPanel();
