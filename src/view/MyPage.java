@@ -138,7 +138,8 @@ public class MyPage extends JScrollPane {
         b1.addActionListener(e -> {
             /** [DB 포인트 3: 회원 정보 UPDATE] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-            // new EditProfileDialog(parentFrame).setVisible(true);
+            new EditProfileDialog(parentFrame).setVisible(true);
+            refreshPage();
         });
 
         JButton b2 = new JButton("비밀번호 변경"); 
@@ -147,6 +148,7 @@ public class MyPage extends JScrollPane {
             /** [DB 포인트 4: 비밀번호 UPDATE] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             new PasswordChangeDialog(parentFrame).setVisible(true);
+            refreshPage();
         });
         
         btns.add(b1);
