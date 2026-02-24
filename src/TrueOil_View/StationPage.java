@@ -6,15 +6,17 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
-import java.net.URL;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+
+// JavaFX 관련 임포트 (pom.xml 설정 필수)
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebView;
+import javafx.scene.web.WebEngine;
 
 public class StationPage extends JScrollPane {
 
-    // .env 파일의 '=' 왼쪽에 적힌 '변수 이름'을 정확히 적어야 합니다.
     private final String NAVER_CLIENT_ID = EnvLoader.get("NAVER_CLIENT_ID");
-    private final String NAVER_CLIENT_SECRET = EnvLoader.get("NAVER_CLIENT_SECRET");
 
     public StationPage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -37,7 +39,7 @@ public class StationPage extends JScrollPane {
         contentPanel.add(title, gbc);
 
         gbc.insets = new Insets(10, 50, 10, 50);
-        contentPanel.add(createMapSection(), gbc);
+        contentPanel.add(createMapSection(), gbc); // 동적 지도 섹션
         contentPanel.add(createSearchFilterSection(), gbc);
         contentPanel.add(createStationListSection(), gbc);
 
@@ -47,55 +49,55 @@ public class StationPage extends JScrollPane {
         setViewportView(contentPanel);
     }
 
+    /**
+     * 동적 지도를 생성하는 섹션 (JavaFX WebView 이용)
+     */
     private JPanel createMapSection() {
-        JPanel card = createBaseCard("🗺️ 주변 지도 확인");
+        JPanel card = createBaseCard("🗺️ 주변 지도 확인 (동적 지도)");
         JPanel body = (JPanel) card.getComponent(1);
         
-        JLabel mapLabel = new JLabel("📍 지도 로딩 중...", SwingConstants.CENTER);
-        mapLabel.setPreferredSize(new Dimension(0, 320));
-        mapLabel.setOpaque(true);
-        mapLabel.setBackground(new Color(229, 231, 235));
-        mapLabel.setBorder(new RoundBorder(new Color(209, 213, 219), 1, 15));
+        // Swing 내부에 JavaFX를 임베딩하기 위한 패널
+        final JFXPanel fxPanel = new JFXPanel();
+        fxPanel.setPreferredSize(new Dimension(0, 400)); // 지도 높이 조절
+        
+        // JavaFX UI 업데이트는 반드시 Platform.runLater 내에서 실행
+        Platform.runLater(() -> {
+            WebView webView = new WebView();
+            WebEngine webEngine = webView.getEngine();
 
-        new Thread(() -> {
-            try {
-                // 테스트 좌표 (서울역)
-                String lon = "126.9706";
-                String lat = "37.5547";
-                int w = 800;
-                int h = 320;
-                
-                // 공식 문서 가이드에 명시된 Static Map v2 raster 엔드포인트 적용
-                String apiURL = "https://maps.apigw.ntruss.com/map-static/v2/raster"
-                        + "?w=" + w + "&h=" + h + "&center=" + lon + "," + lat + "&level=14"
-                        + "&markers=type:d|size:mid|pos:" + lon + "%20" + lat;
+            // 네이버 지도 API V3 로드 및 지도 초기화 HTML
+            String htmlContent = "<html>"
+                + "<head>"
+                + "<meta charset='UTF-8'>"
+                + "<meta name='viewport' content='initial-scale=1.0, user-scalable=no, width=device-width'>"
+                + "<script type='text/javascript' src='https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=" + NAVER_CLIENT_ID + "'></script>"
+                + "<style>"
+                + "  body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }"
+                + "</style>"
+                + "</head>"
+                + "<body>"
+                + "<div id='map'></div>"
+                + "<script>"
+                + "  var map = new naver.maps.Map('map', {"
+                + "    center: new naver.maps.LatLng(37.5547, 126.9706)," // 기본 위치: 서울역
+                + "    zoom: 15,"
+                + "    zoomControl: true,"
+                + "    mapTypeControl: true"
+                + "  });"
+                + "  var marker = new naver.maps.Marker({"
+                + "    position: new naver.maps.LatLng(37.5547, 126.9706),"
+                + "    map: map,"
+                + "    title: '서울역'"
+                + "  });"
+                + "</script>"
+                + "</body></html>";
 
-                URL url = new URL(apiURL);
-                java.net.HttpURLConnection con = (java.net.HttpURLConnection) url.openConnection();
-                con.setRequestMethod("GET");
-                
-                // 필수 요청 헤더 설정
-                con.setRequestProperty("X-NCP-APIGW-API-KEY-ID", NAVER_CLIENT_ID);
-                con.setRequestProperty("X-NCP-APIGW-API-KEY", NAVER_CLIENT_SECRET);
-                
-                int responseCode = con.getResponseCode();
-                if (responseCode == 200) {
-                    BufferedImage img = ImageIO.read(con.getInputStream());
-                    if (img != null) {
-                        mapLabel.setText("");
-                        mapLabel.setIcon(new ImageIcon(img));
-                    }
-                } else {
-                    System.out.println("Ncloud API Response Code: " + responseCode);
-                    mapLabel.setText("지도 로드 실패 (에러 코드: " + responseCode + ")");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                mapLabel.setText("네트워크 연결 오류 발생");
-            }
-        }).start();
+            webEngine.loadContent(htmlContent);
+            Scene scene = new Scene(webView);
+            fxPanel.setScene(scene);
+        });
 
-        body.add(mapLabel);
+        body.add(fxPanel);
         return card;
     }
 

@@ -1,3 +1,3 @@
 cd /d "C:\Users\dita_810\TrueOil"
-java -cp "bin;C:\Users\dita_810\jfreechart-1.5.3.jar" TrueOil_View.Login
-pause
+javac -d bin -cp "C:\Users\dita_810\jfreechart-1.5.3.jar" --module-path "C:\Java\javafx-sdk-21.0.10\lib" --add-modules javafx.swing,javafx.controls,javafx.web src\TrueOil_View\*.java src\TrueOil_Utils\*.java
+java -cp "bin;C:\Users\dita_810\jfreechart-1.5.3.jar" --module-path "C:\Java\javafx-sdk-21.0.10\lib" --add-modules javafx.swing,javafx.controls,javafx.web TrueOil_View.Login
