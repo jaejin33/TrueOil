@@ -12,18 +12,16 @@ public class VehicleHealthSettingDialog extends JDialog {
     private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
     private static final Color COLOR_CARD_BG = Color.WHITE;
     private static final Color COLOR_DANGER = new Color(239, 68, 68);
-    private static final Color COLOR_WARNING = new Color(234, 179, 8);
 
     private JButton saveBtn, cancelBtn;
-    // DB 저장 시 값을 편하게 가져오기 위해 맵에 슬라이더를 담아둡니다.
-    private Map<String, JSlider[]> sliderMap = new HashMap<>();
+    private Map<String, JTextField> cycleFieldMap = new HashMap<>();
 
     public VehicleHealthSettingDialog(Frame parent) {
-        super(parent, "알림 기준 설정", true);
+        super(parent, "권장 주기 설정", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(460, 820);
+        setSize(700, 500);
 
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
@@ -52,22 +50,20 @@ public class VehicleHealthSettingDialog extends JDialog {
         });
         header.add(closeLabel, BorderLayout.EAST);
 
-        JLabel titleLabel = new JLabel("알림 발생 구간 설정");
+        JLabel titleLabel = new JLabel("소모품 권장 교체 주기 설정");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JPanel formWrapper = new JPanel();
-        formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
+        JPanel formWrapper = new JPanel(new GridLayout(2, 2, 30, 30));
         formWrapper.setBackground(COLOR_CARD_BG);
-        formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formWrapper.setOpaque(false);
 
-        /* * [DB POINT 1] 초기 임계값 데이터 로드 (SELECT)
-         * - 구현 방법: SELECT 결과를 아래 redVal, yellowVal 변수에 할당하세요.
+        /* * [DB POINT 1] 초기 권장 주기 데이터 로드 (SELECT)
+         * - 구현 방법: SELECT 결과를 아래 cycleVal 변수에 할당하세요.
          */
-        addThresholdSection(formWrapper, "엔진 오일", 20, 50);
-        addThresholdSection(formWrapper, "타이어", 45, 70);
-        addThresholdSection(formWrapper, "브레이크 패드", 30, 75);
-        addThresholdSection(formWrapper, "배터리", 15, 45);
+        addCycleSection(formWrapper, "엔진 오일", 10000);
+        addCycleSection(formWrapper, "타이어", 50000);
+        addCycleSection(formWrapper, "브레이크 패드", 30000);
+        addCycleSection(formWrapper, "배터리", 60000);
 
         /* ===== 버튼 영역 ===== */
         saveBtn = new JButton("설정 저장");
@@ -76,15 +72,13 @@ public class VehicleHealthSettingDialog extends JDialog {
         saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
         saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         saveBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        saveBtn.setMaximumSize(new Dimension(380, 50));
+        saveBtn.setMaximumSize(new Dimension(250, 50));
         
         saveBtn.addActionListener(e -> {
             /* * [DB POINT 2] 데이터 업데이트 실행 (UPDATE)
-             * - sliderMap.get("엔진 오일")[0].getValue() 처럼 값을 추출하여 DB에 저장하세요.
+             * - cycleFieldMap.get("엔진 오일").getText() 처럼 값을 추출하여 DB에 저장하세요.
              */
-            JOptionPane.showMessageDialog(this, "설정이 저장되었습니다. 메인 화면의 색상 기준이 즉시 적용됩니다.");
-            
-            // 창을 닫으면 VehiclePage의 dialog.setVisible(true) 다음 줄이 실행되며 UI가 갱신됩니다.
+            JOptionPane.showMessageDialog(this, "권장 교체 주기가 저장되었습니다.");
             dispose();
         });
 
@@ -96,13 +90,13 @@ public class VehicleHealthSettingDialog extends JDialog {
         cancelBtn.addActionListener(e -> dispose());
 
         card.add(header);
-        card.add(Box.createVerticalStrut(5));
-        card.add(titleLabel);
-        card.add(Box.createVerticalStrut(30));
-        card.add(formWrapper);
         card.add(Box.createVerticalStrut(10));
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(40));
+        card.add(formWrapper);
+        card.add(Box.createVerticalStrut(40));
         card.add(saveBtn);
-        card.add(Box.createVerticalStrut(12));
+        card.add(Box.createVerticalStrut(10));
         card.add(cancelBtn);
 
         background.add(card, BorderLayout.CENTER);
@@ -110,97 +104,34 @@ public class VehicleHealthSettingDialog extends JDialog {
         setLocationRelativeTo(parent);
     }
 
-    private void addThresholdSection(JPanel p, String title, int redVal, int yellowVal) {
+    private void addCycleSection(JPanel p, String title, int cycleVal) {
+        JPanel sectionPanel = new JPanel();
+        sectionPanel.setLayout(new BoxLayout(sectionPanel, BoxLayout.Y_AXIS));
+        sectionPanel.setBackground(COLOR_CARD_BG);
+        sectionPanel.setBorder(new CompoundBorder(new LineBorder(new Color(245, 245, 245), 1), new EmptyBorder(15, 15, 15, 15)));
+
         JLabel sectionTitle = new JLabel(title);
-        sectionTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        sectionTitle.setAlignmentX(Component.CENTER_ALIGNMENT); 
-        sectionTitle.setBorder(new EmptyBorder(10, 0, 10, 0));
-        p.add(sectionTitle);
+        sectionTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 17));
+        sectionTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sectionTitle.setBorder(new EmptyBorder(0, 0, 15, 0));
+        sectionPanel.add(sectionTitle);
 
-        JSlider rSlider = new JSlider(0, 100, redVal);
-        JSlider ySlider = new JSlider(0, 100, yellowVal);
+        JPanel inputRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        inputRow.setOpaque(false);
+
+        JTextField cycleField = new JTextField(String.valueOf(cycleVal), 8);
+        cycleField.setHorizontalAlignment(JTextField.CENTER);
+        cycleField.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        cycleField.setBorder(new MatteBorder(0, 0, 2, 0, COLOR_PRIMARY));
+        cycleFieldMap.put(title, cycleField);
+
+        JLabel unitLbl = new JLabel("km");
+        unitLbl.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+
+        inputRow.add(cycleField);
+        inputRow.add(unitLbl);
         
-        // 나중에 값을 꺼내기 위해 맵에 보관
-        sliderMap.put(title, new JSlider[]{rSlider, ySlider});
-
-        JTextField rField = new JTextField(String.valueOf(redVal), 3);
-        JTextField yField = new JTextField(String.valueOf(yellowVal), 3);
-
-        JPanel redRow = createThresholdRow("위험", rSlider, rField, COLOR_DANGER);
-        JPanel yellowRow = createThresholdRow("주의", ySlider, yField, COLOR_WARNING);
-        
-        redRow.setAlignmentX(Component.CENTER_ALIGNMENT);
-        yellowRow.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        p.add(redRow);
-        p.add(yellowRow);
-
-        rSlider.addChangeListener(e -> {
-            rField.setText(String.valueOf(rSlider.getValue()));
-            if (rSlider.getValue() >= ySlider.getValue()) {
-                ySlider.setValue(rSlider.getValue() + 1);
-            }
-        });
-
-        ySlider.addChangeListener(e -> {
-            yField.setText(String.valueOf(ySlider.getValue()));
-            if (ySlider.getValue() <= rSlider.getValue()) {
-                rSlider.setValue(ySlider.getValue() - 1);
-            }
-        });
-
-        p.add(Box.createVerticalStrut(15));
-        JSeparator sep = new JSeparator();
-        sep.setMaximumSize(new Dimension(380, 1));
-        p.add(sep);
-        p.add(Box.createVerticalStrut(10));
-    }
-
-    private JPanel createThresholdRow(String labelText, JSlider slider, JTextField tf, Color themeColor) {
-        JPanel row = new JPanel();
-        row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
-        row.setBackground(COLOR_CARD_BG);
-        row.setMaximumSize(new Dimension(380, 70));
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        top.setMaximumSize(new Dimension(380, 25));
-        
-        JLabel nameLbl = new JLabel(labelText);
-        nameLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
-        nameLbl.setForeground(themeColor); 
-
-        JPanel inputGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        inputGroup.setOpaque(false);
-        tf.setHorizontalAlignment(JTextField.RIGHT);
-        tf.setBorder(new MatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
-        tf.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
-        tf.setForeground(themeColor);
-        
-        JLabel unitLbl = new JLabel(" %");
-        unitLbl.setForeground(themeColor);
-        
-        inputGroup.add(tf);
-        inputGroup.add(unitLbl);
-
-        top.add(nameLbl, BorderLayout.WEST);
-        top.add(inputGroup, BorderLayout.EAST);
-
-        slider.setBackground(COLOR_CARD_BG);
-        slider.setMaximumSize(new Dimension(380, 35));
-        
-        tf.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                try {
-                    int v = Integer.parseInt(tf.getText());
-                    if (v >= 0 && v <= 100) slider.setValue(v);
-                } catch (Exception ex) {}
-            }
-        });
-
-        row.add(top);
-        row.add(slider);
-        return row;
+        sectionPanel.add(inputRow);
+        p.add(sectionPanel);
     }
 }
