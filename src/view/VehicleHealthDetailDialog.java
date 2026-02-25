@@ -6,6 +6,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.*;
+import java.time.LocalDate;
 
 public class VehicleHealthDetailDialog extends JDialog {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -15,6 +16,8 @@ public class VehicleHealthDetailDialog extends JDialog {
     private static final Color COLOR_DANGER = new Color(239, 68, 68);
 
     private JTextField lastReplaceField;
+    private JTextField replaceDateField; // 추가
+    private JTextField costField; // 추가
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
     private int updatedLastKm;
@@ -24,7 +27,7 @@ public class VehicleHealthDetailDialog extends JDialog {
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(420, 380);
+        setSize(420, 520); // 필드 추가로 인해 높이 조절
 
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
@@ -44,7 +47,7 @@ public class VehicleHealthDetailDialog extends JDialog {
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 상단 헤더 (✕ 버튼) ===== */
+        /* ===== 상단 헤더 ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(COLOR_CARD_BG);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
@@ -64,7 +67,7 @@ public class VehicleHealthDetailDialog extends JDialog {
         header.add(closeLabel, BorderLayout.EAST);
 
         /* ===== 제목 섹션 ===== */
-        JLabel titleLabel = new JLabel(itemName + " 정보 수정");
+        JLabel titleLabel = new JLabel(itemName + " 교체 이력 등록");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -73,12 +76,15 @@ public class VehicleHealthDetailDialog extends JDialog {
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
         formWrapper.setBackground(COLOR_CARD_BG);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 100));
+        formWrapper.setMaximumSize(new Dimension(320, 280));
 
         Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
         Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
 
-        addInput(formWrapper, "마지막 교체 시점 (km)", lastReplaceField = new JTextField(String.valueOf(lastKm)), labelFont, fieldSize);
+        addInput(formWrapper, "교체 날짜 (예: 2024-01-01)", replaceDateField = new JTextField(LocalDate.now().toString()), labelFont, fieldSize);
+        addInput(formWrapper, "교체 시점의 주행거리 (km)", lastReplaceField = new JTextField(String.valueOf(lastKm)), labelFont, fieldSize);
+        addInput(formWrapper, "비용 (원, 생략 가능)", costField = new JTextField(), labelFont, fieldSize);
+
         JLabel infoLabel = new JLabel(itemName + "의 권장 교체 주기는 " + cycle + "km 입니다.");
         infoLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         infoLabel.setForeground(new Color(75, 85, 99)); 
@@ -98,6 +104,9 @@ public class VehicleHealthDetailDialog extends JDialog {
         saveBtn.addActionListener(e -> {
             try {
                 updatedLastKm = Integer.parseInt(lastReplaceField.getText());
+                String replaceDate = replaceDateField.getText();
+                String costText = costField.getText().trim();
+                int cost = costText.isEmpty() ? 0 : Integer.parseInt(costText);
 
                 /* [DB Point] cycle은 기존값을 그대로 사용하거나 필요한 쿼리에 적용
                  * String sql = "UPDATE maintenance SET last_replace_km = ? WHERE item_name = ?";
@@ -113,7 +122,7 @@ public class VehicleHealthDetailDialog extends JDialog {
                 isUpdated = true;
                 dispose();
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "주행거리와 비용은 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
             }
         });
 
