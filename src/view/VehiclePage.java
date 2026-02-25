@@ -47,7 +47,7 @@ public class VehiclePage extends JScrollPane {
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         container.add(title);
-        container.add(Box.createVerticalStrut(25)); // HomePage와 동일한 간격
+        container.add(Box.createVerticalStrut(25)); 
         JPanel s1 = createHealthSection();
         s1.setAlignmentX(Component.LEFT_ALIGNMENT);
         container.add(s1);
@@ -100,8 +100,11 @@ public class VehiclePage extends JScrollPane {
         body.add(healthGrid);
         body.add(Box.createVerticalStrut(25));
 
-        JButton settingsBtn = new JButton("⚙️ 소모품 알림 기준 설정");
-        settingsBtn.setPreferredSize(new Dimension(280, 50));
+        JPanel btnWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        btnWrapper.setOpaque(false);
+
+        JButton settingsBtn = new JButton("⚙️ 소모품 기준 설정");
+        settingsBtn.setPreferredSize(new Dimension(220, 50));
         settingsBtn.setBackground(COLOR_PRIMARY);
         settingsBtn.setForeground(COLOR_CARD_BG);
         settingsBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
@@ -113,9 +116,20 @@ public class VehiclePage extends JScrollPane {
             refreshAllData(); 
         });
 
-        JPanel btnWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        btnWrapper.setOpaque(false);
+        JButton historyAllBtn = new JButton("📋 전체 교체 이력");
+        historyAllBtn.setPreferredSize(new Dimension(220, 50));
+        historyAllBtn.setBackground(Color.WHITE);
+        historyAllBtn.setForeground(COLOR_PRIMARY);
+        historyAllBtn.setBorder(new LineBorder(COLOR_PRIMARY, 2));
+        historyAllBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+        historyAllBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        historyAllBtn.addActionListener(e -> {
+            Window parentWindow = SwingUtilities.getWindowAncestor(this);
+            new VehicleHealthHistoryDialog((Frame) parentWindow, "소모품 전체").setVisible(true);
+        });
+
         btnWrapper.add(settingsBtn);
+        btnWrapper.add(historyAllBtn);
         body.add(btnWrapper);
         return card;
     }
@@ -124,15 +138,6 @@ public class VehiclePage extends JScrollPane {
         if (healthGrid == null || mLabel == null) return;
 
         /** [DB 연동 포인트 1: 총 주행거리 조회] */
-        /*
-        String sql = "SELECT total_mileage FROM user_vehicle WHERE user_id = ?";
-        try (Connection conn = DBUtil.getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, CurrentUser.getId());
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) currentTotalMileage = rs.getInt("total_mileage");
-        } catch (SQLException e) { e.printStackTrace(); }
-        */
         currentTotalMileage = 52340; 
 
         mLabel.setText("<html><font color='gray' size='4'>현재 총 주행거리</font><br><b style='font-size:18pt; color:#1e293b;'>" 
@@ -141,17 +146,6 @@ public class VehiclePage extends JScrollPane {
         healthGrid.removeAll();
 
         /** [DB 연동 포인트 2: 소모품 현황 리스트 조회] */
-        /*
-        String sql = "SELECT item_name, last_replace_km, change_cycle FROM vehicle_health WHERE user_id = ?";
-        try (Connection conn = DBUtil.getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, CurrentUser.getId());
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                healthGrid.add(createHealthItem(rs.getString("item_name"), rs.getInt("last_replace_km"), rs.getInt("change_cycle")));
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        */
         healthGrid.add(createHealthItem("엔진 오일", 48000, 10000));
         healthGrid.add(createHealthItem("타이어", 20000, 50000));
         healthGrid.add(createHealthItem("브레이크 패드", 45000, 30000));
@@ -179,6 +173,7 @@ public class VehiclePage extends JScrollPane {
             @Override
             public void mouseClicked(MouseEvent e) {
                 Window parentWindow = SwingUtilities.getWindowAncestor(VehiclePage.this);
+                // 교체 이력 등록 다이얼로그 호출
                 VehicleHealthDetailDialog dialog = new VehicleHealthDetailDialog((Frame) parentWindow, name, lastKm, cycle);
                 dialog.setVisible(true);
                 if (dialog.isUpdated()) refreshAllData(); 
@@ -245,18 +240,6 @@ public class VehiclePage extends JScrollPane {
         fuelGridContainer.removeAll();
 
         /** [DB 연동 포인트 3: 주유 이력 조회] */
-        /*
-        String sql = "SELECT fuel_date, station_name, fuel_price, fuel_liter FROM fuel_history WHERE user_id = ? ORDER BY fuel_date DESC LIMIT 4";
-        try (Connection conn = DBUtil.getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, CurrentUser.getId());
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                fuelGridContainer.add(createFuelItem(rs.getString("fuel_date"), rs.getString("station_name"), 
-                                     String.format("%,d원", rs.getInt("fuel_price")), rs.getString("fuel_liter") + "L"));
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        */
         String[][] history = { { "2026-01-25", "주유소 A", "45,000원", "30L" }, { "2026-01-18", "주유소 B", "40,000원", "26L" },
         { "2026-01-31", "주유소 C", "50,000원", "40L" }};
         for (String[] h : history) {
@@ -332,10 +315,6 @@ public class VehiclePage extends JScrollPane {
         if (infoGrid == null || chartPanel == null) return;
 
         /** [DB 연동 포인트 4 & 5: 월별 통계 데이터 집계 조회] */
-        /*
-        String sql = "SELECT MONTH(fuel_date) as m, SUM(fuel_price) as s FROM fuel_history WHERE user_id = ? AND fuel_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY MONTH(fuel_date)";
-        // 조회 결과를 monthlyExpenses 배열 및 요약 정보 변수에 할당
-        */
         monthlyExpenses = new int[]{ 250000, 285000, 320000, 305000, 295000, 318000 };
 
         infoGrid.removeAll();
