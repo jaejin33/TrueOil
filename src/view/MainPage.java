@@ -3,6 +3,7 @@ package view;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.*;
 
 public class MainPage extends JFrame {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -15,6 +16,8 @@ public class MainPage extends JFrame {
     private JPanel contentArea;
     private CardLayout cardLayout;
     private JPanel navBar;
+    
+    private Point initialClick;
 
     public MainPage() {
         setTitle("TrueOil");
@@ -31,6 +34,28 @@ public class MainPage extends JFrame {
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(new MatteBorder(0, 0, 1, 0, COLOR_DIVIDER));
 
+        headerPanel.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+                getComponentAt(initialClick);
+            }
+        });
+
+        headerPanel.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+
+                int X = thisX + xMoved;
+                int Y = thisY + yMoved;
+                setLocation(X, Y);
+            }
+        });
+
         JLabel logoLabel = new JLabel("⛽ TrueOil");
         logoLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
         logoLabel.setForeground(COLOR_TEXT_DARK);
@@ -46,11 +71,11 @@ public class MainPage extends JFrame {
         JButton logoutBtn = new JButton("로그아웃");
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         logoutBtn.setBackground(COLOR_BG_GRAY);
-        logoutBtn.setForeground(COLOR_LABEL_DARK()); // 내부 가독성을 위한 처리
+        logoutBtn.setForeground(COLOR_LABEL_DARK()); 
         logoutBtn.setFocusPainted(false);
         logoutBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         logoutBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(MainPage.this, "로그아웃 하시겠습니까?", "로그아웃 확인", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(MainPage.this, "로그아웃 하시습니까?", "로그아웃 확인", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 new Login().setVisible(true);
                 MainPage.this.dispose();
@@ -102,6 +127,7 @@ public class MainPage extends JFrame {
         contentArea.add(new MyPage(), "MYPAGE");       
 
         mainBackgroundPanel.add(contentArea, BorderLayout.CENTER);
+        setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
         setContentPane(mainBackgroundPanel);
     }
 

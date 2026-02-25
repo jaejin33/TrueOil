@@ -55,10 +55,6 @@ public class MyPage extends JScrollPane {
         // [섹션 2] 예약 현황
         contentPanel.add(createReservationBox());
         contentPanel.add(Box.createVerticalStrut(25));
-        
-        // [섹션 3] 활동 통계
-        contentPanel.add(createActivityBox());
-        contentPanel.add(Box.createVerticalStrut(20));
 
         // [섹션 4] 회원 탈퇴 (하단 배치)
         contentPanel.add(createWithdrawalPanel());
@@ -230,23 +226,6 @@ public class MyPage extends JScrollPane {
         return row;
     }
 
-    private JPanel createActivityBox() {
-        JPanel card = createCardFrame("내 활동 통계");
-        /** [DB 포인트 7: 통계 데이터 집계] */
-        JPanel grid = new JPanel(new GridLayout(1, 3, 15, 0));
-        grid.setOpaque(false);
-        grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-        
-        grid.add(createStatItem("주유 기록", "32회"));
-        grid.add(createStatItem("누적 주유비", "950만원"));
-        grid.add(createStatItem("즐겨찾기", "5곳"));
-        
-        card.add(grid);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height));
-        return card;
-    }
-
     private JPanel createWithdrawalPanel() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setOpaque(false);
@@ -334,23 +313,6 @@ public class MyPage extends JScrollPane {
         r.add(l, BorderLayout.WEST);
         r.add(v, BorderLayout.EAST);
         return r;
-    }
-
-    private JPanel createStatItem(String label, String val) {
-        JPanel b = new JPanel(new GridLayout(2, 1, 0, 5));
-        b.setBackground(new Color(250, 250, 251));
-        b.setBorder(new LineBorder(COLOR_DIVIDER));
-        
-        JLabel l = new JLabel(label, SwingConstants.CENTER);
-        l.setForeground(Color.GRAY);
-        l.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        
-        JLabel v = new JLabel(val, SwingConstants.CENTER);
-        v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        v.setForeground(COLOR_TEXT_DARK);
-        
-        b.add(l); b.add(v);
-        return b;
     }
 
     private void styleBtn(JButton b) {
