@@ -29,7 +29,8 @@ public class VehiclePage extends JScrollPane {
     
     private int currentTotalMileage = 0;
     private int[] monthlyExpenses = {0, 0, 0, 0, 0, 0}; 
-    private String[] months = {"1월", "2월", "3월", "4월", "5월", "6월"};
+    private String[] months = new String[6];
+    private String[] monthQueries = new String[6];
 
     public VehiclePage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -173,7 +174,6 @@ public class VehiclePage extends JScrollPane {
             @Override
             public void mouseClicked(MouseEvent e) {
                 Window parentWindow = SwingUtilities.getWindowAncestor(VehiclePage.this);
-                // 교체 이력 등록 다이얼로그 호출
                 VehicleHealthDetailDialog dialog = new VehicleHealthDetailDialog((Frame) parentWindow, name, lastKm, cycle);
                 dialog.setVisible(true);
                 if (dialog.isUpdated()) refreshAllData(); 
@@ -281,22 +281,44 @@ public class VehiclePage extends JScrollPane {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(); int h = getHeight() - 40;
-                int leftMargin = 80; int chartW = w - 160; int chartH = h - 50;
+                
+                int w = getWidth(); 
+                int h = getHeight() - 40;
+                int leftMargin = 80; 
+                int chartW = w - 160; 
+                int chartH = h - 50;
+
                 for (int i = 0; i <= 4; i++) {
                     int y = h - 20 - (i * chartH / 4);
-                    g2.setColor(COLOR_BORDER_LIGHT); g2.drawLine(leftMargin, y, leftMargin + chartW, y);
-                    g2.setColor(COLOR_TEXT_MUTED); g2.drawString(String.format("%,d", i * 100000), 10, y + 5);
+                    g2.setColor(COLOR_BORDER_LIGHT); 
+                    g2.drawLine(leftMargin, y, leftMargin + chartW, y);
+                    g2.setColor(COLOR_TEXT_MUTED); 
+                    g2.drawString(String.format("%,d", i * 100000), 10, y + 5);
                 }
-                int barWidth = 70; int barSpace = chartW / months.length;
+
+                int barWidth = 70; 
+                int barSpace = chartW / 6;
+                FontMetrics fm = g2.getFontMetrics();
+
                 for (int i = 0; i < monthlyExpenses.length; i++) {
                     int x = leftMargin + (i * barSpace) + (barSpace - barWidth) / 2;
                     int barHeight = (int) ((double) monthlyExpenses[i] / 400000 * chartH);
                     int y = h - 20 - barHeight;
+                    
                     g2.setPaint(new GradientPaint(x, y, COLOR_PRIMARY.brighter(), x, h - 20, COLOR_PRIMARY));
                     g2.fillRoundRect(x, y, barWidth, barHeight, 8, 8);
-                    g2.setColor(COLOR_TEXT_DARK); g2.drawString(String.format("%,d", monthlyExpenses[i]), x, y - 10);
-                    g2.setColor(COLOR_TEXT_DARK); g2.drawString(months[i], x + 20, h + 18);
+
+                    String priceText = String.format("%,d", monthlyExpenses[i]);
+                    int textWidth = fm.stringWidth(priceText);
+                    int textX = x + (barWidth - textWidth) / 2;
+                    
+                    g2.setColor(COLOR_TEXT_DARK); 
+                    g2.drawString(priceText, textX, y - 10);
+                    
+                    String monthText = months[i] != null ? months[i] : "";
+                    int monthWidth = fm.stringWidth(monthText);
+                    int monthX = x + (barWidth - monthWidth) / 2;
+                    g2.drawString(monthText, monthX, h + 18);
                 }
             }
         };
@@ -314,14 +336,34 @@ public class VehiclePage extends JScrollPane {
     public void refreshStatsData() {
         if (infoGrid == null || chartPanel == null) return;
 
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        for (int i = 5; i >= 0; i--) {
+            int year = cal.get(java.util.Calendar.YEAR);
+            int month = cal.get(java.util.Calendar.MONTH) + 1;
+            months[i] = month + "월";
+            monthQueries[i] = String.format("%04d-%02d", year, month);
+            cal.add(java.util.Calendar.MONTH, -1);
+        }
+
         /** [DB 연동 포인트 4 & 5: 월별 통계 데이터 집계 조회] */
         monthlyExpenses = new int[]{ 250000, 285000, 320000, 305000, 295000, 318000 };
 
+        long total = 0;
+        int max = 0;
+        int min = Integer.MAX_VALUE;
+        for (int exp : monthlyExpenses) {
+            total += exp;
+            if (exp > max) max = exp;
+            if (exp < min) min = exp;
+        }
+        if (min == Integer.MAX_VALUE) min = 0;
+        long avg = (total / 6);
+
         infoGrid.removeAll();
-        infoGrid.add(createInfoCard("평균", "291,667원"));
-        infoGrid.add(createInfoCard("최고", "320,000원"));
-        infoGrid.add(createInfoCard("최저", "250,000원"));
-        infoGrid.add(createInfoCard("총액", "1,750,000원"));
+        infoGrid.add(createInfoCard("평균", String.format("%,d원", avg)));
+        infoGrid.add(createInfoCard("최고", String.format("%,d원", max)));
+        infoGrid.add(createInfoCard("최저", String.format("%,d원", min)));
+        infoGrid.add(createInfoCard("총액", String.format("%,d원", total)));
 
         chartPanel.repaint(); 
         infoGrid.revalidate();
