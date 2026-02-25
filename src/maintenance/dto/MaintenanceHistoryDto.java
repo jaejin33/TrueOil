@@ -8,7 +8,7 @@ public class MaintenanceHistoryDto {
     private String replaceDate; // "2026-02-19" 형태의 문자열
     private int replaceMileage; // 교체 당시 주행거리
     private int cost = -1;      // -1이면 입력 안 함
-    private String shopName;    // 정비소 명칭
+    
 	public int getHistoryId() {
 		return historyId;
 	}
@@ -51,12 +51,6 @@ public class MaintenanceHistoryDto {
 	public void setCost(int cost) {
 		this.cost = cost;
 	}
-	public String getShopName() {
-		return shopName;
-	}
-	public void setShopName(String shopName) {
-		this.shopName = shopName;
-	}
-    
+	
     
 }
