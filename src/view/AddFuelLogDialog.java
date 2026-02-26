@@ -2,12 +2,17 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import fuel.FuelController;
+import fuel.dto.FuelLogDto;
+import user.SessionManager;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 
-public class AddStationDialog extends JDialog {
+public class AddFuelLogDialog extends JDialog {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
     private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
     private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
@@ -18,8 +23,9 @@ public class AddStationDialog extends JDialog {
     private JTextField dateF, stationF, priceF, litersF, mileageF;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
+    private FuelController fuelController = new FuelController();
 
-    public AddStationDialog(Frame parent) {
+    public AddFuelLogDialog(Frame parent) {
         super(parent, "주유 기록 추가", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
@@ -95,32 +101,38 @@ public class AddStationDialog extends JDialog {
 
         saveBtn.addActionListener(e -> {
             try {
-                // 1. 입력 데이터 추출
-                String date = dateF.getText();          // fuel_date
-                String station = stationF.getText();    // station_name
-                int price = Integer.parseInt(priceF.getText());    // unit_price
-                double liters = Double.parseDouble(litersF.getText()); // liters
-                int mileage = Integer.parseInt(mileageF.getText()); // total_mileage
+                // 1. 입력 데이터 추출 및 공백 제거
+                String date = dateF.getText().trim();
+                String station = stationF.getText().trim();
+                int price = Integer.parseInt(priceF.getText().trim());
+                double liters = Double.parseDouble(litersF.getText().trim());
+                int mileage = Integer.parseInt(mileageF.getText().trim());
                 
-                /**
-                 * [DB 연동 포인트 1: 데이터 삽입]
-                 * SQL: INSERT INTO fuel_logs (user_id, fuel_date, station_name, unit_price, liters, total_mileage) 
-                 * VALUES (?, ?, ?, ?, ?, ?)
-                 * - 현재 로그인한 사용자(Session)의 ID를 외래키로 반드시 포함해야 함.
-                 * - '총 주유 금액'은 (unit_price * liters)로 계산하여 DB 컬럼에 따로 저장하거나, 
-                 * 조회 시(SELECT) 계산하도록 설계.
-                 */
+                if (station.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "주유소 이름을 입력해주세요.");
+                    return;
+                }
 
-                /**
-                 * [DB 연동 포인트 2: 차량 정보 업데이트]
-                 * SQL: UPDATE car_info SET mileage = ? WHERE user_id = ?
-                 * - 주유 시 입력한 '누적 주행 거리'가 기존 DB에 저장된 거리보다 크다면 
-                 * 차량 테이블의 최신 주행 거리를 함께 업데이트하는 로직이 필요함.
-                 */
+                // 2. DTO 객체에 데이터 담기
+                FuelLogDto logDto = new FuelLogDto();
+                logDto.setUserId(SessionManager.getUserId());
+                logDto.setFuelDate(date);
+                logDto.setStationName(station);
+                logDto.setFuelPrice(price);
+                logDto.setFuelAmount(liters);
+                logDto.setCurrentMileage(mileage);
 
-                isUpdated = true;
-                JOptionPane.showMessageDialog(this, "주유 기록이 성공적으로 추가되었습니다.");
-                dispose();
+                // 3. 컨트롤러 호출 (정석적인 MVC 구조)
+                boolean success = fuelController.registerFueling(logDto);
+
+                if (success) {
+                    isUpdated = true;
+                    JOptionPane.showMessageDialog(this, "주유 기록이 성공적으로 추가되었습니다.");
+                    dispose();
+                } else {
+                    JOptionPane.showMessageDialog(this, "저장에 실패했습니다. 주행거리를 확인해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
+                }
+
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "가격, 리터, 주행거리는 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
             }
