@@ -1,0 +1,266 @@
+package view;
+
+import javax.swing.*;
+import javax.swing.border.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 정비소 예약 페이지
+ * DB 포인트: 정비소 정보 불러오기(GET), 예약 정보 저장하기(POST)
+ */
+public class RepairPage extends JScrollPane {
+    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+    private static final Color COLOR_TEXT_LIGHT = new Color(107, 114, 128);
+    private static final Color COLOR_BORDER = new Color(209, 213, 219);
+    private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
+    private static final Color COLOR_SELECTED_BG = new Color(239, 246, 255);
+
+    private String selectedShopId = null;
+    private String selectedShopName = "";
+    
+    private JTextField shopDisplayField, dateField;
+    private JComboBox<String> timeCombo;
+    private JTextArea noteArea;
+    private List<JCheckBox> serviceChecks;
+    private JPanel shopListPanel;
+
+    public RepairPage() {
+        setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        getVerticalScrollBar().setUnitIncrement(20);
+        setBorder(null);
+
+        JPanel container = new JPanel();
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        container.setBackground(COLOR_BG_GRAY);
+        container.setBorder(new EmptyBorder(30, 60, 30, 60));
+
+        JLabel title = new JLabel("정비소 예약");
+        title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+        title.setForeground(COLOR_TEXT_DARK);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        container.add(title);
+        container.add(Box.createVerticalStrut(25));
+
+        container.add(createShopSection());
+        container.add(Box.createVerticalStrut(25));
+        container.add(createFormSection());
+
+        container.add(Box.createVerticalGlue());
+        setViewportView(container);
+
+        // [이벤트] 탭 전환 시 데이터 갱신 리스너
+        this.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                refreshData();
+            }
+        });
+
+        refreshData();
+        updateFormVisibility();
+    }
+
+    /**
+     * 페이지 데이터 갱신 로직
+     */
+    public void refreshData() {
+        /** [DB 포인트] 정비소 목록 최신화
+         * 1. DAO를 통해 'SELECT * FROM shops' 실행 (또는 위치 기반 필터링)
+         * 2. 기존 shopListPanel의 아이템들을 제거하고 다시 생성
+         */
+        if (shopListPanel != null) {
+            shopListPanel.removeAll();
+            
+            // 더미 데이터 예시 (실제 구현 시 DB 리스트 루프)
+            String[][] shops = {
+                {"1", "정비소 A", "역삼동 123", "1.2km", "4.5"}, 
+                {"2", "정비소 B", "논현동 678", "2.1km", "4.8"}, 
+                {"3", "정비소 C", "서초동 234", "3.5km", "4.3"}, 
+                {"4", "정비소 D", "삼성동 789", "1.8km", "4.6"}
+            };
+
+            for (String[] s : shops) {
+                shopListPanel.add(createShopItem(s[0], s[1], s[2], s[3], s[4]));
+            }
+
+            // 만약 기존에 선택된 정비소가 있다면 UI 강조 유지
+            if (selectedShopId != null) {
+                refreshShopSelection();
+            }
+
+            shopListPanel.revalidate();
+            shopListPanel.repaint();
+        }
+    }
+
+    private JPanel createShopSection() {
+        JPanel card = createBaseCard("📍 근처 정비소");
+        
+        // 정비소 목록이 들어갈 컨테이너 초기화
+        shopListPanel = new JPanel(new GridLayout(0, 2, 15, 15));
+        shopListPanel.setOpaque(false);
+        
+        ((JPanel)card.getComponent(1)).add(shopListPanel);
+        return card;
+    }
+
+    private JPanel createFormSection() {
+        JPanel card = createBaseCard("🔧 예약 정보 입력");
+        JPanel body = (JPanel) card.getComponent(1);
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+
+        // 1. 선택한 정비소 표시
+        shopDisplayField = new JTextField();
+        shopDisplayField.setEditable(false);
+        shopDisplayField.setPreferredSize(new Dimension(0, 35));
+        body.add(createInputGroup("선택한 정비소", shopDisplayField));
+        body.add(Box.createVerticalStrut(15));
+
+        // 2. 예약 날짜 및 시간
+        JPanel grid = new JPanel(new GridLayout(1, 2, 15, 0));
+        grid.setOpaque(false);
+        grid.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        dateField = new JTextField("2026-02-20"); // 예시 날짜
+        timeCombo = new JComboBox<>(new String[]{"시간 선택", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"});
+        
+        grid.add(createInputGroup("📅 예약 날짜", dateField));
+        grid.add(createInputGroup("⏰ 예약 시간", timeCombo));
+        body.add(grid);
+        body.add(Box.createVerticalStrut(15));
+
+        // 3. 정비 서비스 선택
+        JPanel serviceGrid = new JPanel(new GridLayout(2, 3, 0, 5));
+        serviceGrid.setOpaque(false);
+        serviceChecks = new ArrayList<>();
+        String[] services = {"엔진 오일 교환", "타이어 교체", "브레이크 점검", "배터리 점검", "종합 점검", "기타"};
+        for (String s : services) {
+            JCheckBox cb = new JCheckBox(s);
+            cb.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+            cb.setOpaque(false);
+            serviceChecks.add(cb);
+            serviceGrid.add(cb);
+        }
+        body.add(createInputGroup("정비 서비스 (복수 선택 가능)", serviceGrid));
+        body.add(Box.createVerticalStrut(15));
+
+        // 4. 요청사항 입력
+        noteArea = new JTextArea(4, 20);
+        noteArea.setBorder(new LineBorder(COLOR_DIVIDER));
+        JScrollPane noteScroll = new JScrollPane(noteArea);
+        noteScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(createInputGroup("요청사항", noteScroll));
+        body.add(Box.createVerticalStrut(20));
+
+        // 5. 버튼 및 예약 실행 (API/DB 연동)
+        JButton submitBtn = new JButton("예약하기");
+        submitBtn.setBackground(COLOR_PRIMARY);
+        submitBtn.setForeground(Color.WHITE);
+        submitBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        submitBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        submitBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        
+        submitBtn.addActionListener(e -> {
+            /** [API/DB 포인트] 예약 저장 로직
+             * 1. 유효성 검사: if (selectedShopId == null) ...
+             * 2. 서비스 수집: StringBuilder로 체크된 항목 결합 또는 List 생성
+             * 3. DB 연동: 
+             * INSERT INTO reservations (user_id, shop_id, res_date, res_time, services, note) 
+             * VALUES (?, ?, ?, ?, ?, ?)
+             */
+            if (selectedShopId == null) {
+                JOptionPane.showMessageDialog(null, "정비소를 먼저 선택해 주세요.");
+                return;
+            }
+            JOptionPane.showMessageDialog(null, selectedShopName + "에 예약 신청이 완료되었습니다.");
+        });
+        body.add(submitBtn);
+
+        return card;
+    }
+
+    private JPanel createShopItem(String id, String name, String addr, String dist, String rate) {
+        JPanel item = new JPanel(new BorderLayout());
+        item.setBackground(Color.WHITE);
+        item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
+        item.setPreferredSize(new Dimension(0, 80));
+        item.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JLabel info = new JLabel("<html><div style='padding:10px;'><b>"+name+"</b><br><font color='gray' size='3'>"+addr+" · "+dist+"</font><br><font color='#F59E0B'>★ "+rate+"</font></div></html>");
+        item.add(info, BorderLayout.CENTER);
+
+        item.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) { 
+                selectedShopId = id; 
+                selectedShopName = name; 
+                refreshShopSelection();
+                updateFormVisibility(); 
+            }
+        });
+        return item;
+    }
+
+    private void refreshShopSelection() {
+        for (Component c : shopListPanel.getComponents()) {
+            if (c instanceof JPanel) {
+                JPanel item = (JPanel) c;
+                item.setBackground(Color.WHITE);
+                item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
+                // 텍스트 매칭을 통해 현재 선택된 항목 식별
+                if (((JLabel)item.getComponent(0)).getText().contains("<b>"+selectedShopName+"</b>")) {
+                    item.setBackground(COLOR_SELECTED_BG);
+                    item.setBorder(new LineBorder(COLOR_PRIMARY, 2));
+                }
+            }
+        }
+    }
+
+    private void updateFormVisibility() {
+        boolean enabled = (selectedShopId != null);
+        shopDisplayField.setText(selectedShopName.isEmpty() ? " 정비소를 먼저 선택해주세요" : " " + selectedShopName);
+        dateField.setEnabled(enabled);
+        timeCombo.setEnabled(enabled);
+        noteArea.setEnabled(enabled);
+        for (JCheckBox cb : serviceChecks) cb.setEnabled(enabled);
+    }
+
+    private JPanel createInputGroup(String labelText, JComponent component) {
+        JPanel group = new JPanel();
+        group.setLayout(new BoxLayout(group, BoxLayout.Y_AXIS));
+        group.setOpaque(false);
+        group.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        label.setForeground(COLOR_TEXT_LIGHT);
+        label.setBorder(new EmptyBorder(0, 0, 5, 0));
+
+        group.add(label);
+        group.add(component);
+        return group;
+    }
+
+    private JPanel createBaseCard(String titleText) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(Color.WHITE);
+        p.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER, 1), new EmptyBorder(20, 25, 20, 25)));
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JLabel t = new JLabel(titleText);
+        t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        t.setForeground(COLOR_TEXT_DARK);
+        t.setBorder(new EmptyBorder(0, 0, 20, 0));
+        p.add(t, BorderLayout.NORTH);
+
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        p.add(body, BorderLayout.CENTER);
+        
+        return p;
+    }
+}
