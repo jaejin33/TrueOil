@@ -19,6 +19,9 @@ public class StationPage extends JScrollPane {
 	private JPanel gridContainer;
 	private JTextField searchInput;
 
+	private JComboBox<String> fuelTypeCombo;
+	private JComboBox<String> sortCombo;
+
 	public StationPage() {
 
 		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -65,21 +68,44 @@ public class StationPage extends JScrollPane {
 
 	public void refreshData() {
 
+		refreshData(null); // 검색어 없는 경우 기본 호출
+	}
+
+	public void refreshData(String keyword) {
+
 		if (gridContainer != null) {
 			gridContainer.removeAll();
-
-			/** [API/DB POINT] 실시간 유가 데이터 수집
-			 * - 대상: 오피넷(Opinet) 실시간 유가 API
-			 * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
-			 * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
-			 */
 			try {
-				// 예시 좌표 (동의대 KATEC 좌표) + 반경 3000m
+				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
+				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
+				String prodCd = "B027"; // 휘발유 기본
+				switch (selectedFuel) {
+				case "경유":
+					prodCd = "D047";
+					break;
+				case "LPG":
+					prodCd = "K015";
+					break;
+				case "고급휘발유":
+					prodCd = "B034";
+					break;
+				}
+				String sortCode = "1"; // 가격순 기본
+				if ("거리순".equals(selectedSort)) {
+					sortCode = "2";
+				}
+				/** [API/DB POINT] 실시간 유가 데이터 수집
+				 * - 대상: 오피넷(Opinet) 실시간 유가 API
+				 * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
+				 * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
+				 */
 				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(494152, 282437,
-						3000);
+						3000, keyword, prodCd, sortCode);
 
+				// 3. 데이터 정렬 (거리순 or 가격순)
 				for (apiService.ValueStationDto s : stations) {
-					int price = Integer.parseInt(s.getPrice());
+					// 가격 파싱 유틸리티(parsePrice)를 사용하거나 Integer.parseInt 사용
+					int price = parsePrice(s.getPrice());
 					String dist = String.format("%.1fkm", s.getDistance() / 1000.0);
 					gridContainer.add(createStationItem(s.getUniId(), s.getName(), price, dist));
 				}
@@ -92,6 +118,7 @@ public class StationPage extends JScrollPane {
 			gridContainer.revalidate();
 			gridContainer.repaint();
 		}
+
 	}
 
 	private JPanel createMapSection() {
@@ -120,9 +147,27 @@ public class StationPage extends JScrollPane {
 		searchBar.setOpaque(false);
 		searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
-		searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
+		searchInput = new JTextField("주유소 이름을 입력하세요");
 		searchInput.setForeground(COLOR_TEXT_GRAY);
+		searchInput.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
 
+				if (searchInput.getText().trim().equals("주유소 이름을 입력하세요")) {
+					searchInput.setText("");
+					searchInput.setForeground(COLOR_TEXT_DARK); // 입력할 때는 진한 글씨색으로 변경
+				}
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+
+				if (searchInput.getText().trim().isEmpty()) {
+					searchInput.setForeground(COLOR_TEXT_GRAY); // 다시 회색으로 변경
+					searchInput.setText("주유소 이름을 입력하세요");
+				}
+			}
+		});
 		JButton searchBtn = new JButton("검색");
 		searchBtn.setPreferredSize(new Dimension(100, 0));
 		searchBtn.setBackground(COLOR_PRIMARY);
@@ -134,7 +179,13 @@ public class StationPage extends JScrollPane {
 		 * - ActionListener를 등록하여 검색어(searchInput.getText()) 추출
 		 * - 검색어를 기반으로 오피넷 API 재호출 및 refreshData() 실행으로 UI 갱신
 		 */
-		searchBtn.addActionListener(e -> refreshData());
+		searchBtn.addActionListener(e -> {
+			String keyword = searchInput.getText().trim();
+			if (keyword.equals("주유소 이름을 입력하세요")) {
+				keyword = "";
+			}
+			refreshData(keyword);
+		});
 
 		searchBar.add(searchInput, BorderLayout.CENTER);
 		searchBar.add(searchBtn, BorderLayout.EAST);
@@ -144,11 +195,22 @@ public class StationPage extends JScrollPane {
 
 		JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 		filterRow.setOpaque(false);
+
+		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유" });
+		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
+		ActionListener filterListener = e -> {
+			String keyword = searchInput.getText().trim();
+			if (keyword.equals("주유소 이름을 입력하세요"))
+				keyword = ""; // 힌트 텍스트 무시
+			refreshData(keyword);
+		};
+		fuelTypeCombo.addActionListener(filterListener);
+		sortCombo.addActionListener(filterListener);
 		filterRow.add(new JLabel("유종: "));
-		filterRow.add(new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "전기" }));
+		filterRow.add(fuelTypeCombo);
 		filterRow.add(Box.createHorizontalStrut(15));
 		filterRow.add(new JLabel("정렬: "));
-		filterRow.add(new JComboBox<>(new String[] { "가격순", "거리순" }));
+		filterRow.add(sortCombo);
 
 		body.add(filterRow);
 		return card;
@@ -236,5 +298,16 @@ public class StationPage extends JScrollPane {
 		body.setOpaque(false);
 		card.add(body, BorderLayout.CENTER);
 		return card;
+	}
+
+	private int parsePrice(String priceStr) {
+
+		if (priceStr == null || priceStr.trim().isEmpty())
+			return Integer.MAX_VALUE;
+		try {
+			return Integer.parseInt(priceStr.replace(",", ""));
+		} catch (NumberFormatException e) {
+			return Integer.MAX_VALUE; // 가격 정보가 없으면 정렬 시 맨 뒤로 밀리도록 큰 값 반환
+		}
 	}
 }

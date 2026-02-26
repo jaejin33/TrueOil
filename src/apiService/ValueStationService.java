@@ -10,11 +10,26 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.*;
 
 public class ValueStationService {
-
 	public static List<ValueStationDto> getStations(double x, double y, int radius) throws Exception {
 
+		return getStations(x, y, radius, null, null, null);
+	}
+
+	public static List<ValueStationDto> getStations(double x, double y, int radius, String keyword) throws Exception {
+
+		return getStations(x, y, radius, keyword, null, null);
+	}
+
+	public static List<ValueStationDto> getStations(double x, double y, int radius, String keyword, String prodCd,
+			String sortCode) throws Exception {
+		if (prodCd == null || prodCd.trim().isEmpty()) {
+			prodCd = "B027";
+		}
+		if (sortCode == null || sortCode.trim().isEmpty()) {
+			sortCode = "1";
+		}
 		String apiUrl = "https://www.opinet.co.kr/api/aroundAll.do?" + "code=F260206147" + "&out=xml" + "&x=" + x
-				+ "&y=" + y + "&radius=" + radius + "&prodcd=B027" + "&sort=1";
+				+ "&y=" + y + "&radius=" + radius + "&prodcd=" + prodCd + "&sort=" + sortCode;
 
 		URL url = new URL(apiUrl);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -37,7 +52,9 @@ public class ValueStationService {
 			double gx = Double.parseDouble(getTagValue(oil, "GIS_X_COOR"));
 			double gy = Double.parseDouble(getTagValue(oil, "GIS_Y_COOR"));
 
-			stations.add(new ValueStationDto(uniId, name, price, distance, gx, gy));
+			if (keyword == null || keyword.isEmpty() || name.contains(keyword)) {
+				stations.add(new ValueStationDto(uniId, name, price, distance, gx, gy));
+			}
 		}
 
 		return stations;
