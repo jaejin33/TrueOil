@@ -6,6 +6,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
+import apiService.RepairDao;
+import apiService.RepairDto;
 
 /**
  * 정비소 예약 페이지
@@ -68,26 +70,27 @@ public class RepairPage extends JScrollPane {
      * 페이지 데이터 갱신 로직
      */
     public void refreshData() {
-        /** [DB 포인트] 정비소 목록 최신화
-         * 1. DAO를 통해 'SELECT * FROM shops' 실행 (또는 위치 기반 필터링)
-         * 2. 기존 shopListPanel의 아이템들을 제거하고 다시 생성
-         */
         if (shopListPanel != null) {
             shopListPanel.removeAll();
-            
-            // 더미 데이터 예시 (실제 구현 시 DB 리스트 루프)
-            String[][] shops = {
-                {"1", "정비소 A", "역삼동 123", "1.2km", "4.5"}, 
-                {"2", "정비소 B", "논현동 678", "2.1km", "4.8"}, 
-                {"3", "정비소 C", "서초동 234", "3.5km", "4.3"}, 
-                {"4", "정비소 D", "삼성동 789", "1.8km", "4.6"}
-            };
 
-            for (String[] s : shops) {
-                shopListPanel.add(createShopItem(s[0], s[1], s[2], s[3], s[4]));
+            try {
+                RepairDao dao = new RepairDao();
+                // 예시: 부산진구 기준, 내 위치 (35.15, 129.03)
+                List<RepairDto> shops = dao.getNearestShops(35.1417545, 129.0341064, "부산진구", 4);
+
+                for (RepairDto s : shops) {
+                    shopListPanel.add(createShopItem(
+                        s.getName(), 
+                        s.getName(), 
+                        s.getAddress(), 
+                        String.format("%.2f km", s.getDistance()), 
+                        "평점 필요" // 평점은 별도
+                    ));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
-            // 만약 기존에 선택된 정비소가 있다면 UI 강조 유지
             if (selectedShopId != null) {
                 refreshShopSelection();
             }

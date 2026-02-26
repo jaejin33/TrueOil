@@ -17,30 +17,132 @@ public class StationDetailPage extends JScrollPane {
     private static final Color COLOR_BLUE_LIGHT = new Color(59, 130, 246);
     private static final Color COLOR_GRAY_BORDER = new Color(209, 213, 219);
 
-    public StationDetailPage(String stationName) {
-        setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        setBorder(null);
-        getVerticalScrollBar().setUnitIncrement(20);
+	public StationDetailPage(String uniId) {
 
-        JPanel container = new JPanel();
-        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(COLOR_BG_GRAY);
-        container.setBorder(new EmptyBorder(40, 100, 40, 100)); 
+		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		setBorder(null);
+		getVerticalScrollBar().setUnitIncrement(20);
 
-        container.add(createHeader(stationName));
-        container.add(Box.createVerticalStrut(30));
-        container.add(createBasicInfoCard(stationName));
-        container.add(Box.createVerticalStrut(25));
-        container.add(createPriceInfoCard());
-        container.add(Box.createVerticalStrut(25));
-        container.add(createDistanceCostCard());
-        container.add(Box.createVerticalStrut(25));
-        container.add(createMapCard(stationName)); 
-        container.add(Box.createVerticalStrut(60));
+		JPanel container = new JPanel();
+		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+		container.setBackground(COLOR_BG_GRAY);
+		container.setBorder(new EmptyBorder(40, 100, 40, 100));
 
-        setViewportView(container);
-    }
+		try {
+			// ✅ detailById API 호출
+			String apiUrl = "https://www.opinet.co.kr/api/detailById.do?" + "code=F260206147" + "&id=" + uniId
+					+ "&out=xml";
 
+			java.net.URL url = new java.net.URL(apiUrl);
+			java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+
+			java.io.InputStream is = conn.getInputStream();
+			javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+			javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
+			org.w3c.dom.Document doc = builder.parse(is);
+
+			// ✅ 상세정보 파싱
+			String name = getTagValue(doc, "OS_NM");
+			String addr = getTagValue(doc, "NEW_ADR");
+			String tel = getTagValue(doc, "TEL");
+
+			// 유가 정보는 OIL_PRICE 태그 반복문으로 파싱 가능
+			org.w3c.dom.NodeList priceList = doc.getElementsByTagName("OIL_PRICE");
+
+			container.add(createHeader(name));
+			container.add(Box.createVerticalStrut(30));
+			container.add(createBasicInfoCard(name, addr, tel));
+			container.add(Box.createVerticalStrut(25));
+			container.add(createPriceInfoCard(priceList));
+			container.add(Box.createVerticalStrut(25));
+			container.add(createDistanceCostCard());
+			container.add(Box.createVerticalStrut(25));
+			container.add(createMapCard(name));
+			container.add(Box.createVerticalStrut(60));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			container.add(new JLabel("상세 정보를 불러오는 데 실패했습니다."));
+		}
+
+		setViewportView(container);
+	}
+
+	// XML 태그 값 추출 유틸
+	private String getTagValue(org.w3c.dom.Document doc, String tag) {
+
+		org.w3c.dom.NodeList nl = doc.getElementsByTagName(tag);
+		if (nl.getLength() > 0) {
+			return nl.item(0).getTextContent();
+		}
+		return "";
+	}
+
+	// ✅ 주소/전화 표시용
+	private JPanel createBasicInfoCard(String name, String addr, String tel) {
+
+		JPanel card = createBaseCard("🔵 기본 정보");
+		JLabel stationTitle = new JLabel(name, SwingConstants.CENTER);
+		stationTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+		stationTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+		JLabel addrLabel = new JLabel(addr, SwingConstants.CENTER);
+		addrLabel.setForeground(Color.GRAY);
+		addrLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
+		grid.setOpaque(false);
+		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+
+		grid.add(createSubInfoBox("전화번호", tel));
+		grid.add(createSubInfoBox("영업시간", "24시간")); // 필요시 DB 연동
+
+		card.add(stationTitle);
+		card.add(Box.createVerticalStrut(10));
+		card.add(addrLabel);
+		card.add(Box.createVerticalStrut(25));
+		card.add(grid);
+		return card;
+	}
+
+	// ✅ 유종별 가격 표시용
+	private JPanel createPriceInfoCard(org.w3c.dom.NodeList priceList) {
+
+		JPanel card = createBaseCard("💲 유가 정보");
+		JPanel grid = new JPanel(new GridLayout(0, 3, 20, 0));
+		grid.setOpaque(false);
+		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+
+		for (int i = 0; i < priceList.getLength(); i++) {
+			org.w3c.dom.Element oilPrice = (org.w3c.dom.Element) priceList.item(i);
+			String prodcd = oilPrice.getElementsByTagName("PRODCD").item(0).getTextContent();
+			String price = oilPrice.getElementsByTagName("PRICE").item(0).getTextContent();
+			String type = mapProdcd(prodcd); // 코드 → 한글 유종명 변환
+			grid.add(createPriceDetailBox(type, price + "원", ""));
+		}
+		card.add(grid);
+		return card;
+	}
+
+	private String mapProdcd(String code) {
+
+		switch (code) {
+		case "B027":
+			return "휘발유";
+		case "D047":
+			return "경유";
+		case "B034":
+			return "고급휘발유";
+		case "C004":
+			return "등유";
+		case "K015":
+			return "LPG";
+		default:
+			return "기타";
+		}
+
+	}
     private JPanel createMapCard(String name) {
         JPanel card = createBaseCard("지도");
         
