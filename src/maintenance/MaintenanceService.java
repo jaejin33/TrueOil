@@ -142,4 +142,44 @@ public class MaintenanceService {
     public void registInitialStatus(Connection con, int userId, int currentMileage) {
         maintenanceDao.initMaintenanceStatus(con, userId, currentMileage);
     }
+    
+    /**
+     * 소모품 교체 이력을 등록하고 건강도를 재계산하는 핵심 비즈니스 로직
+     * @param history 교체 이력 정보가 담긴 DTO
+     * @return 전체 프로세스 성공 여부
+     */
+    public boolean registerReplacement(MaintenanceHistoryDto history) {
+        Connection con = null;
+        boolean isSuccess = false;
+
+        try {
+            con = pool.getConnection();
+            // [중요] 자동 커밋을 끕니다. (트랜잭션 시작)
+            con.setAutoCommit(false); 
+
+            // 1. DAO의 insertMaintenanceHistory 호출 
+            // (이 안에서 이력 Insert와 상태 수식 Update가 일어납니다.)
+            int result = maintenanceDao.insertMaintenanceHistory(con, history);
+
+            // 2. 두 작업이 모두 정상 처리되었다면 (영향받은 행의 합이 2 이상)
+            if (result >= 2) {
+                con.commit(); // DB에 최종 반영
+                isSuccess = true;
+            } else {
+                con.rollback(); // 하나라도 실패하면 원상복구
+            }
+
+        } catch (Exception e) {
+            if (con != null) {
+                try { con.rollback(); } catch (SQLException se) { se.printStackTrace(); }
+            }
+            e.printStackTrace();
+        } finally {
+            if (con != null) {
+                try { con.setAutoCommit(true); } catch (SQLException e) { e.printStackTrace(); }
+                pool.freeConnection(con);
+            }
+        }
+        return isSuccess;
+    }
 }

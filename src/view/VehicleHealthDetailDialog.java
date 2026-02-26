@@ -2,6 +2,9 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import maintenance.MaintenanceController;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -21,8 +24,11 @@ public class VehicleHealthDetailDialog extends JDialog {
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
     private int updatedLastKm;
+    private int itemId; // 소모품 식별용 ID 추가
+    private String itemName;
+    private MaintenanceController maintenanceController = new MaintenanceController(); // 컨트롤러 연결
 
-    public VehicleHealthDetailDialog(Frame parent, String itemName, int lastKm, int cycle) {
+    public VehicleHealthDetailDialog(Frame parent, int itemId, String itemName, int lastKm, int cycle) {
         super(parent, itemName + " 정보 수정", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
@@ -103,24 +109,31 @@ public class VehicleHealthDetailDialog extends JDialog {
 
         saveBtn.addActionListener(e -> {
             try {
-                updatedLastKm = Integer.parseInt(lastReplaceField.getText());
-                String replaceDate = replaceDateField.getText();
+                // 입력값 추출
+                int mileage = Integer.parseInt(lastReplaceField.getText());
+                String date = replaceDateField.getText().trim();
                 String costText = costField.getText().trim();
                 int cost = costText.isEmpty() ? 0 : Integer.parseInt(costText);
 
-                /* [DB Point] cycle은 기존값을 그대로 사용하거나 필요한 쿼리에 적용
-                 * String sql = "UPDATE maintenance SET last_replace_km = ? WHERE item_name = ?";
-                 * try (Connection conn = DBUtil.getConnection(); 
-                 * PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                 * pstmt.setInt(1, updatedLastKm);
-                 * pstmt.setString(2, itemName);
-                 * pstmt.executeUpdate();
-                 * } catch (SQLException ex) { ex.printStackTrace(); }
-                 */
+                // 유효성 검사 (날짜 포맷 등 간단 체크 가능)
+                if (date.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "교체 날짜를 입력해주세요.");
+                    return;
+                }
 
-                JOptionPane.showMessageDialog(this, itemName + " 정보가 정상적으로 저장되었습니다.", "저장 완료", JOptionPane.INFORMATION_MESSAGE);
-                isUpdated = true;
-                dispose();
+                // [DB 연동] 컨트롤러 호출 
+                // handleMaintenanceReplacement 안에서 이력 저장 + 건강도 재계산이 일어남
+                boolean success = maintenanceController.handleMaintenanceReplacement(
+                    this, itemId, itemName, date, mileage, cost
+                );
+
+                if (success) {
+                    // 성공 시 상태 업데이트 및 창 닫기
+                    this.updatedLastKm = mileage;
+                    this.isUpdated = true;
+                    dispose(); 
+                }
+                
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "주행거리와 비용은 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
             }

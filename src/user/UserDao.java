@@ -145,4 +145,99 @@ public class UserDao {
 	    }
 	    return userId;
 	}
+	
+	/**
+	 * 사용자의 현재 누적 주행거리를 조회합니다.
+	 * VehiclePage 상단 대시보드 및 소모품 건강도 계산의 기준점이 됩니다.
+	 * * @param userId 조회할 사용자의 고유 번호
+	 * @return 현재 누적 주행거리 (km), 조회 실패 시 0
+	 */
+	public int getUserMileage(int userId) {
+	    Connection con = null;
+	    PreparedStatement pstmt = null;
+	    ResultSet rs = null;
+	    int mileage = 0;
+
+	    String sql = "SELECT current_mileage FROM users WHERE user_id = ?";
+
+	    try {
+	        con = pool.getConnection();
+	        pstmt = con.prepareStatement(sql);
+	        pstmt.setInt(1, userId);
+	        rs = pstmt.executeQuery();
+
+	        if (rs.next()) {
+	            mileage = rs.getInt("current_mileage");
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    } finally {
+	        pool.freeConnection(con, pstmt, rs);
+	    }
+	    return mileage;
+	}
+
+	/**
+	 * 사용자의 차량 정보를 상세 조회합니다. (차량번호, 연료타입 등)
+	 * * @param userId 조회할 사용자의 고유 번호
+	 * @return 유저 정보를 담은 UserDto (필요한 필드만 채움)
+	 */
+	public UserDto getUserVehicleInfo(int userId) {
+	    Connection con = null;
+	    PreparedStatement pstmt = null;
+	    ResultSet rs = null;
+	    UserDto dto = null;
+
+	    String sql = "SELECT car_number, fuel_type, current_mileage FROM users WHERE user_id = ?";
+
+	    try {
+	        con = pool.getConnection();
+	        pstmt = con.prepareStatement(sql);
+	        pstmt.setInt(1, userId);
+	        rs = pstmt.executeQuery();
+
+	        if (rs.next()) {
+	            dto = new UserDto();
+	            dto.setCarNumber(rs.getString("car_number"));
+	            dto.setFuelType(rs.getString("fuel_type"));
+	            dto.setCurrentMileage(rs.getInt("current_mileage"));
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    } finally {
+	        pool.freeConnection(con, pstmt, rs);
+	    }
+	    return dto;
+	}
+	
+	/**
+	 * 사용자의 현재 주행거리를 최신화합니다. (주유 기록 등록 시 호출)
+	 * @param con Service에서 관리하는 트랜잭션용 커넥션
+	 * @param userId 사용자 고유 번호
+	 * @param newMileage 새롭게 입력된 누적 주행거리
+	 * @return 업데이트된 행의 수
+	 * @throws SQLException 트랜잭션 롤백 처리를 위해 예외를 상위로 던짐
+	 */
+	public int updateUserMileage(Connection con, int userId, int newMileage) throws SQLException {
+	    PreparedStatement pstmt = null;
+	    int result = 0;
+
+	    String sql = "UPDATE users SET current_mileage = ? WHERE user_id = ?";
+
+	    try {
+	        pstmt = con.prepareStatement(sql);
+	        pstmt.setInt(1, newMileage);
+	        pstmt.setInt(2, userId);
+	        
+	        result = pstmt.executeUpdate();
+	        
+	        if (result > 0) {
+	            System.out.println("[DAO] 유저(" + userId + ")의 주행거리가 " + newMileage + "km로 업데이트되었습니다.");
+	        }
+	    } finally {
+	        // 커넥션은 Service에서 닫으므로 pstmt만 닫습니다.
+	        if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+	    }
+	    return result;
+	}
 }
