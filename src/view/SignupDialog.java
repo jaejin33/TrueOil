@@ -4,6 +4,10 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+
+import user.UserController;
+import user.dto.UserDto;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -138,26 +142,24 @@ public class SignupDialog extends JFrame {
         signupButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
         signupButton.addActionListener(e -> {
-            /**
-             * [DB 연동 포인트 1: 이메일 중복 체크]
-             * SQL: SELECT count(*) FROM users WHERE email = ?
-             * 작업: 입력받은 emailField의 값이 DB에 이미 존재하는지 확인. 
-             * 존재한다면 JOptionPane으로 "이미 가입된 이메일입니다" 알림 후 중단.
-             */
+        	// 1. 데이터 수집 (View의 역할)
+            UserDto userDto = new UserDto();
+            userDto.setEmail(emailField.getText().trim());
+            userDto.setPassword(new String(pwField.getPassword()));
+            userDto.setCarNumber(carNumberField.getText().trim());
+            userDto.setFuelType((String) fuelTypeBox.getSelectedItem());
+            
+            // 주행거리 변환 로직 생략 (유효성 검사는 여기서 하거나 유틸로 분리)
+            int mileage = mileageField.getText().isEmpty() ? 0 : Integer.parseInt(mileageField.getText());
+            userDto.setCurrentMileage(mileage);
 
-            /**
-             * [DB 연동 포인트 2: 회원 및 차량 정보 저장]
-             * SQL 1 (사용자): INSERT INTO users (name, email, password) VALUES (?, ?, ?)
-             * SQL 2 (차량): INSERT INTO car_info (user_email, car_number, fuel_type, mileage) VALUES (?, ?, ?, ?)
-             * 작업: 
-             * 1. pwField와 pwConfirmField 일치 여부 최종 확인.
-             * 2. 비밀번호는 반드시 암호화(Hash)하여 저장 권장.
-             * 3. 두 INSERT 문은 하나의 트랜잭션(Transaction)으로 처리하여 둘 다 성공했을 때만 가입 완료.
-             */
-
-            JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
-            new Login().setVisible(true);
-            dispose();
+            // 2. Controller에게 처리를 맡김 (View는 결과만 받음)
+            UserController controller = new UserController();
+            if (controller.handleSignup(this, userDto)) {
+            	JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
+                new Login().setVisible(true);
+                dispose();
+            }
         });
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));

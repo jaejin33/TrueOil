@@ -2,6 +2,11 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import user.SessionManager;
+import user.UserController;
+import user.dto.UserSessionDto;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -146,16 +151,18 @@ public class Login extends JFrame {
         loginButton.setMaximumSize(new Dimension(320, 45));
 
         loginButton.addActionListener(e -> {
-            // [DB Point] MEMBER 테이블 연동: SELECT pwd FROM member WHERE email = ? 로직 구현 필요
-            String email = emailField.getText().trim();
+        	String email = emailField.getText().trim();
             String password = new String(passwordField.getPassword());
-            
-            // [기능] 입력 검증: emailField 가 공백이거나 password 가 비어있을 시 JOptionPane 경고창 띄우기
-            
-            // [기능] 인증 성공 시: MainPage 생성자에 사용자 닉네임 또는 고유 ID를 인자로 전달하여 로그인 상태 유지
-            
-            new MainPage().setVisible(true);
-            this.dispose(); 
+
+            UserController controller = new UserController();
+            UserSessionDto sessionUser = controller.handleLogin(this, email, password);
+
+            if (sessionUser != null) {
+                // 로그인 성공 시 세션 정보를 메인 화면으로 전달하며 이동
+            	SessionManager.setLoginUser(sessionUser);
+            	new MainPage().setVisible(true);
+                this.dispose(); 
+            }
         });
 
         /* ===== 하단 회원가입 ===== */
