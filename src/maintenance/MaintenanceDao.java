@@ -127,13 +127,21 @@ public class MaintenanceDao {
     }
 
     /**
-     * 회원가입 시 사용자의 초기 소모품 상태 데이터를 생성합니다.
+     * 신규 사용자의 초기 소모품 상태 데이터를 생성합니다.
+     * <p>
+     * maintenance_items 테이블에 등록된 모든 소모품 항목을 참조하여 
+     * 해당 사용자의 초기 건강도(100)와 교체 기준 거리(가입 시 주행거리)를 설정합니다.
+     * </p>
+     *
+     * @param con 상위 서비스로부터 전달받은 트랜잭션용 커넥션
+     * @param userId 신규 가입한 사용자의 고유 번호
+     * @param currentMileage 가입 시점의 차량 누적 주행거리 (last_replace_mileage로 설정)
+     * @throws RuntimeException SQL 예외 발생 시 상위 트랜잭션에서 롤백할 수 있도록 예외를 던짐
      */
     public void initMaintenanceStatus(Connection con, int userId, int currentMileage) {
         PreparedStatement pstmt = null;
 
-        // 가입 시 입력한 주행거리를 마지막 교체 거리로 설정 (입력 안 했으면 0)
-        // 건강도는 100으로 시작합니다.
+        // SELECT 문을 통해 maintenance_items에 정의된 모든 아이템을 해당 유저용으로 복사 삽입
         String sql = "INSERT INTO maintenance_status (user_id, item_id, health_score, last_replace_mileage, custom_cycle_mileage) " +
                      "SELECT ?, item_id, 100, ?, -1 FROM maintenance_items";
 
@@ -141,10 +149,22 @@ public class MaintenanceDao {
             pstmt = con.prepareStatement(sql);
             pstmt.setInt(1, userId);
             pstmt.setInt(2, currentMileage); 
-            pstmt.executeUpdate();
+            
+            int rows = pstmt.executeUpdate();
+            
+            if (rows > 0) {
+                System.out.println("[DAO] 유저 [" + userId + "]를 위한 " + rows + "개의 소모품 항목 생성 완료.");
+            } else {
+                // 이 로그가 찍힌다면 maintenance_items 테이블이 비어있는 것입니다.
+                System.err.println("[경고] maintenance_items 테이블에 데이터가 없어 초기화가 수행되지 않았습니다.");
+            }
+            
         } catch (SQLException e) {
-            System.err.println("소모품 초기화 중 오류: " + e.getMessage());
+            System.err.println("소모품 초기화 중 SQL 오류: " + e.getMessage());
+            // 예외를 다시 던져서 UserService가 실패를 인지하고 rollback하게 함
+            throw new RuntimeException(e); 
         } finally {
+            // 커넥션(con)은 서비스에서 관리하므로 pstmt만 닫음
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
         }
     }
