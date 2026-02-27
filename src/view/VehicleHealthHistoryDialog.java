@@ -21,6 +21,8 @@ public class VehicleHealthHistoryDialog extends JDialog {
     private static final Color COLOR_TEXT_MUTED = new Color(120, 130, 140);
 
     private JPanel listWrapper;
+    
+    private Point initialClick; // 드래그를 위한 포인트 저장
 
     public VehicleHealthHistoryDialog(Frame parent, String itemName) {
         super(parent, itemName + " 교체 이력", true);
@@ -32,6 +34,28 @@ public class VehicleHealthHistoryDialog extends JDialog {
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
+
+        // 드래그 기능 구현
+        background.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+                getComponentAt(initialClick);
+            }
+        });
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+
+                int X = thisX + xMoved;
+                int Y = thisY + yMoved;
+                setLocation(X, Y);
+            }
+        });
 
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
