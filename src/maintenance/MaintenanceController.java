@@ -6,6 +6,9 @@ import user.SessionManager;
 
 import javax.swing.*;
 import java.awt.Component;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 소모품 관리와 관련된 사용자 요청을 제어하는 컨트롤러입니다.
@@ -64,5 +67,27 @@ public class MaintenanceController {
         }
 
         return isSuccess;
+    }
+    
+    public void updateAllCustomCycles(Map<String, JTextField> fieldMap) {
+        int userId = SessionManager.getUserId();
+        MaintenanceDao dao = new MaintenanceDao();
+        
+        try {
+            for (String itemName : fieldMap.keySet()) {
+                int newCycle = Integer.parseInt(fieldMap.get(itemName).getText().trim());
+                dao.updateCustomCycle(userId, itemName, newCycle);
+            }
+        } catch (NumberFormatException e) {
+            throw e; // 다이얼로그에서 팝업을 띄울 수 있게 던짐
+        }
+    }
+    
+    public List<MaintenanceHistoryDto> getHistory(String itemName) {
+    	int userId = SessionManager.getUserId();
+        if (userId == -1) return new ArrayList<>(); // 세션 만료 시 빈 리스트 반환
+        
+        // 서비스 호출
+        return maintenanceService.getHistoryList(userId, itemName);
     }
 }

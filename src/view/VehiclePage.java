@@ -6,6 +6,7 @@ import javax.swing.border.*;
 import fuel.FuelController;
 import fuel.FuelService;
 import fuel.dto.FuelLogDto;
+import fuel.dto.FuelStatsDto;
 import maintenance.MaintenanceService;
 import maintenance.dto.MaintenanceStatusDto;
 import user.SessionManager;
@@ -16,6 +17,7 @@ import java.awt.event.*;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class VehiclePage extends JScrollPane {
 
@@ -407,34 +409,24 @@ public class VehiclePage extends JScrollPane {
     public void refreshStatsData() {
         if (infoGrid == null || chartPanel == null) return;
 
+        // 1. 월 쿼리 생성 (이건 화면 표시용이기도 하니 유지)
         java.util.Calendar cal = java.util.Calendar.getInstance();
         for (int i = 5; i >= 0; i--) {
-            int year = cal.get(java.util.Calendar.YEAR);
-            int month = cal.get(java.util.Calendar.MONTH) + 1;
-            months[i] = month + "월";
-            monthQueries[i] = String.format("%04d-%02d", year, month);
+            months[i] = (cal.get(java.util.Calendar.MONTH) + 1) + "월";
+            monthQueries[i] = String.format("%04d-%02d", cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH) + 1);
             cal.add(java.util.Calendar.MONTH, -1);
         }
 
-        /** [DB 연동 포인트 4 & 5: 월별 통계 데이터 집계 조회] */
-        monthlyExpenses = new int[]{ 250000, 285000, 320000, 305000, 295000, 318000 };
+        // 2. 가공된 데이터 통째로 가져오기
+        FuelStatsDto stats = fuelController.getProcessedStats(monthQueries);
+        this.monthlyExpenses = stats.getMonthlyExpenses(); // 그래프 배열 업데이트
 
-        long total = 0;
-        int max = 0;
-        int min = Integer.MAX_VALUE;
-        for (int exp : monthlyExpenses) {
-            total += exp;
-            if (exp > max) max = exp;
-            if (exp < min) min = exp;
-        }
-        if (min == Integer.MAX_VALUE) min = 0;
-        long avg = (total / 6);
-
+        // 3. UI 갱신 (View의 본업)
         infoGrid.removeAll();
-        infoGrid.add(createInfoCard("평균", String.format("%,d원", avg)));
-        infoGrid.add(createInfoCard("최고", String.format("%,d원", max)));
-        infoGrid.add(createInfoCard("최저", String.format("%,d원", min)));
-        infoGrid.add(createInfoCard("총액", String.format("%,d원", total)));
+        infoGrid.add(createInfoCard("평균", String.format("%,d원", stats.getAvg())));
+        infoGrid.add(createInfoCard("최고", String.format("%,d원", stats.getMax())));
+        infoGrid.add(createInfoCard("최저", String.format("%,d원", stats.getMin())));
+        infoGrid.add(createInfoCard("총액", String.format("%,d원", stats.getTotal())));
 
         chartPanel.repaint(); 
         infoGrid.revalidate();

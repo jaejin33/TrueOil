@@ -2,10 +2,16 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import maintenance.MaintenanceDao;
+import maintenance.dto.MaintenanceHistoryDto;
+import user.SessionManager;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.*;
+import java.util.List;
 
 public class VehicleHealthHistoryDialog extends JDialog {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -54,7 +60,7 @@ public class VehicleHealthHistoryDialog extends JDialog {
         columnHeader.setBackground(new Color(249, 250, 251));
         columnHeader.setMaximumSize(new Dimension(400, 30));
         columnHeader.setBorder(new EmptyBorder(0, 10, 0, 10));
-        String[] headers = {"교체 날짜", "교체 항목", "주행거리", "비용"};
+        String[] headers = {"교체 날짜", "교체 항목", "누적주행거리", "비용"};
         for (String h : headers) {
             JLabel hl = new JLabel(h, SwingConstants.CENTER);
             hl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
@@ -95,41 +101,31 @@ public class VehicleHealthHistoryDialog extends JDialog {
     private void loadHistoryFromDB(String itemName) {
         listWrapper.removeAll();
 
-        /**
-         * [필요한 쿼리 예시]
-         * SELECT replace_date, item_name, last_replace_km, cost 
-         * FROM maintenance_history 
-         * WHERE user_id = ? 
-         * AND (item_name = ? OR ? = '소모품 전체') 
-         * ORDER BY replace_date DESC;
-         */
+        // 1. 유저 ID 가져오기
+        int userId = SessionManager.getUserId();
+        if (userId == -1) return;
 
-        // 임시 샘플 데이터 (항목 이름 추가)
-        listWrapper.add(createHistoryItem("2026-02-10", "엔진오일", "52,000 km", "45,000원"));
-        listWrapper.add(createHistoryItem("2025-08-15", "타이어", "42,000 km", "120,000원"));
+        // 2. DAO를 통해 데이터 조회
+        MaintenanceDao dao = new MaintenanceDao();
+        List<MaintenanceHistoryDto> historyList = dao.getMaintenanceHistory(userId, itemName);
 
-        /*
-        // 실제 연동 코드 구조:
-        try (Connection conn = DBUtil.getConnection()) {
-            String sql = "SELECT replace_date, item_name, last_replace_km, cost FROM maintenance_history " +
-                         "WHERE user_id = ? AND (item_name = ? OR ? = '소모품 전체') ORDER BY replace_date DESC";
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, "USER123"); // 실제 세션 ID
-            pstmt.setString(2, itemName);
-            pstmt.setString(3, itemName);
-            
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                String date = rs.getString("replace_date");
-                String name = rs.getString("item_name");
-                String km = String.format("%,d km", rs.getInt("last_replace_km"));
-                String cost = String.format("%,d원", rs.getInt("cost"));
+        // 3. 리스트 생성
+        if (historyList.isEmpty()) {
+            JLabel emptyLabel = new JLabel("교체 이력이 없습니다.");
+            emptyLabel.setForeground(COLOR_TEXT_MUTED);
+            emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            listWrapper.add(Box.createVerticalStrut(100));
+            listWrapper.add(emptyLabel);
+        } else {
+            for (MaintenanceHistoryDto h : historyList) {
+                String date = h.getReplaceDate();
+                String name = h.getItemName();
+                String km = String.format("%,d km", h.getReplaceMileage());
+                String cost = String.format("%,d원", h.getCost());
+                
                 listWrapper.add(createHistoryItem(date, name, km, cost));
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        */
 
         listWrapper.revalidate();
         listWrapper.repaint();

@@ -2,9 +2,15 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import maintenance.MaintenanceController;
+import maintenance.dto.MaintenanceStatusDto;
+import user.SessionManager;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class VehicleHealthSettingDialog extends JDialog {
@@ -15,6 +21,7 @@ public class VehicleHealthSettingDialog extends JDialog {
 
     private JButton saveBtn, cancelBtn;
     private Map<String, JTextField> cycleFieldMap = new HashMap<>();
+    private MaintenanceController maintenanceController = new MaintenanceController();
 
     public VehicleHealthSettingDialog(Frame parent) {
         super(parent, "권장 주기 설정", true);
@@ -57,13 +64,8 @@ public class VehicleHealthSettingDialog extends JDialog {
         formWrapper.setBackground(COLOR_CARD_BG);
         formWrapper.setOpaque(false);
 
-        /* * [DB POINT 1] 초기 권장 주기 데이터 로드 (SELECT)
-         * - 구현 방법: SELECT 결과를 아래 cycleVal 변수에 할당하세요.
-         */
-        addCycleSection(formWrapper, "엔진 오일", 10000);
-        addCycleSection(formWrapper, "타이어", 50000);
-        addCycleSection(formWrapper, "브레이크 패드", 30000);
-        addCycleSection(formWrapper, "배터리", 60000);
+        //[DB POINT 1] 초기 권장 주기 데이터 로드 (SELECT)
+        loadCurrentSettings(formWrapper);
 
         /* ===== 버튼 영역 ===== */
         saveBtn = new JButton("설정 저장");
@@ -75,11 +77,15 @@ public class VehicleHealthSettingDialog extends JDialog {
         saveBtn.setMaximumSize(new Dimension(250, 50));
         
         saveBtn.addActionListener(e -> {
-            /* * [DB POINT 2] 데이터 업데이트 실행 (UPDATE)
-             * - cycleFieldMap.get("엔진 오일").getText() 처럼 값을 추출하여 DB에 저장하세요.
-             */
-            JOptionPane.showMessageDialog(this, "권장 교체 주기가 저장되었습니다.");
-            dispose();
+            try {
+                /* * [DB POINT 2] 데이터 업데이트 실행 */
+                maintenanceController.updateAllCustomCycles(cycleFieldMap);
+                
+                JOptionPane.showMessageDialog(this, "권장 교체 주기가 저장되었으며 건강도가 재계산되었습니다.");
+                dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "주기는 숫자만 입력 가능합니다.", "입력 오류", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         cancelBtn = new JButton("취소");
@@ -133,5 +139,20 @@ public class VehicleHealthSettingDialog extends JDialog {
         
         sectionPanel.add(inputRow);
         p.add(sectionPanel);
+    }
+    
+    private void loadCurrentSettings(JPanel formWrapper) {
+        int userId = SessionManager.getUserId();
+        // 기존 MaintenanceService의 getHealthDashboard 재사용
+        List<MaintenanceStatusDto> list = new maintenance.MaintenanceService().getHealthDashboard(userId);
+        
+        for (MaintenanceStatusDto dto : list) {
+            // 커스텀 주기가 설정되어 있으면(-1이 아니면) 그 값을, 없으면 기본 주기(cycleMileage)를 표시
+            int displayCycle = (dto.getCustomCycleMileage() == -1) 
+                               ? dto.getCycleMileage() 
+                               : dto.getCustomCycleMileage();
+                               
+            addCycleSection(formWrapper, dto.getItemName(), displayCycle);
+        }
     }
 }
