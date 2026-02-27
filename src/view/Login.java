@@ -26,7 +26,6 @@ public class Login extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
@@ -38,7 +37,6 @@ public class Login extends JFrame {
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
         centerWrapper.setBackground(COLOR_BG_GRAY);
 
-        /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -49,7 +47,6 @@ public class Login extends JFrame {
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
         card.setMaximumSize(new Dimension(360, 520));
 
-        /* ===== 상단 헤더 ===== */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
@@ -75,7 +72,6 @@ public class Login extends JFrame {
         });
         header.add(closeLabel, BorderLayout.EAST);
 
-        /* ===== 로고 영역 ===== */
         JPanel logoPanel = new JPanel();
         logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.Y_AXIS));
         logoPanel.setBackground(Color.WHITE);
@@ -101,13 +97,11 @@ public class Login extends JFrame {
         logoPanel.add(Box.createVerticalStrut(4));
         logoPanel.add(subtitleLabel);
 
-        /* ===== 로그인 제목 ===== */
         JLabel loginTitle = new JLabel("로그인");
         loginTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
         loginTitle.setForeground(COLOR_TEXT_DARK);
         loginTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 입력 폼 ===== */
         JPanel formWrapper = new JPanel();
         formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
         formWrapper.setBackground(Color.WHITE);
@@ -140,7 +134,6 @@ public class Login extends JFrame {
         formWrapper.add(Box.createVerticalStrut(6));
         formWrapper.add(passwordField);
 
-        /* ===== 로그인 버튼 및 로직 ===== */
         JButton loginButton = new JButton("로그인");
         loginButton.setBackground(COLOR_PRIMARY);
         loginButton.setForeground(Color.WHITE);
@@ -151,21 +144,19 @@ public class Login extends JFrame {
         loginButton.setMaximumSize(new Dimension(320, 45));
 
         loginButton.addActionListener(e -> {
-        	String email = emailField.getText().trim();
+            String email = emailField.getText().trim();
             String password = new String(passwordField.getPassword());
 
             UserController controller = new UserController();
             UserSessionDto sessionUser = controller.handleLogin(this, email, password);
 
             if (sessionUser != null) {
-                // 로그인 성공 시 세션 정보를 메인 화면으로 전달하며 이동
-            	SessionManager.setLoginUser(sessionUser);
-            	new MainPage().setVisible(true);
+                SessionManager.setLoginUser(sessionUser);
+                new MainPage().setVisible(true);
                 this.dispose(); 
             }
         });
 
-        /* ===== 하단 회원가입 ===== */
         JPanel signupPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
         signupPanel.setBackground(Color.WHITE);
         signupPanel.setMaximumSize(new Dimension(320, 20));
@@ -182,7 +173,6 @@ public class Login extends JFrame {
         signupLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // [기능] 회원가입 완료 후 로그인 페이지로 자동 리다이렉트 되는 구조 확인
                 new SignupDialog().setVisible(true);
                 dispose();
             }
@@ -199,7 +189,6 @@ public class Login extends JFrame {
         signupPanel.add(signupText);
         signupPanel.add(signupLink);
 
-        /* ===== 최종 조립 ===== */
         card.add(header);
         card.add(Box.createVerticalStrut(10));
         card.add(logoPanel);
@@ -218,7 +207,10 @@ public class Login extends JFrame {
     }
 
     public static void main(String[] args) {
-        // [API Point] 오피넷 API 키 및 DB 연결 상태(JDBC 드라이버 로딩 등)를 체크하는 Pre-Check 로직 필요
         SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }
 }
+
+
+
+
