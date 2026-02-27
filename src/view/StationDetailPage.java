@@ -17,6 +17,8 @@ public class StationDetailPage extends JScrollPane {
 	private static final Color COLOR_BLUE_LIGHT = new Color(59, 130, 246);
 	private static final Color COLOR_GRAY_BORDER = new Color(209, 213, 219);
 
+	private static final int MAX_CARD_WIDTH = 900;
+
 	public StationDetailPage(String uniId) {
 
 		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -26,7 +28,7 @@ public class StationDetailPage extends JScrollPane {
 		JPanel container = new JPanel();
 		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
 		container.setBackground(COLOR_BG_GRAY);
-		container.setBorder(new EmptyBorder(40, 100, 40, 100));
+		container.setBorder(new EmptyBorder(40, 60, 40, 60));
 
 		try {
 			// ✅ [추가] 전국 평균 유가 Map 형태로 불러오기
@@ -97,7 +99,7 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
-		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 90));
 
 		// [DB Point] stations 테이블의 business_hours, phone_number 컬럼 데이터 매핑
 		grid.add(createSubInfoBox("전화번호", tel.isEmpty() ? "정보없음" : tel));
@@ -121,6 +123,7 @@ public class StationDetailPage extends JScrollPane {
 		// [Logic Point] 전국 평균가(다른 테이블 혹은 API 결과)와 비교 연산 수행 후 'compare' 텍스트 생성
 		JPanel priceContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
 		priceContainer.setOpaque(false);
+		priceContainer.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 150));
 
 		for (int i = 0; i < priceList.getLength(); i++) {
 			org.w3c.dom.Element oilPrice = (org.w3c.dom.Element) priceList.item(i);
@@ -151,7 +154,7 @@ public class StationDetailPage extends JScrollPane {
 				}
 			}
 			JPanel priceBox = createPriceDetailBox(type, price + "원", compareText, compareColor);
-			priceBox.setPreferredSize(new Dimension(180, 105));
+			priceBox.setPreferredSize(new Dimension(200, 105));
 			priceContainer.add(priceBox);
 		}
 
@@ -192,7 +195,7 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel mapArea = new JPanel(new GridBagLayout());
 		mapArea.setPreferredSize(new Dimension(0, 300));
-		mapArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
+		mapArea.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 300));
 		mapArea.setBackground(COLOR_MAP_BG);
 		mapArea.setBorder(new LineBorder(COLOR_MAP_BORDER));
 
@@ -202,7 +205,7 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel btnGrid = new JPanel(new GridLayout(1, 2, 15, 0));
 		btnGrid.setOpaque(false);
-		btnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+		btnGrid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 50));
 
 		JButton naviBtn = createStyledButton("네이버 지도에서 보기", COLOR_NAVER_GREEN);
 		JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
@@ -234,10 +237,12 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel p = new JPanel(new BorderLayout());
 		p.setOpaque(false);
-		p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-
-		JLabel title = new JLabel("주유소 상세 정보 (" + name + ")");
-		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 80));
+		JLabel title = new JLabel("<html><div style='line-height:1.2;'>"
+	            + "주유소 상세 정보<br>"
+	            + "<span style='font-size:16px; font-weight:bold; color:#444444;'>(" + name + ")</span>"
+	            + "</div></html>");
+		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
 
 		JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
 		btnPanel.setOpaque(false);
@@ -280,7 +285,7 @@ public class StationDetailPage extends JScrollPane {
 		JPanel card = createBaseCard("🚩 거리 / 예상 이동 비용");
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
-		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 90));
 
 		// [Logic/API Point]
 		// 1. Haversine 공식 등을 사용하여 사용자의 좌표와 주유소 좌표 사이의 직선/이동 거리 계산
@@ -300,6 +305,7 @@ public class StationDetailPage extends JScrollPane {
 		p.setBackground(Color.WHITE);
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT), new EmptyBorder(30, 40, 30, 40)));
 		p.setAlignmentX(Component.CENTER_ALIGNMENT);
+		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, Integer.MAX_VALUE));
 		JLabel t = new JLabel(title, SwingConstants.CENTER);
 		t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 		t.setForeground(COLOR_PRIMARY);
@@ -336,7 +342,7 @@ public class StationDetailPage extends JScrollPane {
 		v.setForeground(COLOR_PRIMARY);
 		JLabel c = new JLabel(compare);
 		c.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-		c.setForeground(COLOR_BLUE_LIGHT);
+		c.setForeground(compareColor);
 		p.add(t);
 		p.add(v);
 		p.add(c);
