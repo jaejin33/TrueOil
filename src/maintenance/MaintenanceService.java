@@ -182,4 +182,16 @@ public class MaintenanceService {
         }
         return isSuccess;
     }
+    
+    /**
+     * 특정 사용자 및 항목의 교체 이력을 가져옵니다.
+     * @param userId 현재 로그인한 유저 ID
+     * @param itemName 필터링할 항목 이름 (또는 '소모품 전체')
+     * @return 교체 이력 리스트
+     */
+    public List<MaintenanceHistoryDto> getHistoryList(int userId, String itemName) {
+        // 현재는 단순 조레이므로 별도의 트랜잭션 처리는 필요 없으나,
+        // 나중에 데이터 가공(예: 날짜 형식 변환 등)이 필요하면 여기서 수행합니다.
+        return maintenanceDao.getMaintenanceHistory(userId, itemName);
+    }
 }

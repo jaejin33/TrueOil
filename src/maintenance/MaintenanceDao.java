@@ -180,4 +180,76 @@ public class MaintenanceDao {
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
         }
     }
+    
+    /**
+     * 사용자의 특정 소모품 커스텀 주기를 업데이트하고 건강도를 재계산합니다.
+     */
+    public void updateCustomCycle(int userId, String itemName, int newCycle) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        
+        // 1. 커스텀 주기 업데이트
+        // 2. 새로운 주기를 바탕으로 건강도(health_score) 재계산
+        String sql = "UPDATE maintenance_status s " +
+                     "JOIN maintenance_items i ON s.item_id = i.item_id " +
+                     "JOIN users u ON s.user_id = u.user_id " +
+                     "SET s.custom_cycle_mileage = ?, " +
+                     "    s.health_score = GREATEST(0, ROUND(100 - ((u.current_mileage - s.last_replace_mileage) / ? * 100))) " +
+                     "WHERE s.user_id = ? AND i.item_name = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, newCycle);
+            pstmt.setInt(2, newCycle);
+            pstmt.setInt(3, userId);
+            pstmt.setString(4, itemName);
+            
+            pstmt.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
+    }
+    
+    /**
+     * 특정 사용자의 교체 이력을 조회합니다. (항목별 필터링 가능)
+     */
+    public List<MaintenanceHistoryDto> getMaintenanceHistory(int userId, String itemName) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        List<MaintenanceHistoryDto> list = new ArrayList<>();
+
+        // '소모품 전체'일 경우 모든 항목을, 아닐 경우 특정 항목만 조회
+        String sql = "SELECT h.*, i.item_name FROM maintenance_history h " +
+                     "JOIN maintenance_items i ON h.item_id = i.item_id " +
+                     "WHERE h.user_id = ? " +
+                     "AND (? = '소모품 전체' OR i.item_name = ?) " +
+                     "ORDER BY h.replace_date DESC";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, itemName);
+            pstmt.setString(3, itemName);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                MaintenanceHistoryDto dto = new MaintenanceHistoryDto();
+                dto.setReplaceDate(rs.getString("replace_date"));
+                dto.setItemName(rs.getString("item_name")); // DTO에 담기 위해 필드 필요
+                dto.setReplaceMileage(rs.getInt("replace_mileage"));
+                dto.setCost(rs.getInt("cost"));
+                list.add(dto);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return list;
+    }
 }

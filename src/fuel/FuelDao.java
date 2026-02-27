@@ -2,7 +2,9 @@ package fuel;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import database.DBConnectionMgr;
 import fuel.dto.FuelLogDto;
@@ -63,5 +65,64 @@ public class FuelDao {
             pool.freeConnection(con, pstmt, rs);
         }
         return list;
+    }
+    
+    /**
+     * 최근 6개월간의 월별 주유비 합계를 조회합니다.
+     */
+    public Map<String, Integer> getMonthlyFuelExpenses(int userId) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        // 결과 저장용 (키: "2026-02", 값: 55000)
+        Map<String, Integer> stats = new HashMap<>();
+
+        // 최근 6개월 데이터를 월별로 그룹화하여 합산
+        String sql = "SELECT DATE_FORMAT(fuel_date, '%Y-%m') AS month, SUM(fuel_price) AS total " +
+                     "FROM fuel_logs " +
+                     "WHERE user_id = ? AND fuel_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) " +
+                     "GROUP BY month " +
+                     "ORDER BY month ASC";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                stats.put(rs.getString("month"), rs.getInt("total"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return stats;
+    }
+    
+    public String getLastFuelDate(int userId) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String lastDate = "0000-00-00"; // 기록이 없을 경우 대비
+
+        String sql = "SELECT MAX(fuel_date) FROM fuel_logs WHERE user_id = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next() && rs.getString(1) != null) {
+                lastDate = rs.getString(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return lastDate;
     }
 }

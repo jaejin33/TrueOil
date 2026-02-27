@@ -3,6 +3,7 @@ package fuel;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import database.DBConnectionMgr;
 import fuel.dto.FuelLogDto;
@@ -23,9 +24,8 @@ public class FuelService {
     }
 
     /**
-     * 주유 기록을 등록하고, 차량 주행거리 갱신 및 소모품 건강도를 일괄 업데이트합니다.
-     * @param log 주유 기록 정보 DTO
-     * @return 트랜잭션 성공 여부
+     * 주유 기록을 등록합니다. 
+     * 최신 날짜인 경우에만 차량 주행거리와 소모품 건강도를 갱신합니다.
      */
     public boolean registerFueling(FuelLogDto log) {
         Connection con = null;
@@ -33,26 +33,33 @@ public class FuelService {
 
         try {
             con = pool.getConnection();
-            // [트랜잭션 시작] 모든 작업이 성공해야만 DB에 반영됨
-            con.setAutoCommit(false);
+            con.setAutoCommit(false); // 트랜잭션 시작
 
-            // 1. 주유 로그 테이블에 기록 저장
+            // 1. 주유 로그 저장 (과거/현재 상관없이 무조건 저장)
             int insertResult = fuelDao.insertFuelLog(con, log);
 
-            // 2. 사용자 테이블(users)의 현재 주행거리(current_mileage) 업데이트
-            int mileageResult = userDao.updateUserMileage(con, log.getUserId(), log.getCurrentMileage());
-
-            // 3. 주행거리 변화에 따른 모든 소모품 건강도(health_score) 재계산
-            // (MaintenanceDao에 작성했던 정밀 수식 업데이트 쿼리 호출)
-            int maintenanceResult = maintenanceDao.updateAllHealthScores(con, log.getUserId(), log.getCurrentMileage());
-
-            // 세 작업이 모두 정상적으로 실행되었는지 확인 (결과값이 0보다 커야 함)
-            if (insertResult > 0 && mileageResult > 0) {
-                con.commit(); // 모든 변경사항 확정
-                isSuccess = true;
-                System.out.println("[Service] 주유 등록 및 건강도 갱신 완료 (User: " + log.getUserId() + ")");
+            // 2. 주행거리 업데이트 판단 (mileage가 -1이면 과거 기록으로 간주)
+            boolean isLatest = log.getCurrentMileage() != -1;
+            
+            if (isLatest) {
+                // 최신 기록일 때만 유저 주행거리와 소모품 건강도 갱신
+                int mileageResult = userDao.updateUserMileage(con, log.getUserId(), log.getCurrentMileage());
+                int maintenanceResult = maintenanceDao.updateAllHealthScores(con, log.getUserId(), log.getCurrentMileage());
+                
+                if (insertResult > 0 && mileageResult > 0) {
+                    con.commit();
+                    isSuccess = true;
+                } else {
+                    con.rollback();
+                }
             } else {
-                con.rollback(); // 하나라도 실패 시 무효화
+                // 과거 기록일 때는 로그만 저장 성공하면 커밋
+                if (insertResult > 0) {
+                    con.commit();
+                    isSuccess = true;
+                } else {
+                    con.rollback();
+                }
             }
 
         } catch (Exception e) {
@@ -70,9 +77,17 @@ public class FuelService {
     }
 
     /**
-     * 최근 주유 기록 리스트를 가져옵니다 (VehiclePage 하단 리스트용)
+     * 사용자의 가장 최신 주유 날짜를 가져옵니다. (AddFuelLogDialog에서 비교용)
      */
+    public String getLastFuelDate(int userId) {
+        return fuelDao.getLastFuelDate(userId);
+    }
+
     public List<FuelLogDto> getRecentFuelLogs(int userId) {
         return fuelDao.getRecentFuelLogs(userId);
+    }
+    
+    public Map<String, Integer> getMonthlyStats(int userId) {
+        return fuelDao.getMonthlyFuelExpenses(userId);
     }
 }
