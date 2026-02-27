@@ -2,6 +2,11 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import user.SessionManager;
+import user.UserController;
+import user.dto.UserDto;
+
 import java.awt.*;
 import java.awt.event.*;
 
@@ -16,6 +21,7 @@ public class MyPage extends JScrollPane {
 
     private JPanel contentPanel;
     private JPanel listPanel;
+    private UserController userController = new UserController();
 
     public MyPage() {
         setBorder(null);
@@ -66,7 +72,14 @@ public class MyPage extends JScrollPane {
 
     private JPanel createProfileBox() {
         JPanel card = createCardFrame("👤 내 정보");
+        UserDto user = userController.getMyProfile();
         
+        // 데이터 추출 (null 방지)
+        String name = (user != null) ? user.getName() : "정보 없음";
+        String email = (user != null) ? user.getEmail() : "-";
+        String carNum = (user != null) ? user.getCarNumber() : "차량 등록 필요";
+        String fuelType = (user != null) ? user.getFuelType() : "미설정"; // 연료 종류
+        String joinDate = (user != null) ? user.getCreatedAt() : "-";
         /** [DB 포인트 1: 사용자 정보 로드] */
         JPanel profileHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         profileHeader.setBackground(Color.WHITE);
@@ -84,11 +97,11 @@ public class MyPage extends JScrollPane {
         infoAndBtnTexts.setLayout(new BoxLayout(infoAndBtnTexts, BoxLayout.Y_AXIS));
         infoAndBtnTexts.setOpaque(false);
         
-        JLabel nameLbl = new JLabel("홍길동"); 
+        JLabel nameLbl = new JLabel(name); 
         nameLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
         nameLbl.setForeground(COLOR_TEXT_DARK);
         
-        JLabel idLbl = new JLabel("회원 ID: USER12345");
+        JLabel idLbl = new JLabel("회원 고유번호: " + SessionManager.getUserId());
         idLbl.setForeground(Color.GRAY);
         idLbl.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 
@@ -117,11 +130,13 @@ public class MyPage extends JScrollPane {
         card.add(profileHeader);
         card.add(Box.createVerticalStrut(25));
 
-        card.add(createDataRow("✉️ 이메일", "hong@example.com"));
+        card.add(createDataRow("✉️ 이메일", email));
         card.add(Box.createVerticalStrut(10));
-        card.add(createDataRow("🚗 차량번호", "12가 3456"));
+        card.add(createDataRow("🚗 차량번호", carNum));
         card.add(Box.createVerticalStrut(10));
-        card.add(createDataRow("📅 가입일", "2025-12-15"));
+        card.add(createDataRow("⛽ 연료 종류", fuelType)); // 새로 추가된 유종 정보
+        card.add(Box.createVerticalStrut(10));
+        card.add(createDataRow("📅 가입일", joinDate));
         card.add(Box.createVerticalStrut(25));
 
         JPanel btns = new JPanel(new GridLayout(1, 2, 15, 0));
@@ -226,6 +241,7 @@ public class MyPage extends JScrollPane {
         return row;
     }
 
+    
     private JPanel createWithdrawalPanel() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setOpaque(false);
@@ -239,6 +255,7 @@ public class MyPage extends JScrollPane {
         withdrawBtn.setContentAreaFilled(false);
         withdrawBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+        // 마우스 호버 시 강조 효과
         withdrawBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) { withdrawBtn.setForeground(COLOR_DANGER); }
@@ -247,6 +264,7 @@ public class MyPage extends JScrollPane {
         });
 
         withdrawBtn.addActionListener(e -> {
+            // 1차 확인 창
             int firstCheck = JOptionPane.showConfirmDialog(
                 this,
                 "정말로 탈퇴하시겠습니까?",
@@ -254,7 +272,9 @@ public class MyPage extends JScrollPane {
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
             );
+            
             if (firstCheck == JOptionPane.YES_OPTION) {
+                // 2차 최종 경고 창 (Red Alert)
                 int secondCheck = JOptionPane.showConfirmDialog(
                     this,
                     "탈퇴 시 모든 데이터가 삭제되며 다시 복구할 수 없습니다.\n정말로 모든 정보를 삭제하고 탈퇴하시겠습니까?",
@@ -264,15 +284,25 @@ public class MyPage extends JScrollPane {
                 );
 
                 if (secondCheck == JOptionPane.YES_OPTION) {
-                    /** * [DB 포인트 8: 회원 탈퇴 처리] 
-                     * - DELETE FROM members WHERE user_id = ?
+                    /** * [실제 DB 연동 처리] 
+                     * UserController를 통해 DB 삭제 및 세션 무효화를 수행합니다.
                      */
-                    JOptionPane.showMessageDialog(this, "탈퇴 처리가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
-                    Window ancestor = SwingUtilities.getWindowAncestor(this);
-                    if (ancestor != null) {
-                        ancestor.dispose();
+                    boolean isWithdrawn = userController.withdrawAccount();
+
+                    if (isWithdrawn) {
+                        JOptionPane.showMessageDialog(this, "탈퇴 처리가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
+                        
+                        // 현재 열려있는 모든 창(MainFrame 등)을 닫음
+                        Window ancestor = SwingUtilities.getWindowAncestor(this);
+                        if (ancestor != null) {
+                            ancestor.dispose();
+                        }
+                        
+                        // 로그인 화면으로 복귀
+                        new Login().setVisible(true); 
+                    } else {
+                        JOptionPane.showMessageDialog(this, "탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
                     }
-                    new Login().setVisible(true); 
                 }
             }
         });

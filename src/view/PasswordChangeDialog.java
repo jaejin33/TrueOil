@@ -4,6 +4,9 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+
+import user.UserController;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -25,6 +28,8 @@ public class PasswordChangeDialog extends JDialog {
     private JPasswordField currentPwF, newPwF, confirmPwF;
     private JLabel pwStatusLabel;
     private JButton saveBtn, cancelBtn;
+    
+    private UserController userController = new UserController();
 
     public PasswordChangeDialog(Frame parent) {
         super(parent, "비밀번호 변경", true);
@@ -135,27 +140,40 @@ public class PasswordChangeDialog extends JDialog {
             String confirmPw = new String(confirmPwF.getPassword());
 
             // 1. [검증] 빈 칸 체크
-            if (currentPw.isEmpty() || newPw.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "비밀번호를 입력해주세요.", "입력 오류", JOptionPane.WARNING_MESSAGE);
+            if (currentPw.isEmpty() || newPw.isEmpty() || confirmPw.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "모든 필드를 입력해주세요.", "입력 오류", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
             // 2. [DB Point 1] 현재 비밀번호 대조
-            // SELECT user_pw FROM members WHERE user_id = ?
-            // DB에서 가져온 비밀번호와 currentPw가 일치하는지 먼저 확인해야 합니다.
+            if (!userController.verifyPassword(currentPw)) {
+                JOptionPane.showMessageDialog(this, "현재 비밀번호가 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+                currentPwF.requestFocus();
+                return;
+            }
 
             // 3. [검증] 새 비밀번호 일치 여부
             if (!newPw.equals(confirmPw)) {
-                JOptionPane.showMessageDialog(this, "새 비밀번호가 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "새 비밀번호 확인이 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+                confirmPwF.requestFocus();
+                return;
+            }
+            
+            // [추가 검증] 현재 비밀번호와 새 비밀번호가 같은 경우 방지
+            if (currentPw.equals(newPw)) {
+                JOptionPane.showMessageDialog(this, "현재 비밀번호와 다른 비밀번호를 입력해주세요.", "알림", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
             // 4. [DB Point 2] 최종 업데이트
-            // UPDATE members SET user_pw = ? WHERE user_id = ?
-            // 업데이트 로직 성공 시 아래 알림창을 띄우고 창을 닫습니다.
+            boolean success = userController.changePassword(newPw);
 
-            JOptionPane.showMessageDialog(this, "비밀번호가 성공적으로 변경되었습니다.");
-            dispose();
+            if (success) {
+                JOptionPane.showMessageDialog(this, "비밀번호가 성공적으로 변경되었습니다.");
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, "비밀번호 변경 중 오류가 발생했습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         cancelBtn = new JButton("취소");

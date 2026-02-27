@@ -163,6 +163,7 @@ public class SignupDialog extends JFrame {
         signupButton.addActionListener(e -> {
             // 1. 데이터 수집 (View의 역할)
             UserDto userDto = new UserDto();
+            userDto.setName(nameField.getText().trim());
             userDto.setEmail(emailField.getText().trim());
             userDto.setPassword(new String(pwField.getPassword()));
             userDto.setCarNumber(carNumberField.getText().trim());
