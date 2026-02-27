@@ -286,30 +286,50 @@ public class UserDao {
      * * @param userId 삭제할 사용자의 고유 번호
      * @return 삭제 성공 시 true, 실패 시 false
      */
-    public boolean deleteUser(int userId) {
-        Connection con = null;
-        PreparedStatement pstmt = null;
-        boolean flag = false;
+	public boolean deleteUser(int userId) {
+	    Connection con = null;
+	    PreparedStatement pstmt = null;
+	    boolean flag = false;
 
-        String sql = "DELETE FROM users WHERE user_id = ?";
+	    // 1. 자식 테이블(정비 상태) 먼저 삭제
+	    String sql1 = "DELETE FROM maintenance_status WHERE user_id = ?";
+	    // 2. 부모 테이블(유저) 삭제
+	    String sql2 = "DELETE FROM users WHERE user_id = ?";
 
-        try {
-            con = pool.getConnection();
-            pstmt = con.prepareStatement(sql);
-            pstmt.setInt(1, userId);
+	    try {
+	        con = pool.getConnection();
+	        // 트랜잭션 시작 (자동 커밋 방지)
+	        con.setAutoCommit(false);
 
-            // 영향받은 행의 수가 1개이면 성공
-            if (pstmt.executeUpdate() == 1) {
-                flag = true;
-            }
-        } catch (Exception e) {
-            System.err.println("[UserDao] deleteUser 실행 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            pool.freeConnection(con, pstmt);
-        }
-        return flag;
-    }
+	        // [작업 1] maintenance_status 삭제
+	        pstmt = con.prepareStatement(sql1);
+	        pstmt.setInt(1, userId);
+	        pstmt.executeUpdate();
+	        pstmt.close(); // 다음 쿼리를 위해 닫기
+
+	        // [작업 2] users 삭제
+	        pstmt = con.prepareStatement(sql2);
+	        pstmt.setInt(1, userId);
+	        int result = pstmt.executeUpdate();
+	        if (result == 1) {
+	            con.commit();
+	            flag = true;
+	        } else {
+	            con.rollback();
+	        }
+	    } catch (Exception e) {
+	        try {
+	            if (con != null) con.rollback(); 
+	        } catch (Exception re) {
+	            re.printStackTrace();
+	        }
+	        System.err.println("[UserDao] deleteUser 실행 중 오류 발생: " + e.getMessage());
+	        e.printStackTrace();
+	    } finally {
+	        pool.freeConnection(con, pstmt);
+	    }
+	    return flag;
+	}
     
     /**
      * 사용자의 이름, 차량번호, 연료 타입, 주행거리를 일괄 업데이트합니다.
