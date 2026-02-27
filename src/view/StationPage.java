@@ -1,209 +1,370 @@
 package view;
 
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.concurrent.Worker;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.util.List;
 
 public class StationPage extends JScrollPane {
-    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
-    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
-    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
-    private static final Color COLOR_TEXT_GRAY = Color.GRAY;
-    private static final Color COLOR_LABEL_DARK = new Color(55, 65, 81);
-    private static final Color COLOR_BORDER_LIGHT = new Color(229, 231, 235);
-    private static final Color COLOR_ITEM_BORDER = new Color(235, 237, 240);
-    private static final Color COLOR_HOVER_BG = new Color(248, 250, 252);
+	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+	private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+	private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+	private static final Color COLOR_TEXT_GRAY = Color.GRAY;
+	private static final Color COLOR_LABEL_DARK = new Color(55, 65, 81);
+	private static final Color COLOR_BORDER_LIGHT = new Color(229, 231, 235);
+	private static final Color COLOR_ITEM_BORDER = new Color(235, 237, 240);
+	private static final Color COLOR_HOVER_BG = new Color(248, 250, 252);
 
-    private JPanel gridContainer; 
-    private JTextField searchInput; 
+	private JPanel gridContainer;
+	private JTextField searchInput;
+	private JComboBox<String> fuelTypeCombo;
+	private JComboBox<String> sortCombo;
 
-    public StationPage() {
-        setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        getVerticalScrollBar().setUnitIncrement(20);
-        setBorder(null);
+	private WebView webView;
+	private WebEngine webEngine;
 
-        JPanel contentPanel = new JPanel(new GridBagLayout());
-        contentPanel.setBackground(COLOR_BG_GRAY);
-        
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = GridBagConstraints.RELATIVE;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(10, 50, 10, 50);
+	public StationPage() {
 
-        JLabel title = new JLabel("주유소 찾기");
-        title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-        gbc.insets = new Insets(30, 50, 20, 50);
-        contentPanel.add(title, gbc);
+		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		getVerticalScrollBar().setUnitIncrement(20);
+		setBorder(null);
 
-        gbc.insets = new Insets(10, 50, 10, 50);
-        contentPanel.add(createMapSection(), gbc);
-        contentPanel.add(createSearchFilterSection(), gbc);
-        contentPanel.add(createStationListSection(), gbc);
+		JPanel contentPanel = new JPanel(new GridBagLayout());
+		contentPanel.setBackground(COLOR_BG_GRAY);
 
-        gbc.weighty = 1.0;
-        contentPanel.add(new JPanel() {{ setOpaque(false); }}, gbc);
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = GridBagConstraints.RELATIVE;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.weightx = 1.0;
+		gbc.insets = new Insets(10, 50, 10, 50);
 
-        setViewportView(contentPanel);
+		JLabel title = new JLabel("주유소 찾기");
+		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+		gbc.insets = new Insets(30, 50, 20, 50);
+		contentPanel.add(title, gbc);
 
-        this.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
-                refreshData();
-            }
-        });
+		gbc.insets = new Insets(10, 50, 10, 50);
+		contentPanel.add(createMapSection(), gbc);
+		contentPanel.add(createSearchFilterSection(), gbc);
+		contentPanel.add(createStationListSection(), gbc);
 
-        refreshData();
-    }
+		gbc.weighty = 1.0;
+		contentPanel.add(new JPanel() {
+			{
+				setOpaque(false);
+			}
+		}, gbc);
 
-    public void refreshData() {
-        if (gridContainer != null) {
-            gridContainer.removeAll();
-            
-            /** [API/DB POINT] 실시간 유가 데이터 수집
-             * - 대상: 오피넷(Opinet) 실시간 유가 API
-             * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
-             * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
-             */
-            for (int i = 0; i < 6; i++) {
-                gridContainer.add(createStationItem("주유소 " + (char)('A'+i), "서울시 강남구 역삼동", 1520 + (i*10), (1.1+i) + "km"));
-            }
-            
-            gridContainer.revalidate();
-            gridContainer.repaint();
-        }
-    }
+		setViewportView(contentPanel);
 
-    private JPanel createMapSection() {
+		this.addHierarchyListener(e -> {
+			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+				refreshData();
+			}
+		});
+
+		refreshData();
+	}
+
+	public void refreshData() {
+
+		refreshData(null);
+	}
+
+	public void refreshData(String keyword) {
+
+		if (gridContainer != null) {
+			gridContainer.removeAll();
+			try {
+				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
+				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
+				String prodCd = "B027";
+				switch (selectedFuel) {
+				case "경유":
+					prodCd = "D047";
+					break;
+				case "LPG":
+					prodCd = "K015";
+					break;
+				case "고급휘발유":
+					prodCd = "B034";
+					break;
+				}
+				String sortCode = "1";
+				if ("거리순".equals(selectedSort)) {
+					sortCode = "2";
+				}
+
+				// API 데이터 호출
+				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(494152, 282437,
+						3000, keyword, prodCd, sortCode);
+
+				// 지도 마커 업데이트
+				if (webEngine != null) {
+					updateMapMarkers(stations);
+				}
+
+				// 리스트 UI 업데이트
+				for (apiService.ValueStationDto s : stations) {
+					int price = parsePrice(s.getPrice());
+					String dist = String.format("%.1fkm", s.getDistance() / 1000.0);
+					gridContainer.add(createStationItem(s.getUniId(), s.getName(), price, dist));
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				gridContainer.add(new JLabel("주유소 정보를 불러오는 데 실패했습니다."));
+			}
+
+			gridContainer.revalidate();
+			gridContainer.repaint();
+		}
+	}
+
+	private JPanel createMapSection() {
         JPanel card = createBaseCard("🗺️ 주변 지도 확인");
-        
-        /** [API/DB POINT] 지도 연동
-         * - Naver/Kakao Static Map API 사용 시: 현재 위치 좌표를 기반으로 지도 이미지 URL 생성 및 로드
-         * - WebView(JCEF) 사용 시: 지도 API HTML 가이드를 통해 현재 위치 마커 표시
-         */
-        JPanel mapBox = new JPanel(new GridBagLayout());
-        mapBox.setBackground(COLOR_BORDER_LIGHT);
-        mapBox.setPreferredSize(new Dimension(0, 320));
-        mapBox.add(new JLabel("📍 지도 데이터 로딩 중..."));
-        
-        ((JPanel)card.getComponent(1)).add(mapBox);
-        return card;
-    }
-
-    private JPanel createSearchFilterSection() {
-        JPanel card = createBaseCard("🔍 주유소 검색 및 필터");
         JPanel body = (JPanel) card.getComponent(1);
 
-        JPanel searchBar = new JPanel(new BorderLayout(10, 0));
-        searchBar.setOpaque(false);
-        searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        
-        searchInput = new JTextField(" 주유소 이름이나 동네를 입력하세요");
-        searchInput.setForeground(COLOR_TEXT_GRAY);
-        
-        JButton searchBtn = new JButton("검색");
-        searchBtn.setPreferredSize(new Dimension(100, 0));
-        searchBtn.setBackground(COLOR_PRIMARY);
-        searchBtn.setForeground(Color.WHITE);
-        searchBtn.setFocusPainted(false);
-        searchBtn.setBorderPainted(false);
+        JFXPanel jfxPanel = new JFXPanel();
+        jfxPanel.setPreferredSize(new Dimension(0, 400));
 
-        /** [기능 포인트] 검색 실행 로직
-         * - ActionListener를 등록하여 검색어(searchInput.getText()) 추출
-         * - 검색어를 기반으로 오피넷 API 재호출 및 refreshData() 실행으로 UI 갱신
-         */
-        searchBtn.addActionListener(e -> refreshData());
+        Platform.runLater(() -> {
+            WebView webView = new WebView();
+            // 네이버 지도 로딩을 위한 필수 설정
+            webView.getEngine().setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
-        searchBar.add(searchInput, BorderLayout.CENTER);
-        searchBar.add(searchBtn, BorderLayout.EAST);
-        
-        body.add(searchBar);
-        body.add(Box.createVerticalStrut(20));
-        
-        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        filterRow.setOpaque(false);
-        filterRow.add(new JLabel("유종: "));
-        filterRow.add(new JComboBox<>(new String[]{"휘발유", "경유", "LPG", "전기"}));
-        filterRow.add(Box.createHorizontalStrut(15));
-        filterRow.add(new JLabel("정렬: "));
-        filterRow.add(new JComboBox<>(new String[]{"가격순", "거리순"}));
-        
-        body.add(filterRow);
-        return card;
-    }
-
-    private JPanel createStationListSection() {
-        JPanel card = createBaseCard("📄 실시간 유가 목록");
-        JPanel body = (JPanel) card.getComponent(1);
-        gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
-        gridContainer.setOpaque(false);
-        body.add(gridContainer);
-        return card;
-    }
-
-    private JPanel createStationItem(String name, String addr, int price, String dist) {
-        JPanel item = new JPanel(new BorderLayout(10, 0));
-        item.setBackground(Color.WHITE);
-        item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
-        item.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        JPanel info = new JPanel(new GridLayout(2, 1, 0, 5));
-        info.setOpaque(false);
-        JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        JLabel subLabel = new JLabel("<html>" + addr + "<br>" + dist + "</html>");
-        subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        subLabel.setForeground(COLOR_TEXT_GRAY);
-        info.add(nameLabel); info.add(subLabel);
-
-        JLabel priceLabel = new JLabel(String.format("%,d원", price), SwingConstants.RIGHT);
-        priceLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        priceLabel.setForeground(COLOR_PRIMARY);
-
-        item.add(info, BorderLayout.CENTER);
-        item.add(priceLabel, BorderLayout.EAST);
-
-        /** [기능 포인트] 상세 페이지 이동 및 즐겨찾기 연동
-         * - 클릭 시 해당 주유소의 고유 ID(또는 명칭)를 StationDetail 페이지로 전달
-         * - [DB 연동]: 상세 페이지 진입 시 해당 주유소가 사용자의 '즐겨찾기' 테이블에 있는지 확인 필요
-         */
-        item.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                Window win = SwingUtilities.getWindowAncestor(item);
-                if (win instanceof MainPage) {
-                    ((MainPage) win).showStationDetail(name);
+            try {
+                // 1. 파일의 실제 URL 경로를 얻어옵니다.
+                // resources 폴더 내의 map.html을 찾습니다.
+                java.net.URL url = getClass().getResource("/map.html");
+                
+                if (url == null) {
+                    // 리소스에서 못 찾을 경우 실제 물리적 경로 시도
+                    java.io.File file = new java.io.File("C:\\Java\\TrueOil\\map.html");
+                    if (file.exists()) {
+                        url = file.toURI().toURL();
+                    }
                 }
+
+                if (url != null) {
+                    // 2. loadContent 대신 load를 사용하여 파일 URL을 직접 호출합니다.
+                    // 이렇게 로드하면 WebView가 로컬 호스트 컨텍스트를 더 잘 인식합니다.
+                    webView.getEngine().load(url.toExternalForm());
+                } else {
+                    webView.getEngine().loadContent("<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3></body></html>", "text/html");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            @Override
-            public void mouseEntered(MouseEvent e) { 
-                item.setBackground(COLOR_HOVER_BG);
-                item.setBorder(new CompoundBorder(new LineBorder(COLOR_PRIMARY), new EmptyBorder(15, 15, 15, 15)));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) { 
-                item.setBackground(Color.WHITE);
-                item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
-            }
+            
+            jfxPanel.setScene(new Scene(webView));
         });
 
-        return item;
-    }
-
-    private JPanel createBaseCard(String titleText) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT, 1, true), new EmptyBorder(25, 25, 25, 25)));
-        JLabel label = new JLabel(titleText);
-        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        label.setForeground(COLOR_LABEL_DARK);
-        label.setBorder(new EmptyBorder(0, 0, 20, 0));
-        card.add(label, BorderLayout.NORTH);
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        card.add(body, BorderLayout.CENTER);
+        body.add(jfxPanel);
         return card;
     }
+
+	private void updateMapMarkers(List<apiService.ValueStationDto> stations) {
+
+		Platform.runLater(() -> {
+			if (webEngine == null)
+				return;
+
+			try {
+				Object result = webEngine.executeScript("typeof isMapLoaded !== 'undefined' && isMapLoaded");
+				if (result instanceof Boolean && (Boolean) result) {
+					webEngine.executeScript("clearMarkers();");
+
+					for (apiService.ValueStationDto s : stations) {
+						/* * [주의] 오피넷 API는 KATECH(TM128) 좌표를 반환하고, 네이버 지도는 WGS84(위도/경도)를 사용합니다.
+						 * 좌표 변환 로직이 완료된 후 아래 주석을 해제하여 마커를 추가하세요.
+						 */
+						// String script = String.format("addMarker(%f, %f, '%s')", s.getLat(),
+						// s.getLng(), s.getName().replace("'", "\\'"));
+						// webEngine.executeScript(script);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("지도가 아직 완전히 로드되지 않아 마커 업데이트를 대기합니다.");
+			}
+		});
+	}
+
+	private JPanel createSearchFilterSection() {
+
+		JPanel card = createBaseCard("🔍 주유소 검색 및 필터");
+		JPanel body = (JPanel) card.getComponent(1);
+
+		JPanel searchBar = new JPanel(new BorderLayout(10, 0));
+		searchBar.setOpaque(false);
+		searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+
+		searchInput = new JTextField("주유소 이름을 입력하세요");
+		searchInput.setForeground(COLOR_TEXT_GRAY);
+		searchInput.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+
+				if (searchInput.getText().trim().equals("주유소 이름을 입력하세요")) {
+					searchInput.setText("");
+					searchInput.setForeground(COLOR_TEXT_DARK);
+				}
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+
+				if (searchInput.getText().trim().isEmpty()) {
+					searchInput.setForeground(COLOR_TEXT_GRAY);
+					searchInput.setText("주유소 이름을 입력하세요");
+				}
+			}
+		});
+
+		JButton searchBtn = new JButton("검색");
+		searchBtn.setPreferredSize(new Dimension(100, 0));
+		searchBtn.setBackground(COLOR_PRIMARY);
+		searchBtn.setForeground(Color.WHITE);
+		searchBtn.setFocusPainted(false);
+		searchBtn.setBorderPainted(false);
+
+		searchBtn.addActionListener(e -> {
+			String keyword = searchInput.getText().trim();
+			if (keyword.equals("주유소 이름을 입력하세요")) {
+				keyword = "";
+			}
+			refreshData(keyword);
+		});
+
+		searchBar.add(searchInput, BorderLayout.CENTER);
+		searchBar.add(searchBtn, BorderLayout.EAST);
+
+		body.add(searchBar);
+		body.add(Box.createVerticalStrut(20));
+
+		JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+		filterRow.setOpaque(false);
+
+		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유" });
+		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
+		ActionListener filterListener = e -> {
+			String keyword = searchInput.getText().trim();
+			if (keyword.equals("주유소 이름을 입력하세요")) {
+				keyword = "";
+			}
+			refreshData(keyword);
+		};
+		fuelTypeCombo.addActionListener(filterListener);
+		sortCombo.addActionListener(filterListener);
+
+		filterRow.add(new JLabel("유종: "));
+		filterRow.add(fuelTypeCombo);
+		filterRow.add(Box.createHorizontalStrut(15));
+		filterRow.add(new JLabel("정렬: "));
+		filterRow.add(sortCombo);
+
+		body.add(filterRow);
+		return card;
+	}
+
+	private JPanel createStationListSection() {
+
+		JPanel card = createBaseCard("📄 실시간 유가 목록");
+		JPanel body = (JPanel) card.getComponent(1);
+		gridContainer = new JPanel(new GridLayout(0, 2, 15, 15));
+		gridContainer.setOpaque(false);
+		body.add(gridContainer);
+		return card;
+	}
+
+	private JPanel createStationItem(String uniId, String name, int price, String dist) {
+
+		JPanel item = new JPanel(new BorderLayout(10, 0));
+		item.setBackground(Color.WHITE);
+		item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
+		item.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+		JPanel info = new JPanel(new GridLayout(2, 1, 0, 5));
+		info.setOpaque(false);
+		JLabel nameLabel = new JLabel(name);
+		nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+		JLabel subLabel = new JLabel("<html>" + "<br>" + dist + "</html>");
+		subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+		subLabel.setForeground(COLOR_TEXT_GRAY);
+		info.add(nameLabel);
+		info.add(subLabel);
+
+		JLabel priceLabel = new JLabel(String.format("%,d원", price), SwingConstants.RIGHT);
+		priceLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		priceLabel.setForeground(COLOR_PRIMARY);
+
+		item.add(info, BorderLayout.CENTER);
+		item.add(priceLabel, BorderLayout.EAST);
+
+		item.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+				Window win = SwingUtilities.getWindowAncestor(item);
+				if (win instanceof MainPage) {
+					((MainPage) win).showStationDetail(uniId);
+				}
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+
+				item.setBackground(COLOR_HOVER_BG);
+				item.setBorder(new CompoundBorder(new LineBorder(COLOR_PRIMARY), new EmptyBorder(15, 15, 15, 15)));
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+
+				item.setBackground(Color.WHITE);
+				item.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 15, 15, 15)));
+			}
+		});
+
+		return item;
+	}
+
+	private JPanel createBaseCard(String titleText) {
+
+		JPanel card = new JPanel(new BorderLayout());
+		card.setBackground(Color.WHITE);
+		card.setBorder(
+				new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT, 1, true), new EmptyBorder(25, 25, 25, 25)));
+		JLabel label = new JLabel(titleText);
+		label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		label.setForeground(COLOR_LABEL_DARK);
+		label.setBorder(new EmptyBorder(0, 0, 20, 0));
+		card.add(label, BorderLayout.NORTH);
+		JPanel body = new JPanel();
+		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+		body.setOpaque(false);
+		card.add(body, BorderLayout.CENTER);
+		return card;
+	}
+
+	private int parsePrice(String priceStr) {
+
+		if (priceStr == null || priceStr.trim().isEmpty())
+			return Integer.MAX_VALUE;
+		try {
+			return Integer.parseInt(priceStr.replace(",", ""));
+		} catch (NumberFormatException e) {
+			return Integer.MAX_VALUE;
+		}
+	}
 }

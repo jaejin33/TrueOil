@@ -2,6 +2,15 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import fuel.FuelController;
+import fuel.FuelService;
+import fuel.dto.FuelLogDto;
+import maintenance.MaintenanceService;
+import maintenance.dto.MaintenanceStatusDto;
+import user.SessionManager;
+import user.UserDao;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
@@ -31,6 +40,9 @@ public class VehiclePage extends JScrollPane {
     private int[] monthlyExpenses = {0, 0, 0, 0, 0, 0}; 
     private String[] months = new String[6];
     private String[] monthQueries = new String[6];
+    private MaintenanceService maintenanceService = new MaintenanceService();
+    private UserDao userDao = new UserDao();
+    private FuelController fuelController = new FuelController();
 
     public VehiclePage() {
         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -135,28 +147,61 @@ public class VehiclePage extends JScrollPane {
         return card;
     }
 
+    /**
+     * DB로부터 사용자의 최신 주행거리와 소모품 건강도 데이터를 가져와 화면을 갱신합니다.
+     */
     public void refreshHealthData() {
+        // 1. 컴포넌트 유효성 검사 (초기화 전 호출 방지)
         if (healthGrid == null || mLabel == null) return;
 
-        /** [DB 연동 포인트 1: 총 주행거리 조회] */
-        currentTotalMileage = 52340; 
+        // 2. 세션 매니저를 통한 현재 로그인 사용자 식별
+        int userId = SessionManager.getUserId();
+        if (userId == -1) {
+            System.err.println("[오류] 로그인 세션 정보가 없습니다.");
+            return; 
+        }
 
+        // 3. 데이터 로딩 (UserDao & MaintenanceService 활용)
+        // 현재 총 주행거리 조회
+        this.currentTotalMileage = userDao.getUserMileage(userId);
+        
+        // 소모품별 상세 상태 리스트 조회
+        List<MaintenanceStatusDto> statusList = maintenanceService.getHealthDashboard(userId);
+
+        // 4. UI 갱신 시작
+        // 기존에 붙어있던 아이템 카드들을 모두 제거
+        healthGrid.removeAll();
+
+        // 상단 주행거리 라벨 업데이트
         mLabel.setText("<html><font color='gray' size='4'>현재 총 주행거리</font><br><b style='font-size:18pt; color:#1e293b;'>" 
                         + String.format("%,d", currentTotalMileage) + " km</b></html>");
 
-        healthGrid.removeAll();
+        // 5. 소모품 리스트 동적 생성 (그리드에 카드 추가)
+        if (statusList != null && !statusList.isEmpty()) {
+            for (MaintenanceStatusDto item : statusList) {
+                // DB 데이터(DTO)를 UI 컴포넌트(JPanel 카드)로 변환하여 추가
+                // createHealthItem(아이템명, 마지막교체거리, 교체주기)
+                healthGrid.add(createHealthItem(
+                	item.getItemId(),
+                    item.getItemName(), 
+                    item.getLastReplaceMileage(), 
+                    item.getCycleMileage()
+                ));
+            }
+        } else {
+            // 소모품 데이터가 아예 없는 경우 (비정상 가입 등)
+            JLabel emptyLabel = new JLabel("등록된 소모품 데이터가 없습니다.");
+            emptyLabel.setForeground(COLOR_TEXT_MUTED);
+            healthGrid.add(emptyLabel);
+        }
 
-        /** [DB 연동 포인트 2: 소모품 현황 리스트 조회] */
-        healthGrid.add(createHealthItem("엔진 오일", 48000, 10000));
-        healthGrid.add(createHealthItem("타이어", 20000, 50000));
-        healthGrid.add(createHealthItem("브레이크 패드", 45000, 30000));
-        healthGrid.add(createHealthItem("배터리", 10000, 60000));
-
+        // 6. Swing 화면 새로고침 (반드시 호출해야 변경사항이 보임)
         healthGrid.revalidate();
         healthGrid.repaint();
+        
+        System.out.println("[대시보드] 유저 ID " + userId + "의 데이터를 성공적으로 불러왔습니다.");
     }
-
-    private JPanel createHealthItem(String name, int lastKm, int cycle) {
+    private JPanel createHealthItem(int itemId, String name, int lastKm, int cycle) {
         int driven = currentTotalMileage - lastKm;
         int percent = (int) (((double) (cycle - driven) / cycle) * 100);
         percent = Math.max(0, Math.min(100, percent));
@@ -174,7 +219,7 @@ public class VehiclePage extends JScrollPane {
             @Override
             public void mouseClicked(MouseEvent e) {
                 Window parentWindow = SwingUtilities.getWindowAncestor(VehiclePage.this);
-                VehicleHealthDetailDialog dialog = new VehicleHealthDetailDialog((Frame) parentWindow, name, lastKm, cycle);
+                VehicleHealthDetailDialog dialog = new VehicleHealthDetailDialog((Frame) parentWindow, itemId, name, lastKm, cycle);
                 dialog.setVisible(true);
                 if (dialog.isUpdated()) refreshAllData(); 
             }
@@ -223,7 +268,7 @@ public class VehiclePage extends JScrollPane {
         addBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         addBtn.addActionListener(e -> {
             Window parentWindow = SwingUtilities.getWindowAncestor(this);
-            AddStationDialog addPage = new AddStationDialog((Frame) parentWindow);
+            AddFuelLogDialog addPage = new AddFuelLogDialog((Frame) parentWindow);
             addPage.setVisible(true);
             if (addPage.isUpdated()) refreshAllData(); 
         });
@@ -237,14 +282,40 @@ public class VehiclePage extends JScrollPane {
 
     public void loadFuelData() {
         if (fuelGridContainer == null) return;
+        
+        // 기존 UI 초기화
         fuelGridContainer.removeAll();
 
+        // 세션에서 유저 ID 가져오기
+        int userId = SessionManager.getUserId();
+        if (userId == -1) return;
+
         /** [DB 연동 포인트 3: 주유 이력 조회] */
-        String[][] history = { { "2026-01-25", "주유소 A", "45,000원", "30L" }, { "2026-01-18", "주유소 B", "40,000원", "26L" },
-        { "2026-01-31", "주유소 C", "50,000원", "40L" }};
-        for (String[] h : history) {
-            fuelGridContainer.add(createFuelItem(h[0], h[1], h[2], h[3]));
+        // 최신 4개 혹은 6개 정도의 주유 기록을 가져옵니다.
+        List<FuelLogDto> fuelList = fuelController.getRecentHistory(userId);
+
+        if (fuelList != null && !fuelList.isEmpty()) {
+            for (fuel.dto.FuelLogDto log : fuelList) {
+                // 가격 포맷 (예: 50,000원)
+                String priceStr = String.format("%,d원", log.getFuelPrice());
+                // 리터 포맷 (예: 35.5L)
+                String literStr = String.format("%.1fL", log.getFuelAmount());
+                
+                // UI 아이템 생성 및 추가
+                fuelGridContainer.add(createFuelItem(
+                    log.getFuelDate(), 
+                    log.getStationName(), 
+                    priceStr, 
+                    literStr
+                ));
+            }
+        } else {
+            // 데이터가 없을 때 표시
+            JLabel emptyLabel = new JLabel("주유 기록이 없습니다.");
+            emptyLabel.setForeground(COLOR_TEXT_MUTED);
+            fuelGridContainer.add(emptyLabel);
         }
+
         fuelGridContainer.revalidate();
         fuelGridContainer.repaint();
     }

@@ -6,6 +6,16 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Java/mysql-connector-j-8.0.32.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.base.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.controls.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.fxml.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.graphics.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.media.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.swing.jar"/>
+	<classpathentry kind="lib" path="lib/javafx.web.jar"/>
+	<classpathentry kind="lib" path="lib/javafx-swt.jar"/>
+	<classpathentry kind="lib" path="lib/jcommon-1.0.24.jar"/>
+	<classpathentry kind="lib" path="lib/jfreechart-1.5.3.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-j-8.0.33.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

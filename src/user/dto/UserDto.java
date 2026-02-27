@@ -1,14 +1,12 @@
 package user.dto;
 
-import java.time.LocalDateTime;
-
 public class UserDto {
 	
     private int userId;
     private String email;
     private String password;
+    private String carNumber;
     private String fuelType;
-    private double efficiency;
     private int currentMileage;
     private String profileImg;
     private String createdAt;
@@ -36,11 +34,11 @@ public class UserDto {
 	public void setFuelType(String fuelType) {
 		this.fuelType = fuelType;
 	}
-	public double getEfficiency() {
-		return efficiency;
+	public String getCarNumber() {
+		return carNumber;
 	}
-	public void setEfficiency(double efficiency) {
-		this.efficiency = efficiency;
+	public void setCarNumber(String carNumber) {
+		this.carNumber = carNumber;
 	}
 	public int getCurrentMileage() {
 		return currentMileage;

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>네이버 지도 - TrueOil</title>
+    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+        }
+        #map { 
+            width: 100%; 
+            height: 100vh; 
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        try {
+            // 지도 옵션 설정 (초기 중심점: 네이버 본사 근처)
+            var mapOptions = {
+                center: new naver.maps.LatLng(37.3595704, 127.105399),
+                zoom: 13,
+                zoomControl: true,
+                zoomControlOptions: {
+                    position: naver.maps.Position.TOP_RIGHT
+                }
+            };
+
+            // 지도 생성
+            var map = new naver.maps.Map('map', mapOptions);
+
+            // 중심 마커 추가 (내 위치 예시)
+            var marker = new naver.maps.Marker({
+                position: new naver.maps.LatLng(37.3595704, 127.105399),
+                map: map,
+                title: '현재 위치'
+            });
+
+            // 주변 주유소 예시 데이터
+            var stations = [
+                { name: 'GS칼텍스 역삼점', lat: 37.360, lng: 127.110, price: 1520 },
+                { name: 'SK 강남점', lat: 37.355, lng: 127.100, price: 1530 },
+                { name: 'S-OIL 삼성점', lat: 37.365, lng: 127.095, price: 1510 }
+            ];
+
+            // 주유소 마커 추가 로직
+            stations.forEach(function(station) {
+                var stationMarker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(station.lat, station.lng),
+                    map: map,
+                    title: station.name,
+                    icon: {
+                        content: '<div style="background:#2563eb;color:white;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:bold;box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + station.price + '원</div>',
+                        anchor: new naver.maps.Point(30, 30)
+                    }
+                });
+
+                // 마커 클릭 시 정보창 생성
+                var infowindow = new naver.maps.InfoWindow({
+                    content: '<div style="padding:10px;min-width:150px;"><strong>' + station.name + '</strong><br>가격: ' + station.price + '원/L</div>'
+                });
+
+                naver.maps.Event.addListener(stationMarker, 'click', function() {
+                    if (infowindow.getMap()) {
+                        infowindow.close();
+                    } else {
+                        infowindow.open(map, stationMarker);
+                    }
+                });
+            });
+
+            console.log('네이버 지도 로드 및 마커 표시 완료');
+            
+        } catch(e) {
+            console.error('지도 초기화 오류:', e);
+        }
+    </script>
+</body>
+</html>

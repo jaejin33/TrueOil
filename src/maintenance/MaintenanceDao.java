@@ -21,6 +21,7 @@ public class MaintenanceDao {
     
     /**
      * 특정 사용자의 모든 소모품 건강도 상태를 조회합니다.
+     * 마스터 테이블(maintenance_items)과 조인하여 아이템 이름과 기준 교체 주기를 함께 가져옵니다.
      */
     public List<MaintenanceStatusDto> getMaintenanceStatusList(int userId) {
         Connection con = null;
@@ -28,7 +29,8 @@ public class MaintenanceDao {
         ResultSet rs = null;
         List<MaintenanceStatusDto> list = new ArrayList<>();
 
-        String sql = "SELECT s.*, i.item_name FROM maintenance_status s " +
+        //i.cycle_mileage 컬럼을 SELECT 절에 추가했습니다.
+        String sql = "SELECT s.*, i.item_name, i.cycle_mileage FROM maintenance_status s " +
                      "JOIN maintenance_items i ON s.item_id = i.item_id " +
                      "WHERE s.user_id = ?";
 
@@ -42,10 +44,13 @@ public class MaintenanceDao {
                 MaintenanceStatusDto dto = new MaintenanceStatusDto();
                 dto.setmId(rs.getInt("m_id"));
                 dto.setItemId(rs.getInt("item_id"));
+                dto.setUserId(rs.getInt("user_id")); // 명시적으로 유저 ID 설정
                 dto.setItemName(rs.getString("item_name"));
+                dto.setCycleMileage(rs.getInt("cycle_mileage"));
                 dto.setHealthScore(rs.getInt("health_score"));
                 dto.setCustomCycleMileage(rs.getInt("custom_cycle_mileage"));
                 dto.setLastReplaceMileage(rs.getInt("last_replace_mileage"));
+                
                 list.add(dto);
             }
         } catch (Exception e) {
@@ -96,12 +101,18 @@ public class MaintenanceDao {
         // 1. 교체 이력 추가 (History Table)
         String insertSql = "INSERT INTO maintenance_history (user_id, item_id, replace_date, replace_mileage, cost) VALUES (?, ?, ?, ?, ?)";
         
-        // 2. 상태 테이블 리셋 (Status Table) - 건강도를 100으로, 마지막 교체 거리를 현재 거리를 업데이트
-        String updateSql = "UPDATE maintenance_status SET health_score = 100, last_replace_mileage = ? " +
-                           "WHERE user_id = ? AND item_id = ?";
+        // 2. 상태 테이블 리셋 (단순 100점이 아닌, 현재 차량 주행거리에 맞춰 재계산)
+        // users 테이블의 current_mileage를 가져와서 (현재거리 - 교체거리)를 계산합니다.
+        String updateSql = "UPDATE maintenance_status s " +
+                           "JOIN maintenance_items i ON s.item_id = i.item_id " +
+                           "JOIN users u ON s.user_id = u.user_id " +
+                           "SET s.last_replace_mileage = ?, " +
+                           "    s.health_score = GREATEST(0, ROUND(100 - ((u.current_mileage - ?) / " +
+                           "    IF(s.custom_cycle_mileage = -1, i.cycle_mileage, s.custom_cycle_mileage) * 100))) " +
+                           "WHERE s.user_id = ? AND s.item_id = ?";
 
         try {
-            // 이력 추가 실행
+            // 1. 이력 추가
             pstmt1 = con.prepareStatement(insertSql);
             pstmt1.setInt(1, history.getUserId());
             pstmt1.setInt(2, history.getItemId());
@@ -110,11 +121,12 @@ public class MaintenanceDao {
             pstmt1.setInt(5, history.getCost());      
             result += pstmt1.executeUpdate();
 
-            // 상태 리셋 실행
+            // 2. 상태 재계산 업데이트
             pstmt2 = con.prepareStatement(updateSql);
-            pstmt2.setInt(1, history.getReplaceMileage());
-            pstmt2.setInt(2, history.getUserId());
-            pstmt2.setInt(3, history.getItemId());
+            pstmt2.setInt(1, history.getReplaceMileage()); // last_replace_mileage 업데이트 값
+            pstmt2.setInt(2, history.getReplaceMileage()); // 건강도 계산에 쓰일 값
+            pstmt2.setInt(3, history.getUserId());
+            pstmt2.setInt(4, history.getItemId());
             result += pstmt2.executeUpdate();
 
         } catch (SQLException e) {
@@ -123,17 +135,25 @@ public class MaintenanceDao {
             if (pstmt1 != null) try { pstmt1.close(); } catch (SQLException e) {}
             if (pstmt2 != null) try { pstmt2.close(); } catch (SQLException e) {}
         }
-        return result; // 두 쿼리가 모두 성공하면 2를 반환
+        return result;
     }
 
     /**
-     * 회원가입 시 사용자의 초기 소모품 상태 데이터를 생성합니다.
+     * 신규 사용자의 초기 소모품 상태 데이터를 생성합니다.
+     * <p>
+     * maintenance_items 테이블에 등록된 모든 소모품 항목을 참조하여 
+     * 해당 사용자의 초기 건강도(100)와 교체 기준 거리(가입 시 주행거리)를 설정합니다.
+     * </p>
+     *
+     * @param con 상위 서비스로부터 전달받은 트랜잭션용 커넥션
+     * @param userId 신규 가입한 사용자의 고유 번호
+     * @param currentMileage 가입 시점의 차량 누적 주행거리 (last_replace_mileage로 설정)
+     * @throws RuntimeException SQL 예외 발생 시 상위 트랜잭션에서 롤백할 수 있도록 예외를 던짐
      */
     public void initMaintenanceStatus(Connection con, int userId, int currentMileage) {
         PreparedStatement pstmt = null;
 
-        // 가입 시 입력한 주행거리를 마지막 교체 거리로 설정 (입력 안 했으면 0)
-        // 건강도는 100으로 시작합니다.
+        // SELECT 문을 통해 maintenance_items에 정의된 모든 아이템을 해당 유저용으로 복사 삽입
         String sql = "INSERT INTO maintenance_status (user_id, item_id, health_score, last_replace_mileage, custom_cycle_mileage) " +
                      "SELECT ?, item_id, 100, ?, -1 FROM maintenance_items";
 
@@ -141,10 +161,22 @@ public class MaintenanceDao {
             pstmt = con.prepareStatement(sql);
             pstmt.setInt(1, userId);
             pstmt.setInt(2, currentMileage); 
-            pstmt.executeUpdate();
+            
+            int rows = pstmt.executeUpdate();
+            
+            if (rows > 0) {
+                System.out.println("[DAO] 유저 [" + userId + "]를 위한 " + rows + "개의 소모품 항목 생성 완료.");
+            } else {
+                // 이 로그가 찍힌다면 maintenance_items 테이블이 비어있는 것입니다.
+                System.err.println("[경고] maintenance_items 테이블에 데이터가 없어 초기화가 수행되지 않았습니다.");
+            }
+            
         } catch (SQLException e) {
-            System.err.println("소모품 초기화 중 오류: " + e.getMessage());
+            System.err.println("소모품 초기화 중 SQL 오류: " + e.getMessage());
+            // 예외를 다시 던져서 UserService가 실패를 인지하고 rollback하게 함
+            throw new RuntimeException(e); 
         } finally {
+            // 커넥션(con)은 서비스에서 관리하므로 pstmt만 닫음
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
         }
     }
