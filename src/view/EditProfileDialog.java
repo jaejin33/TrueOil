@@ -183,7 +183,7 @@ public class EditProfileDialog extends JDialog {
                 boolean success = userController.updateProfile(updateDto);
 
                 if (success) {
-                    JOptionPane.showMessageDialog(this, "성금적으로 수정되었습니다.");
+                    JOptionPane.showMessageDialog(this, "성공적으로 수정되었습니다.");
                     dispose();
                 } else {
                     JOptionPane.showMessageDialog(this, "수정에 실패했습니다. 다시 시도해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
