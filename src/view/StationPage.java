@@ -1,9 +1,17 @@
 package view;
 
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.concurrent.Worker;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.util.List;
 
 public class StationPage extends JScrollPane {
@@ -18,9 +26,32 @@ public class StationPage extends JScrollPane {
 
 	private JPanel gridContainer;
 	private JTextField searchInput;
-
 	private JComboBox<String> fuelTypeCombo;
 	private JComboBox<String> sortCombo;
+
+	private WebView webView;
+	private WebEngine webEngine;
+
+	private double currentX = 494152;
+	private double currentY = 282437;
+	private JavaConnector myConnector = new JavaConnector();
+
+	public class JavaConnector {
+		public void searchStations(double x, double y) {
+
+			System.out.println("✅ 지도가 이동했습니다! KATECH 좌표: X=" + x + ", Y=" + y);
+			currentX = x;
+			currentY = y;
+
+			// UI 업데이트는 반드시 Swing 쓰레드에서 처리해야 안전합니다.
+			SwingUtilities.invokeLater(() -> {
+				String keyword = searchInput != null ? searchInput.getText().trim() : "";
+				if (keyword.equals("주유소 이름을 입력하세요"))
+					keyword = "";
+				refreshData(keyword);
+			});
+		}
+	}
 
 	public StationPage() {
 
@@ -68,7 +99,7 @@ public class StationPage extends JScrollPane {
 
 	public void refreshData() {
 
-		refreshData(null); // 검색어 없는 경우 기본 호출
+		refreshData(null);
 	}
 
 	public void refreshData(String keyword) {
@@ -78,7 +109,7 @@ public class StationPage extends JScrollPane {
 			try {
 				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
 				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
-				String prodCd = "B027"; // 휘발유 기본
+				String prodCd = "B027";
 				switch (selectedFuel) {
 				case "경유":
 					prodCd = "D047";
@@ -90,21 +121,22 @@ public class StationPage extends JScrollPane {
 					prodCd = "B034";
 					break;
 				}
-				String sortCode = "1"; // 가격순 기본
+				String sortCode = "1";
 				if ("거리순".equals(selectedSort)) {
 					sortCode = "2";
 				}
-				/** [API/DB POINT] 실시간 유가 데이터 수집
-				 * - 대상: 오피넷(Opinet) 실시간 유가 API
-				 * - 로직: 현재 위치(좌표) 혹은 검색된 지역 코드를 파라미터로 전달하여 JSON 데이터 응답 수신
-				 * - 연동: 수신된 리스트를 루프 돌며 createStationItem에 값(이름, 주소, 가격, 거리) 전달
-				 */
-				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(494152, 282437,
-						3000, keyword, prodCd, sortCode);
 
-				// 3. 데이터 정렬 (거리순 or 가격순)
+				// API 데이터 호출
+				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(currentX,
+						currentY, 3000, keyword, prodCd, sortCode);
+
+				// 지도 마커 업데이트
+				if (webEngine != null) {
+					updateMapMarkers(stations);
+				}
+
+				// 리스트 UI 업데이트
 				for (apiService.ValueStationDto s : stations) {
-					// 가격 파싱 유틸리티(parsePrice)를 사용하거나 Integer.parseInt 사용
 					int price = parsePrice(s.getPrice());
 					String dist = String.format("%.1fkm", s.getDistance() / 1000.0);
 					gridContainer.add(createStationItem(s.getUniId(), s.getName(), price, dist));
@@ -118,24 +150,99 @@ public class StationPage extends JScrollPane {
 			gridContainer.revalidate();
 			gridContainer.repaint();
 		}
-
 	}
 
 	private JPanel createMapSection() {
 
 		JPanel card = createBaseCard("🗺️ 주변 지도 확인");
+		JPanel body = (JPanel) card.getComponent(1);
 
-		/** [API/DB POINT] 지도 연동
-		 * - Naver/Kakao Static Map API 사용 시: 현재 위치 좌표를 기반으로 지도 이미지 URL 생성 및 로드
-		 * - WebView(JCEF) 사용 시: 지도 API HTML 가이드를 통해 현재 위치 마커 표시
-		 */
-		JPanel mapBox = new JPanel(new GridBagLayout());
-		mapBox.setBackground(COLOR_BORDER_LIGHT);
-		mapBox.setPreferredSize(new Dimension(0, 320));
-		mapBox.add(new JLabel("📍 지도 데이터 로딩 중..."));
+		JFXPanel jfxPanel = new JFXPanel();
+		jfxPanel.setPreferredSize(new Dimension(0, 400));
 
-		((JPanel) card.getComponent(1)).add(mapBox);
+		Platform.runLater(() -> {
+			webView = new WebView(); 
+            webEngine = webView.getEngine();
+			// 네이버 지도 로딩을 위한 필수 설정
+			webEngine.setUserAgent(
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+
+			webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue == Worker.State.SUCCEEDED) {
+                    netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine.executeScript("window");
+                    
+                    // 1. myConnector 연결
+                    window.setMember("javaConnector", myConnector);
+                    System.out.println("✅ Java-HTML 브릿지 연결 완료!");
+
+                    // 2. 💡 [추가] 연결되자마자 지도(HTML) 화면에 성공 메시지를 띄우고, 현재 중심 좌표를 강제로 한 번 전송시킴!
+                    String initScript = 
+                        "if (typeof map !== 'undefined') {" +
+                        "    var center = map.getCenter();" +
+                        "    var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);" +
+                        "    window.javaConnector.searchStations(tm128.x, tm128.y);" +
+                        "}";
+                    webEngine.executeScript(initScript);
+                }
+            });
+			try {
+				// 1. 파일의 실제 URL 경로를 얻어옵니다.
+				// resources 폴더 내의 map.html을 찾습니다.
+				java.net.URL url = getClass().getResource("/map.html");
+
+				if (url == null) {
+					// 리소스에서 못 찾을 경우 실제 물리적 경로 시도
+					java.io.File file = new java.io.File("C:\\Java\\TrueOil\\map.html");
+					if (file.exists()) {
+						url = file.toURI().toURL();
+					}
+				}
+
+				if (url != null) {
+					// 2. loadContent 대신 load를 사용하여 파일 URL을 직접 호출합니다.
+					// 이렇게 로드하면 WebView가 로컬 호스트 컨텍스트를 더 잘 인식합니다.
+					webView.getEngine().load(url.toExternalForm());
+				} else {
+					webView.getEngine().loadContent("<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3></body></html>",
+							"text/html");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			jfxPanel.setScene(new Scene(webView));
+		});
+
+		body.add(jfxPanel);
 		return card;
+	}
+
+	private void updateMapMarkers(List<apiService.ValueStationDto> stations) {
+
+		Platform.runLater(() -> {
+			if (webEngine == null)
+				return;
+
+			try {
+				Object result = webEngine.executeScript("typeof isMapLoaded !== 'undefined' && isMapLoaded");
+				if (result instanceof Boolean && (Boolean) result) {
+					webEngine.executeScript("clearMarkers();");
+					for (apiService.ValueStationDto s : stations) {
+						int price = parsePrice(s.getPrice());
+						// Dto에 저장된 KATECH 좌표 가져오기 (ValueStationService에서 파싱한 변수명에 맞게 호출)
+						double x = s.getX();
+						double y = s.getY();
+
+						String script = String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s')", x, y,
+								s.getName().replace("'", "\\'"), String.format("%,d", price));
+
+						webEngine.executeScript(script);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("지도가 아직 완전히 로드되지 않아 마커 업데이트를 대기합니다.");
+			}
+		});
 	}
 
 	private JPanel createSearchFilterSection() {
@@ -155,7 +262,7 @@ public class StationPage extends JScrollPane {
 
 				if (searchInput.getText().trim().equals("주유소 이름을 입력하세요")) {
 					searchInput.setText("");
-					searchInput.setForeground(COLOR_TEXT_DARK); // 입력할 때는 진한 글씨색으로 변경
+					searchInput.setForeground(COLOR_TEXT_DARK);
 				}
 			}
 
@@ -163,11 +270,12 @@ public class StationPage extends JScrollPane {
 			public void focusLost(FocusEvent e) {
 
 				if (searchInput.getText().trim().isEmpty()) {
-					searchInput.setForeground(COLOR_TEXT_GRAY); // 다시 회색으로 변경
+					searchInput.setForeground(COLOR_TEXT_GRAY);
 					searchInput.setText("주유소 이름을 입력하세요");
 				}
 			}
 		});
+
 		JButton searchBtn = new JButton("검색");
 		searchBtn.setPreferredSize(new Dimension(100, 0));
 		searchBtn.setBackground(COLOR_PRIMARY);
@@ -175,10 +283,6 @@ public class StationPage extends JScrollPane {
 		searchBtn.setFocusPainted(false);
 		searchBtn.setBorderPainted(false);
 
-		/** [기능 포인트] 검색 실행 로직
-		 * - ActionListener를 등록하여 검색어(searchInput.getText()) 추출
-		 * - 검색어를 기반으로 오피넷 API 재호출 및 refreshData() 실행으로 UI 갱신
-		 */
 		searchBtn.addActionListener(e -> {
 			String keyword = searchInput.getText().trim();
 			if (keyword.equals("주유소 이름을 입력하세요")) {
@@ -200,12 +304,14 @@ public class StationPage extends JScrollPane {
 		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
 		ActionListener filterListener = e -> {
 			String keyword = searchInput.getText().trim();
-			if (keyword.equals("주유소 이름을 입력하세요"))
-				keyword = ""; // 힌트 텍스트 무시
+			if (keyword.equals("주유소 이름을 입력하세요")) {
+				keyword = "";
+			}
 			refreshData(keyword);
 		};
 		fuelTypeCombo.addActionListener(filterListener);
 		sortCombo.addActionListener(filterListener);
+
 		filterRow.add(new JLabel("유종: "));
 		filterRow.add(fuelTypeCombo);
 		filterRow.add(Box.createHorizontalStrut(15));
@@ -250,10 +356,6 @@ public class StationPage extends JScrollPane {
 		item.add(info, BorderLayout.CENTER);
 		item.add(priceLabel, BorderLayout.EAST);
 
-		/** [기능 포인트] 상세 페이지 이동 및 즐겨찾기 연동
-		 * - 클릭 시 해당 주유소의 고유 ID(또는 명칭)를 StationDetail 페이지로 전달
-		 * - [DB 연동]: 상세 페이지 진입 시 해당 주유소가 사용자의 '즐겨찾기' 테이블에 있는지 확인 필요
-		 */
 		item.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -307,7 +409,7 @@ public class StationPage extends JScrollPane {
 		try {
 			return Integer.parseInt(priceStr.replace(",", ""));
 		} catch (NumberFormatException e) {
-			return Integer.MAX_VALUE; // 가격 정보가 없으면 정렬 시 맨 뒤로 밀리도록 큰 값 반환
+			return Integer.MAX_VALUE;
 		}
 	}
 }

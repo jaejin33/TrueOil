@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>네이버 지도 - TrueOil</title>
+	<script type="text/javascript"
+		src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2&submodules=geocoder"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+
+		#map {
+			width: 100%;
+			height: 100vh;
+		}
+
+		/* 디버그용 콘솔 (필요 없을 시 display: none 유지) */
+		#debug {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			height: 80px;
+			background: rgba(0, 0, 0, 0.8);
+			color: lime;
+			overflow-y: auto;
+			font-size: 13px;
+			padding: 10px;
+			display: none;
+			box-sizing: border-box;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="map"></div>
+	<div id="debug"></div>
+
+	<script>
+		// 에러 로깅용 함수
+		function log(msg) {
+			console.log(msg);
+		}
+
+		var map;
+		var markers = [];
+		var isMapLoaded = false;
+
+		try {
+			// 1. 지도 초기 옵션 (기본 위치: 동의대역)
+			var mapOptions = {
+				center: new naver.maps.LatLng(35.1539777, 129.0320804),
+				zoom: 14,
+				zoomControl: true
+			};
+
+			map = new naver.maps.Map('map', mapOptions);
+			isMapLoaded = true;
+
+			// 2. [핵심] 지도 움직임이 멈췄을 때 (idle 이벤트)
+			naver.maps.Event.addListener(map, 'idle', function () {
+				var center = map.getCenter(); // 현재 중심 위경도
+
+				// 네이버 위경도(LatLng) -> 오피넷 KATECH(TM128) 변환
+				var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);
+
+				// Java에 연결된 객체가 있으면 좌표 전송
+				if (window.javaConnector) {
+					window.javaConnector.searchStations(tm128.x, tm128.y);
+				}
+			});
+
+		} catch (e) {
+			log('❌ 지도 초기화 오류: ' + e.message);
+		}
+
+		// ==========================================
+		// ▼ Java에서 호출할 외부 함수들 ▼
+		// ==========================================
+
+		// 기존 마커 모두 삭제
+		function clearMarkers() {
+			try {
+				for (var i = 0; i < markers.length; i++) {
+					markers[i].setMap(null);
+				}
+				markers = [];
+			} catch (e) {log('❌ clearMarkers 에러: ' + e.message);}
+		}
+
+		// 새 마커 추가 (Java가 KATECH 좌표를 던져줌)
+		function addMarker(x, y, name, price) {
+			try {
+				if (!x || !y || x == 0 || y == 0) return;
+
+				// KATECH(TM128) -> 네이버 위경도(LatLng) 변환
+				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
+				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+
+				var marker = new naver.maps.Marker({
+					position: latLng,
+					map: map,
+					title: name,
+					icon: {
+						content: '<div style="background:#2563eb;color:white;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:bold;box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + price + '원</div>',
+						anchor: new naver.maps.Point(30, 30)
+					}
+				});
+
+				var infowindow = new naver.maps.InfoWindow({
+					content: '<div style="padding:10px;min-width:150px;"><strong>' + name + '</strong><br>가격: ' + price + '원/L</div>'
+				});
+
+				naver.maps.Event.addListener(marker, 'click', function () {
+					if (infowindow.getMap()) infowindow.close();
+					else infowindow.open(map, marker);
+				});
+
+				markers.push(marker);
+			} catch (e) {log('❌ addMarker 에러: ' + e.message);}
+		}
+
+		// 지도 중심 이동하기
+		function setCenter(x, y) {
+			try {
+				if (!x || !y || x == 0 || y == 0) return;
+				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
+				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+				map.setCenter(latLng);
+			} catch (e) {log('❌ setCenter 에러');}
+		}
+	</script>
+</body>
+
+</html>
