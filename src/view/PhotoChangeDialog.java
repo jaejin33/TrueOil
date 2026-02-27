@@ -3,8 +3,12 @@ package view;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.util.List;
 
 public class PhotoChangeDialog extends JDialog {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -20,6 +24,8 @@ public class PhotoChangeDialog extends JDialog {
     private JButton applyBtn;
     private JPanel actionRow;
 
+    private int mouseX, mouseY;
+
     public PhotoChangeDialog(Frame parent) {
         super(parent, "프로필 사진 변경", true);
         setUndecorated(true);
@@ -34,6 +40,23 @@ public class PhotoChangeDialog extends JDialog {
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
+
+        background.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int x = e.getXOnScreen();
+                int y = e.getYOnScreen();
+                setLocation(x - mouseX, y - mouseY);
+            }
+        });
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
@@ -79,6 +102,35 @@ public class PhotoChangeDialog extends JDialog {
         photoPreview.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 65));
         photoPreview.setAlignmentX(Component.CENTER_ALIGNMENT);
         photoPreview.setBorder(new LineBorder(COLOR_DIVIDER, 1));
+
+        photoPreview.setTransferHandler(new TransferHandler() {
+            @Override
+            public boolean canImport(TransferSupport support) {
+                return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+            }
+
+            @Override
+            public boolean importData(TransferSupport support) {
+                if (!canImport(support)) return false;
+                try {
+                    Transferable t = support.getTransferable();
+                    List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
+                    if (files.size() > 0) {
+                        File file = files.get(0);
+                        String path = file.getAbsolutePath().toLowerCase();
+                        if (path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg")) {
+                            updatePreview(file.getAbsolutePath());
+                            removeBtn.setVisible(true);
+                            applyBtn.setVisible(true);
+                            revalidate();
+                            repaint();
+                            return true;
+                        }
+                    }
+                } catch (Exception e) { e.printStackTrace(); }
+                return false;
+            }
+        });
 
         /**
          * [DB Point 1: 초기 데이터 로드] 

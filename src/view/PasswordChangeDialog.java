@@ -30,6 +30,7 @@ public class PasswordChangeDialog extends JDialog {
     private JButton saveBtn, cancelBtn;
     
     private UserController userController = new UserController();
+    private int mouseX, mouseY;
 
     public PasswordChangeDialog(Frame parent) {
         super(parent, "비밀번호 변경", true);
@@ -45,6 +46,23 @@ public class PasswordChangeDialog extends JDialog {
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
+
+        background.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int x = e.getXOnScreen();
+                int y = e.getYOnScreen();
+                setLocation(x - mouseX, y - mouseY);
+            }
+        });
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
