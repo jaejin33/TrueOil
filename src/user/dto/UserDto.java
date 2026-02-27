@@ -3,6 +3,7 @@ package user.dto;
 public class UserDto {
 	
     private int userId;
+    private String name;
     private String email;
     private String password;
     private String carNumber;
@@ -15,6 +16,12 @@ public class UserDto {
 	}
 	public void setUserId(int userId) {
 		this.userId = userId;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
 	}
 	public String getEmail() {
 		return email;

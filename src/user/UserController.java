@@ -82,4 +82,52 @@ public class UserController {
             return null;
         }
     }
+    
+    /**
+     * 마이페이지 조회를 위해 현재 로그인한 사용자의 전체 프로필 데이터를 요청합니다.
+     * * @return 현재 세션 사용자의 UserDto 객체
+     */
+    public UserDto getMyProfile() {
+        int userId = SessionManager.getUserId();
+        if (userId == -1) return null;
+        return userDao.getUserInfo(userId);
+    }
+    
+    /**
+     * 현재 로그인된 사용자의 탈퇴 처리를 수행합니다.
+     * 세션에서 사용자 ID를 식별하여 DAO의 삭제 로직을 호출합니다.
+     * * @return 탈퇴 성공 여부
+     */
+    public boolean withdrawAccount() {
+        int userId = SessionManager.getUserId();
+        if (userId == -1) {
+            return false;
+        }
+        return userDao.deleteUser(userId);
+    }
+    
+    /**
+     * 사용자의 프로필 정보를 업데이트합니다.
+     * @param user 수정된 정보를 담은 DTO
+     * @return 수정 성공 여부
+     */
+    public boolean updateProfile(UserDto user) {
+        return userDao.updateUserInfo(user);
+    }
+    
+    /**
+     * 비밀번호 변경 전 현재 비밀번호를 검증합니다.
+     */
+    public boolean verifyPassword(String currentPw) {
+        int userId = SessionManager.getUserId();
+        return userDao.checkCurrentPassword(userId, currentPw);
+    }
+
+    /**
+     * 새로운 비밀번호로 변경을 요청합니다.
+     */
+    public boolean changePassword(String newPw) {
+        int userId = SessionManager.getUserId();
+        return userDao.updatePassword(userId, newPw);
+    }
 }

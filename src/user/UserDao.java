@@ -24,15 +24,16 @@ public class UserDao {
 	    PreparedStatement pstmt = null;
 	    boolean flag = false;
 	    
-	    String sql = "INSERT INTO users (email, password, car_number, fuel_type, current_mileage) VALUES (?, ?, ?, ?, ?)";
-	    
-	    try {
-	        pstmt = con.prepareStatement(sql);
-	        pstmt.setString(1, user.getEmail());
-	        pstmt.setString(2, user.getPassword());
-	        pstmt.setString(3, user.getCarNumber()); // 추가된 차량번호
-	        pstmt.setString(4, user.getFuelType());
-	        pstmt.setInt(5, user.getCurrentMileage());
+	    String sql = "INSERT INTO users (name, email, password, car_number, fuel_type, current_mileage) VALUES (?, ?, ?, ?, ?, ?)";
+        
+        try {
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, user.getName()); // 추가된 name 필드
+            pstmt.setString(2, user.getEmail());
+            pstmt.setString(3, user.getPassword());
+            pstmt.setString(4, user.getCarNumber());
+            pstmt.setString(5, user.getFuelType());
+            pstmt.setInt(6, user.getCurrentMileage());
 
 	        if (pstmt.executeUpdate() == 1) {
 	            flag = true;
@@ -240,4 +241,165 @@ public class UserDao {
 	    }
 	    return result;
 	}
+	
+	/**
+	 * 사용자의 고유 번호(ID)를 기반으로 이름, 이메일, 차량번호, 연료 종류, 가입일 정보를 상세 조회합니다.
+	 * * @param userId 조회할 사용자의 고유 번호
+	 * @return 사용자 상세 정보를 담은 UserDto 객체, 데이터가 없을 경우 null 반환
+	 */
+	public UserDto getUserInfo(int userId) {
+	    Connection con = null;
+	    PreparedStatement pstmt = null;
+	    ResultSet rs = null;
+	    UserDto user = null;
+
+	    // fuel_type 컬럼 추가
+	    String sql = "SELECT name, email, car_number, fuel_type, created_at FROM users WHERE user_id = ?";
+
+	    try {
+	        con = pool.getConnection();
+	        pstmt = con.prepareStatement(sql);
+	        pstmt.setInt(1, userId);
+	        rs = pstmt.executeQuery();
+
+	        if (rs.next()) {
+	            user = new UserDto();
+	            user.setUserId(userId);
+	            user.setName(rs.getString("name"));
+	            user.setEmail(rs.getString("email"));
+	            user.setCarNumber(rs.getString("car_number"));
+	            user.setFuelType(rs.getString("fuel_type")); // 연료 종류 추가
+	            user.setCreatedAt(rs.getString("created_at"));
+	        }
+	    } catch (Exception e) {
+	        System.err.println("[UserDao] getUserInfo 상세 조회 오류: " + e.getMessage());
+	        e.printStackTrace();
+	    } finally {
+	        pool.freeConnection(con, pstmt, rs);
+	    }
+	    return user;
+	}
+	
+	/**
+     * 고유 번호(ID)를 기반으로 사용자 레코드를 데이터베이스에서 영구 삭제합니다.
+     * <p>주의: 탈퇴 시 해당 사용자와 연결된 모든 참조 데이터가 삭제되거나 처리되어야 합니다.</p>
+     * * @param userId 삭제할 사용자의 고유 번호
+     * @return 삭제 성공 시 true, 실패 시 false
+     */
+    public boolean deleteUser(int userId) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        boolean flag = false;
+
+        String sql = "DELETE FROM users WHERE user_id = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+
+            // 영향받은 행의 수가 1개이면 성공
+            if (pstmt.executeUpdate() == 1) {
+                flag = true;
+            }
+        } catch (Exception e) {
+            System.err.println("[UserDao] deleteUser 실행 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
+        return flag;
+    }
+    
+    /**
+     * 사용자의 이름, 차량번호, 연료 타입, 주행거리를 일괄 업데이트합니다.
+     * @param user 수정할 정보가 담긴 DTO 객체
+     * @return 업데이트 성공 여부
+     */
+    public boolean updateUserInfo(UserDto user) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        boolean flag = false;
+
+        // email을 조건으로 나머지 정보 수정
+        String sql = "UPDATE users SET name = ?, car_number = ?, fuel_type = ?, current_mileage = ? WHERE email = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, user.getName());
+            pstmt.setString(2, user.getCarNumber());
+            pstmt.setString(3, user.getFuelType());
+            pstmt.setInt(4, user.getCurrentMileage());
+            pstmt.setString(5, user.getEmail());
+
+            if (pstmt.executeUpdate() == 1) {
+                flag = true;
+            }
+        } catch (Exception e) {
+            System.err.println("[UserDao] updateUserInfo 오류: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
+        return flag;
+    }
+    
+    /**
+     * 사용자의 현재 비밀번호가 일치하는지 확인합니다.
+     * @param userId 사용자 고유 번호
+     * @param password 입력받은 현재 비밀번호
+     * @return 일치 여부 (true: 일치, false: 불일치)
+     */
+    public boolean checkCurrentPassword(int userId, String password) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        boolean isMatch = false;
+
+        String sql = "SELECT password FROM users WHERE user_id = ? AND password = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, password);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) isMatch = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return isMatch;
+    }
+
+    /**
+     * 새로운 비밀번호로 업데이트합니다.
+     * @param userId 사용자 고유 번호
+     * @param newPassword 변경할 새 비밀번호
+     * @return 성공 여부
+     */
+    public boolean updatePassword(int userId, String newPassword) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        boolean flag = false;
+
+        String sql = "UPDATE users SET password = ? WHERE user_id = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, newPassword);
+            pstmt.setInt(2, userId);
+
+            if (pstmt.executeUpdate() == 1) flag = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
+        return flag;
+    }
 }

@@ -2,6 +2,10 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import user.UserController;
+import user.dto.UserDto;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -19,6 +23,8 @@ public class EditProfileDialog extends JDialog {
     private JRadioButton[] fuelRadios;
     private ButtonGroup fuelGroup;
     private JButton saveBtn, cancelBtn;
+    
+    private UserController userController = new UserController();
 
     public EditProfileDialog(Frame parent) {
         super(parent, "정보 수정", true);
@@ -36,12 +42,17 @@ public class EditProfileDialog extends JDialog {
          * WHERE m.email = ?;
          * 3. ResultSet에서 꺼낸 값을 아래 current... 변수들에 할당합니다.
          */
-        String currentName = "홍길동";     // rs.getString("name")
-        String currentEmail = "hong@example.com"; // rs.getString("email")
-        String currentCar = "12가 3456";  // rs.getString("car_number")
-        String currentFuel = "휘발유";    // rs.getString("fuel_type")
-        String currentMileage = "50000"; // rs.getString("mileage")
-
+        
+     // [DB 포인트 1: 현재 로그인한 사용자 정보 로드]
+        UserDto currentUser = userController.getMyProfile();
+        
+        // 불러온 데이터 할당 (null 체크 포함)
+        String currentName = (currentUser != null) ? currentUser.getName() : "";
+        String currentEmail = (currentUser != null) ? currentUser.getEmail() : "";
+        String currentCar = (currentUser != null) ? currentUser.getCarNumber() : "";
+        String currentFuel = (currentUser != null) ? currentUser.getFuelType() : "휘발유";
+        String currentMileage = (currentUser != null) ? String.valueOf(currentUser.getCurrentMileage()) : "0";
+ 
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
@@ -126,26 +137,42 @@ public class EditProfileDialog extends JDialog {
         saveBtn.setMaximumSize(new Dimension(320, 45));
 
         saveBtn.addActionListener(e -> {
-            /**
-             * [DB 포인트 2: 정보 업데이트 트랜잭션 로직]
-             * * 1. 변수 추출:
-             * String newName = nameF.getText();
-             * String newCarNum = carF.getText();
-             * int newMileage = Integer.parseInt(mileageF.getText());
-             * String selectedFuel = ""; 
-             * for(JRadioButton rb : fuelRadios) { if(rb.isSelected()) selectedFuel = rb.getText(); }
-             * * 2. 트랜잭션 시작:
-             * Connection conn = DBConnection.getConnection();
-             * conn.setAutoCommit(false);
-             * * 3. 실행:
-             * (1) UPDATE member SET name = ? WHERE email = ?
-             * (2) UPDATE car_info SET car_number = ?, fuel_type = ?, mileage = ? WHERE user_email = ?
-             * * 4. 마무리:
-             * 모두 성공 시 conn.commit(); 
-             * 실패 시 conn.rollback(); 알림창 띄우기.
-             */
-            JOptionPane.showMessageDialog(this, "성공적으로 수정되었습니다.");
-            dispose();
+            try {
+                // 1. 입력 값 추출
+                String newName = nameF.getText().trim();
+                String newCarNum = carF.getText().trim();
+                int newMileage = Integer.parseInt(mileageF.getText().trim());
+                String selectedFuel = ""; 
+                for(JRadioButton rb : fuelRadios) { 
+                    if(rb.isSelected()) selectedFuel = rb.getText(); 
+                }
+
+                // 2. 유효성 검사
+                if(newName.isEmpty() || newCarNum.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "모든 정보를 입력해주세요.");
+                    return;
+                }
+
+                // 3. DTO 생성 및 데이터 바인딩
+                UserDto updateDto = new UserDto();
+                updateDto.setEmail(currentEmail); // 수정 불가 (PK)
+                updateDto.setName(newName);
+                updateDto.setCarNumber(newCarNum);
+                updateDto.setFuelType(selectedFuel);
+                updateDto.setCurrentMileage(newMileage);
+
+                // 4. DB 업데이트 실행
+                boolean success = userController.updateProfile(updateDto);
+
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "성금적으로 수정되었습니다.");
+                    dispose();
+                } else {
+                    JOptionPane.showMessageDialog(this, "수정에 실패했습니다. 다시 시도해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "주행 거리는 숫자만 입력 가능합니다.");
+            }
         });
 
         cancelBtn = new JButton("취소");
