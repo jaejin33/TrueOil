@@ -10,7 +10,6 @@ import user.SessionManager;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.sql.*;
 import java.util.List;
 
 public class VehicleHealthHistoryDialog extends JDialog {
