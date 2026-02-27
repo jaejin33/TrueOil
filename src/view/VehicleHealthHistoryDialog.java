@@ -108,7 +108,9 @@ public class VehicleHealthHistoryDialog extends JDialog {
         okBtn.setBackground(COLOR_PRIMARY);
         okBtn.setForeground(COLOR_CARD_BG);
         okBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
-        okBtn.setMaximumSize(new Dimension(400, 45));
+        okBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        okBtn.setMaximumSize(new Dimension(200, 45));
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         okBtn.addActionListener(e -> dispose());
 
         card.add(header); card.add(Box.createVerticalStrut(5));
