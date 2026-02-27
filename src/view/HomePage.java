@@ -91,11 +91,10 @@ public class HomePage extends JScrollPane {
 
 		// 2
 		briefingContent.setText("<html>오늘 전국 평균 유가를 불러오는 중입니다... ⏳</html>");// UI 멈춤(프리징) 방지를 위한 비동기 처리
-		SwingWorker<apiService.AvgPriceDto, Void> worker = new SwingWorker<>() {
+		SwingWorker<java.util.Map<String, apiService.AvgPriceDto>, Void> worker = new SwingWorker<>() {
 			@Override
-			protected apiService.AvgPriceDto doInBackground() throws Exception {
-
-				// 백그라운드에서 API 호출 (화면 멈춤 없음)
+			protected java.util.Map<String, apiService.AvgPriceDto> doInBackground() throws Exception {
+				// 백그라운드에서 API 호출 (Map 형태로 모든 유종의 평균가 가져오기)
 				return apiService.AvgPrice.getAvgPrice();
 			}
 
@@ -104,11 +103,17 @@ public class HomePage extends JScrollPane {
 
 				try {
 					// API 호출 결과 받아오기
-					apiService.AvgPriceDto dto = get();
+					java.util.Map<String, apiService.AvgPriceDto> avgPriceMap = get();
 
-					// 헬퍼 메서드를 통해 조립된 HTML 문자열을 받아와서 UI 업데이트
-					String htmlText = OneLineBriefing(dto);
-					briefingContent.setText(htmlText);
+					apiService.AvgPriceDto dto = avgPriceMap.get("B027"); 
+
+					if (dto != null) {
+						// 헬퍼 메서드를 통해 조립된 HTML 문자열을 받아와서 UI 업데이트
+						String htmlText = OneLineBriefing(dto);
+						briefingContent.setText(htmlText);
+					} else {
+						briefingContent.setText("<html><font color='#DC2626'><b>휘발유 가격 정보를 찾을 수 없습니다.</b></font></html>");
+					}
 
 				} catch (Exception e) {
 					e.printStackTrace();
