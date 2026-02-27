@@ -123,7 +123,7 @@ public class StationDetailPage extends JScrollPane {
 		// [Logic Point] 전국 평균가(다른 테이블 혹은 API 결과)와 비교 연산 수행 후 'compare' 텍스트 생성
 		JPanel priceContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
 		priceContainer.setOpaque(false);
-		priceContainer.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 150));
+		priceContainer.setMaximumSize(new Dimension(MAX_CARD_WIDTH, Integer.MAX_VALUE));
 
 		for (int i = 0; i < priceList.getLength(); i++) {
 			org.w3c.dom.Element oilPrice = (org.w3c.dom.Element) priceList.item(i);
