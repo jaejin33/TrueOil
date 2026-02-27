@@ -25,6 +25,7 @@ public class EditProfileDialog extends JDialog {
     private JButton saveBtn, cancelBtn;
     
     private UserController userController = new UserController();
+    private int mouseX, mouseY;
 
     public EditProfileDialog(Frame parent) {
         super(parent, "정보 수정", true);
@@ -43,7 +44,7 @@ public class EditProfileDialog extends JDialog {
          * 3. ResultSet에서 꺼낸 값을 아래 current... 변수들에 할당합니다.
          */
         
-     // [DB 포인트 1: 현재 로그인한 사용자 정보 로드]
+        // [DB 포인트 1: 현재 로그인한 사용자 정보 로드]
         UserDto currentUser = userController.getMyProfile();
         
         // 불러온 데이터 할당 (null 체크 포함)
@@ -60,6 +61,23 @@ public class EditProfileDialog extends JDialog {
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
+
+        background.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int x = e.getXOnScreen();
+                int y = e.getYOnScreen();
+                setLocation(x - mouseX, y - mouseY);
+            }
+        });
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();
