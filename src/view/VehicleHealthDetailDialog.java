@@ -19,21 +19,23 @@ public class VehicleHealthDetailDialog extends JDialog {
     private static final Color COLOR_DANGER = new Color(239, 68, 68);
 
     private JTextField lastReplaceField;
-    private JTextField replaceDateField; // 추가
-    private JTextField costField; // 추가
+    private JTextField replaceDateField;
+    private JTextField costField;
     private JButton saveBtn, cancelBtn;
     private boolean isUpdated = false;
     private int updatedLastKm;
-    private int itemId; // 소모품 식별용 ID 추가
+    private int itemId;
     private String itemName;
     private MaintenanceController maintenanceController = new MaintenanceController(); // 컨트롤러 연결
+    
+    private Point initialClick;
 
     public VehicleHealthDetailDialog(Frame parent, int itemId, String itemName, int lastKm, int cycle) {
         super(parent, itemName + " 정보 수정", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
         setResizable(false);
-        setSize(420, 520); // 필드 추가로 인해 높이 조절
+        setSize(420, 520);
 
         /* ===== 전체 배경 ===== */
         JPanel background = new JPanel(new BorderLayout());
@@ -42,6 +44,28 @@ public class VehicleHealthDetailDialog extends JDialog {
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
+        
+        background.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+                getComponentAt(initialClick);
+            }
+        });
+
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+
+                int X = thisX + xMoved;
+                int Y = thisY + yMoved;
+                setLocation(X, Y);
+            }
+        });
 
         /* ===== 카드 패널 ===== */
         JPanel card = new JPanel();

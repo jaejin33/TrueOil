@@ -361,12 +361,22 @@ public class VehiclePage extends JScrollPane {
                 int chartW = w - 160; 
                 int chartH = h - 50;
 
+                int maxDataValue = 100000; 
+                for (int exp : monthlyExpenses) {
+                    if (exp > maxDataValue) maxDataValue = exp;
+                }
+
+                int yUnit = maxDataValue / 4;
+
                 for (int i = 0; i <= 4; i++) {
-                    int y = h - 20 - (i * chartH / 4);
+                    int currentYVal = yUnit * i;
+                    int y = h - 20 - (int)((double)currentYVal / maxDataValue * chartH);
+                    
                     g2.setColor(COLOR_BORDER_LIGHT); 
                     g2.drawLine(leftMargin, y, leftMargin + chartW, y);
+                    
                     g2.setColor(COLOR_TEXT_MUTED); 
-                    g2.drawString(String.format("%,d", i * 100000), 10, y + 5);
+                    g2.drawString(String.format("%,d", currentYVal), 10, y + 5);
                 }
 
                 int barWidth = 70; 
@@ -375,22 +385,19 @@ public class VehiclePage extends JScrollPane {
 
                 for (int i = 0; i < monthlyExpenses.length; i++) {
                     int x = leftMargin + (i * barSpace) + (barSpace - barWidth) / 2;
-                    int barHeight = (int) ((double) monthlyExpenses[i] / 400000 * chartH);
+                    int barHeight = 0;
+                    if (maxDataValue > 0) {
+                        barHeight = (int) ((double) monthlyExpenses[i] / maxDataValue * chartH);
+                    }
                     int y = h - 20 - barHeight;
-                    
                     g2.setPaint(new GradientPaint(x, y, COLOR_PRIMARY.brighter(), x, h - 20, COLOR_PRIMARY));
                     g2.fillRoundRect(x, y, barWidth, barHeight, 8, 8);
-
                     String priceText = String.format("%,d", monthlyExpenses[i]);
                     int textWidth = fm.stringWidth(priceText);
-                    int textX = x + (barWidth - textWidth) / 2;
-                    
                     g2.setColor(COLOR_TEXT_DARK); 
-                    g2.drawString(priceText, textX, y - 10);
-                    
+                    g2.drawString(priceText, x + (barWidth - textWidth) / 2, y - 10);
                     String monthText = months[i] != null ? months[i] : "";
-                    int monthWidth = fm.stringWidth(monthText);
-                    int monthX = x + (barWidth - monthWidth) / 2;
+                    int monthX = x + (barWidth - fm.stringWidth(monthText)) / 2;
                     g2.drawString(monthText, monthX, h + 18);
                 }
             }

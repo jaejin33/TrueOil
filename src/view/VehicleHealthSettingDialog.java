@@ -22,6 +22,8 @@ public class VehicleHealthSettingDialog extends JDialog {
     private JButton saveBtn, cancelBtn;
     private Map<String, JTextField> cycleFieldMap = new HashMap<>();
     private MaintenanceController maintenanceController = new MaintenanceController();
+    
+    private Point initialClick; // 드래그를 위한 포인트 저장
 
     public VehicleHealthSettingDialog(Frame parent) {
         super(parent, "권장 주기 설정", true);
@@ -33,6 +35,28 @@ public class VehicleHealthSettingDialog extends JDialog {
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
+
+        // 드래그 기능 구현
+        background.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+                getComponentAt(initialClick);
+            }
+        });
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+
+                int X = thisX + xMoved;
+                int Y = thisY + yMoved;
+                setLocation(X, Y);
+            }
+        });
 
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
