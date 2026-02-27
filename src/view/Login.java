@@ -8,6 +8,8 @@ import user.UserController;
 import user.dto.UserSessionDto;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -18,6 +20,8 @@ public class Login extends JFrame {
     private static final Color COLOR_BORDER = new Color(209, 213, 219);
     private static final Color COLOR_DANGER = new Color(239, 68, 68); 
     
+    private Point initialClick;
+
     public Login() {
         setTitle("TrueOil");
         setUndecorated(true);
@@ -33,6 +37,21 @@ public class Login extends JFrame {
                 new LineBorder(Color.BLACK, 2),
                 new EmptyBorder(20, 20, 20, 20) 
         ));
+
+        background.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+            }
+        });
+        background.addMouseMotionListener(new MouseAdapter() {
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+                setLocation(thisX + xMoved, thisY + yMoved);
+            }
+        });
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
@@ -150,8 +169,8 @@ public class Login extends JFrame {
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         loginButton.setMaximumSize(new Dimension(320, 45));
 
-        loginButton.addActionListener(e -> {
-        	String email = emailField.getText().trim();
+        Runnable loginAction = () -> {
+            String email = emailField.getText().trim();
             String password = new String(passwordField.getPassword());
 
             UserController controller = new UserController();
@@ -159,11 +178,24 @@ public class Login extends JFrame {
 
             if (sessionUser != null) {
                 // 로그인 성공 시 세션 정보를 메인 화면으로 전달하며 이동
-            	SessionManager.setLoginUser(sessionUser);
-            	new MainPage().setVisible(true);
+                SessionManager.setLoginUser(sessionUser);
+                new MainPage().setVisible(true);
                 this.dispose(); 
             }
-        });
+        };
+
+        loginButton.addActionListener(e -> loginAction.run());
+
+        KeyAdapter enterKeyAdapter = new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    loginAction.run();
+                }
+            }
+        };
+        emailField.addKeyListener(enterKeyAdapter);
+        passwordField.addKeyListener(enterKeyAdapter);
 
         /* ===== 하단 회원가입 ===== */
         JPanel signupPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));

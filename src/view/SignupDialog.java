@@ -20,6 +20,8 @@ public class SignupDialog extends JFrame {
     private static final Color COLOR_DANGER = new Color(220, 38, 38);
     private static final Color COLOR_DIVIDER = new Color(229, 231, 235);
 
+    private Point initialClick;
+
     public SignupDialog() {
         setTitle("회원가입");
         setUndecorated(true);
@@ -31,6 +33,23 @@ public class SignupDialog extends JFrame {
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
+
+        background.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+            }
+        });
+        background.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int thisX = getLocation().x;
+                int thisY = getLocation().y;
+                int xMoved = e.getX() - initialClick.x;
+                int yMoved = e.getY() - initialClick.y;
+                setLocation(thisX + xMoved, thisY + yMoved);
+            }
+        });
 
         JPanel centerWrapper = new JPanel();
         centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
@@ -142,7 +161,7 @@ public class SignupDialog extends JFrame {
         signupButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
         signupButton.addActionListener(e -> {
-        	// 1. 데이터 수집 (View의 역할)
+            // 1. 데이터 수집 (View의 역할)
             UserDto userDto = new UserDto();
             userDto.setEmail(emailField.getText().trim());
             userDto.setPassword(new String(pwField.getPassword()));
@@ -156,7 +175,7 @@ public class SignupDialog extends JFrame {
             // 2. Controller에게 처리를 맡김 (View는 결과만 받음)
             UserController controller = new UserController();
             if (controller.handleSignup(this, userDto)) {
-            	JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
+                JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
                 new Login().setVisible(true);
                 dispose();
             }

@@ -4,6 +4,8 @@ import user.dto.UserDto;
 import user.dto.UserSessionDto;
 
 import javax.swing.JOptionPane;
+import javax.swing.JDialog;
+import javax.swing.Timer;
 import java.awt.Component;
 
 public class UserController {
@@ -58,7 +60,22 @@ public class UserController {
         UserSessionDto sessionUser = userDao.loginUser(email, password);
 
         if (sessionUser != null) {
-            JOptionPane.showMessageDialog(parentView, sessionUser.email + "님, 환영합니다!", "로그인 성공", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane pane = new JOptionPane(
+                sessionUser.email + "님, 환영합니다!", 
+                JOptionPane.INFORMATION_MESSAGE, 
+                JOptionPane.DEFAULT_OPTION, 
+                null, new Object[]{},null);
+            JDialog dialog = pane.createDialog(parentView, "로그인 성공");
+            Timer timer = new Timer(400, e -> dialog.dispose());
+            timer.setRepeats(false);
+            timer.start();
+            dialog.setModal(false);
+            dialog.setAlwaysOnTop(true); 
+            dialog.setVisible(true);
+            if (dialog.getGraphics() != null) {
+                dialog.paintAll(dialog.getGraphics());
+            }
+
             return sessionUser;
         } else {
             JOptionPane.showMessageDialog(parentView, "이메일 또는 비밀번호가 일치하지 않습니다.", "로그인 실패", JOptionPane.ERROR_MESSAGE);
