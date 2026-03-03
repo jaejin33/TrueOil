@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script type="text/javascript"
-	src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2&submodules=geocoder"></script>
+	src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2&submodules=directions,geocoder"></script>
 <style>
 body {
 	margin: 0;
@@ -30,6 +30,7 @@ body {
 		var isMapLoaded = false;
 		var currentMode = "STATION"; // 기본값은 주유소 모드
 		var activeMarker = null;
+		var routePath = null;
 		// 지도 중심 이동하기
 		window.setCenter = function(lat, lng) {
 			if (!map)
@@ -55,7 +56,13 @@ body {
 				console.error("setCenter 에러:", e);
 			}
 		}
-
+		function formatTime(ms) {
+			var minutes = Math.floor(ms / (1000 * 60));
+			if (minutes >= 60) {
+				return Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분";
+			}
+			return minutes + "분";
+		}
 		// ==========================================
 		// ▼ Java에서 호출할 외부 함수들 ▼
 		// ==========================================
@@ -147,16 +154,17 @@ body {
 			}
 		}
 		function initMap() {
-			map = new naver.maps.Map('map', {
+			if (map)
+				return;
+			var mapOptions = {
 				center : new naver.maps.LatLng(35.154031, 129.032212),
-				zoom : 14
-			});
+				zoom : 14,
+				zoomControl : true
+			};
+
 			map = new naver.maps.Map('map', mapOptions);
 			window.isMapLoaded = true;
-		}
-		function setMapMode(mode) {
-			currentMode = mode; // "STATION" 또는 "REPAIR"
-			log("현재 지도 모드 변경: " + mode);
+			console.log("✅ 지도 로드 완료");
 		}
 		window.getLatLngFromKatech = function(x, y) {
 			try {
@@ -286,6 +294,68 @@ body {
 						}
 					});
 		}
+		window.drawRoute = function(pathData, timeText) { // 두 번째 인자를 텍스트로 받음
+			try {
+				if (!pathData)
+					return;
+
+				var coords = (typeof pathData === 'string') ? JSON
+						.parse(pathData.trim()) : pathData;
+				if (coords.length === 1 && Array.isArray(coords[0]))
+					coords = coords[0];
+
+				var pathCoords = [];
+				coords.forEach(function(coord) {
+					pathCoords.push(new naver.maps.LatLng(coord[1], coord[0]));
+				});
+
+				if (window.routePath)
+					window.routePath.setMap(null);
+				if (window.durationInfoWindow)
+					window.durationInfoWindow.close();
+
+				window.routePath = new naver.maps.Polyline({
+					path : pathCoords,
+					strokeColor : '#2563eb',
+					strokeWeight : 6,
+					strokeOpacity : 0.8,
+					map : map
+				});
+
+				// 이미 Java에서 포맷팅된 timeText를 그대로 사용!
+				var midIndex = Math.floor(pathCoords.length / 2);
+				var midCoord = pathCoords[midIndex];
+
+				window.durationInfoWindow = new naver.maps.InfoWindow(
+						{
+							content : [
+									'<div style="padding:6px 12px; background:#2563eb; color:white; border-radius:20px; font-family:sans-serif; box-shadow:0 4px 10px rgba(0,0,0,0.3); border:2px solid white; display:flex; align-items:center; white-space:nowrap;">',
+									'   <span style="margin-right:5px; font-size:12px;">🕒</span>',
+									'   <span style="font-size:11px; font-weight:300; opacity:0.8; margin-right:5px;">예상</span>',
+									'   <span style="font-size:14px; font-weight:bold;">'
+											+ timeText + '</span>', '</div>' ]
+									.join(''),
+							position : midCoord,
+							backgroundColor : "transparent",
+							borderWidth : 0,
+							disableAnchor : true
+						});
+				window.durationInfoWindow.open(map);
+
+				var bounds = new naver.maps.LatLngBounds();
+				pathCoords.forEach(function(p) {
+					bounds.extend(p);
+				});
+				map.fitBounds(bounds, {
+					top : 50,
+					right : 50,
+					bottom : 50,
+					left : 50
+				});
+			} catch (e) {
+				console.error("drawRoute 에러:", e);
+			}
+		};
 		initMap();
 	</script>
 

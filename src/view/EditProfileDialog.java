@@ -240,7 +240,7 @@ public class EditProfileDialog extends JDialog {
         JPanel p = new JPanel(new GridLayout(2, 3, 5, 5));
         p.setBackground(Color.WHITE);
         p.setMaximumSize(new Dimension(320, 55));
-        String[] fuels = {"휘발유", "경유", "LPG", "전기", "하이브리드", "기타"};
+        String[] fuels = {"휘발유", "경유", "LPG", "전기", "하이브리드"};
         fuelRadios = new JRadioButton[fuels.length];
         fuelGroup = new ButtonGroup();
 

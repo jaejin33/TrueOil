@@ -4,9 +4,9 @@ import javax.swing.*;
 import javax.swing.border.*;
 import apiService.AvgPrice;
 import java.awt.*;
-import java.awt.event.*;
 import java.net.URI;
 import java.util.Map;
+import database.LocationData;
 
 // JavaFX 연동을 위한 import
 import javafx.application.Platform;
@@ -33,7 +33,7 @@ public class StationDetailPage extends JScrollPane {
 	private JFXPanel jfxPanel;
 	private WebEngine webEngine;
 	private String stationX, stationY, stationName, representativePrice;
-
+	public String addr;
 	private JLabel distanceValueLabel;
 	private JLabel travelCostValueLabel;
 
@@ -67,7 +67,7 @@ public class StationDetailPage extends JScrollPane {
 
 			// 3. 상세 정보 및 좌표 파싱
 			this.stationName = getTagValue(doc, "OS_NM");
-			String addr = getTagValue(doc, "NEW_ADR");
+			addr = getTagValue(doc, "NEW_ADR");
 			String tel = getTagValue(doc, "TEL");
 			this.stationX = getTagValue(doc, "GIS_X_COOR"); // 오피넷 KATECH X
 			this.stationY = getTagValue(doc, "GIS_Y_COOR"); // 오피넷 KATECH Y
@@ -113,7 +113,7 @@ public class StationDetailPage extends JScrollPane {
 		return "";
 	}
 
-	// ✅ 지도 카드 생성 (JavaFX WebView 통합)
+	// 지도 카드 생성 (JavaFX WebView 통합)
 	private JPanel createMapCard(String name) {
 
 		JPanel card = createBaseCard("📍 주유소 위치");
@@ -132,7 +132,7 @@ public class StationDetailPage extends JScrollPane {
 			webEngine.setUserAgent(
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 			try {
-				// ✅ 현재 작업 디렉토리(프로젝트 루트)에서 map.html 찾기
+				// 현재 작업 디렉토리(프로젝트 루트)에서 map.html 찾기
 				String projectRoot = System.getProperty("user.dir");
 				java.io.File mapFile = new java.io.File(projectRoot, "map.html");
 
@@ -157,7 +157,6 @@ public class StationDetailPage extends JScrollPane {
 						}
 					});
 				} else {
-					// 💡 상위 폴더 경로 디버깅을 위한 출력
 					System.err.println("❌ map.html 못 찾음. 실행 위치: " + projectRoot);
 					webEngine.loadContent("<html><body><h3 style='color:red;'>map.html missing at: "
 							+ mapFile.getAbsolutePath() + "</h3></body></html>");
@@ -194,13 +193,75 @@ public class StationDetailPage extends JScrollPane {
 		});
 
 		routeBtn.addActionListener(e -> {
-			try {
-				String urlWithFixedSpace = "https://map.naver.com/v5/directions/-/-/" + stationName.replace(" ", "%20")
-						+ ",PLACE_ID/route";
-				Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
+			// 1. 출발지 좌표 가져오기
+			LocationData startPlace = LocationData.selected;
+			double sLat = (startPlace != null) ? startPlace.getLat() : 35.154176;
+			double sLng = (startPlace != null) ? startPlace.getLng() : 129.033014;
+			// 2. JavaScript를 통해 목적지 위경도 좌표를 먼저 가져옴 (UI 스레드)
+			Platform.runLater(() -> {
+				try {
+					Object result = webEngine
+							.executeScript(String.format("getLatLngFromKatech(%s, %s)", stationX, stationY));
+					if (result != null) {
+						String[] latlng = result.toString().split(",");
+						double dLat = Double.parseDouble(latlng[0]);
+						double dLng = Double.parseDouble(latlng[1]);
+
+						// 3. 좌표를 구한 후 네트워크 작업 시작 (별도 스레드)
+						// routeBtn 리스너 내 Thread 부분 수정
+						new Thread(() -> {
+							String jsonResponse = getRouteData(sLng, sLat, dLng, dLat);
+
+							if (jsonResponse != null && jsonResponse.contains("\"path\"")) {
+								javafx.application.Platform.runLater(() -> {
+									try {
+										// 1. 데이터 추출
+										java.util.regex.Pattern pathPattern = java.util.regex.Pattern
+												.compile("\"path\":\\s*\\[(\\[.*?\\])\\]");
+										java.util.regex.Matcher pathMatcher = pathPattern.matcher(jsonResponse);
+
+										// 2. summary 내의 duration 추출 (보안형)
+										java.util.regex.Pattern durPattern = java.util.regex.Pattern
+												.compile("\"summary\".*?\"duration\":\\s*(\\d+)");
+										java.util.regex.Matcher durMatcher = durPattern.matcher(jsonResponse);
+
+										String pathDataString = pathMatcher.find() ? pathMatcher.group(1) : "";
+
+										// duration 파싱
+										long durationMs = 0;
+										if (durMatcher.find()) {
+											durationMs = Long.parseLong(durMatcher.group(1));
+										}
+										// 2. Java에서 최종 표시용 텍스트 완성 (중복 계산 방지)
+										long totalMinutes = Math.max(1, Math.round(durationMs / 1000.0 / 60.0));
+										String finalTimeText;
+										if (totalMinutes >= 60) {
+											finalTimeText = (totalMinutes / 60) + "시간 " + (totalMinutes % 60) + "분";
+										} else {
+											finalTimeText = totalMinutes + "분";
+										}
+
+										if (pathDataString.length() > 5) {
+											// [중요] 숫자가 아닌 문자열 '%s'로 전달합니다.
+											String script = String.format(java.util.Locale.US,
+													"if(window.drawRoute){ window.drawRoute(`[%s]`, '%s'); }",
+													pathDataString, finalTimeText);
+											webEngine.executeScript(script);
+
+											System.out.println(">>> 실제 duration(ms): " + durationMs);
+											System.out.println(">>> 지도 표시 텍스트: " + finalTimeText);
+										}
+									} catch (Exception ex) {
+										ex.printStackTrace();
+									}
+								});
+							}
+						}).start();
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			});
 		});
 
 		btnGrid.add(naviBtn);
@@ -212,6 +273,45 @@ public class StationDetailPage extends JScrollPane {
 		return card;
 	}
 
+	public String getRouteData(double sLng, double sLat, double eLng, double eLat) {
+		// 이미지에서 확인된 ID와 Secret (공백 없이 정확함)
+		String clientId = "jkwi5mphw2";
+		String clientSecret = "2EOprmGxyCh8FdCDBgTUKUUvAEX5uWv0UzBwG93f";
+
+		try {
+			// [수정] 매뉴얼의 curl 예시 주소와 100% 일치시킴
+			// 주소: maps.apigw.ntruss.com / 경로: v1/driving
+			String apiURL = String.format(java.util.Locale.US,
+					"https://maps.apigw.ntruss.com/map-direction/v1/driving?start=%f,%f&goal=%f,%f&option=trafast",
+					sLng, sLat, eLng, eLat);
+
+			java.net.URL url = new java.net.URL(apiURL);
+			java.net.HttpURLConnection con = (java.net.HttpURLConnection) url.openConnection();
+			con.setRequestMethod("GET");
+
+			// [수정] 헤더 키 이름을 매뉴얼과 동일하게 소문자로 시도 (보안 장비 특성 반영)
+			con.setRequestProperty("x-ncp-apigw-api-key-id", clientId);
+			con.setRequestProperty("x-ncp-apigw-api-key", clientSecret);
+			con.setRequestProperty("Accept", "application/json");
+
+			int responseCode = con.getResponseCode();
+			System.out.println(">>> Directions 5 최종 시도 응답 코드: " + responseCode);
+
+			java.io.InputStream inputStream = (responseCode == 200) ? con.getInputStream() : con.getErrorStream();
+			java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(inputStream, "UTF-8"));
+
+			StringBuilder response = new StringBuilder();
+			String line;
+			while ((line = br.readLine()) != null)
+				response.append(line);
+			br.close();
+
+			return response.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
 	// --- 나머지 기존 UI 빌더 메서드 (동일) ---
 
 	private JPanel createHeader(String name, String uniId) {
@@ -380,7 +480,7 @@ public class StationDetailPage extends JScrollPane {
 				double sLng = Double.parseDouble(latLng[1]);
 
 				// 거리 및 비용 계산 로직...
-				database.LocationData current = database.LocationData.selected;
+				LocationData current = LocationData.selected;
 				double distance = calculateDistance(current.getLat(), current.getLng(), sLat, sLng);
 				int price = parsePrice(this.representativePrice);
 				double travelCost = (distance / 12.0) * price;
@@ -392,11 +492,8 @@ public class StationDetailPage extends JScrollPane {
 					Platform.runLater(() -> {
 						String mapUpdateScript = String.format(java.util.Locale.US,
 								"if (typeof setCenter === 'function') { " + "    setCenter(%s, %s); "
-										+ "    if (typeof addMarker === 'function') { " + "        clearMarkers(); " + // 기존
-																														// 마커
-																														// 제거
-																														// (필요시)
-										"        addMarker(%s, %s, '%s', '%s'); " + "    } " + "}",
+										+ "    if (typeof addMarker === 'function') { " + "        clearMarkers(); "
+										+ "        addMarker(%s, %s, '%s', '%s'); " + "    } " + "}",
 								stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
 								representativePrice);
 

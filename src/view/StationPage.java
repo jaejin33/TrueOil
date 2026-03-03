@@ -129,7 +129,7 @@ public class StationPage extends JScrollPane {
 			try {
 				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
 				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
-				String prodCd = "";// getSession
+				String prodCd = "";
 				switch (selectedFuel) {
 				case "휘발유":
 					prodCd = "B027";
