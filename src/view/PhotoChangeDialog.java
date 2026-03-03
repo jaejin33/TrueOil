@@ -2,10 +2,7 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
-
 import user.UserController;
-import user.dto.UserDto;
-
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -29,7 +26,7 @@ public class PhotoChangeDialog extends JDialog {
     private JPanel actionRow;
 
     private int mouseX, mouseY;
-    private String currentSelectedPath = null; // 현재 선택된 임시 파일 경로
+    private String currentSelectedPath = null;
     private UserController userController = new UserController();
 
     public PhotoChangeDialog(Frame parent) {
@@ -39,17 +36,17 @@ public class PhotoChangeDialog extends JDialog {
         setResizable(false);
         setSize(420, 480);
 
-        /* 1. 버튼 객체들 먼저 생성 (순서가 가장 중요합니다) */
+        /* 1. 버튼 객체 생성 */
         removeBtn = new JButton("삭제");
         styleSecondaryBtn(removeBtn, COLOR_DANGER);
         applyBtn = new JButton("적용");
         stylePrimaryBtn(applyBtn, COLOR_SUCCESS);
 
-        /* 2. 초기에는 버튼 숨김 처리 */
+        /* 2. 초기 숨김 처리 */
         removeBtn.setVisible(false);
         applyBtn.setVisible(false);
 
-        /* ===== 전체 배경 설정 ===== */
+        /* 배경 패널 */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
@@ -57,24 +54,19 @@ public class PhotoChangeDialog extends JDialog {
                 new EmptyBorder(20, 20, 20, 20) 
         ));
 
+        // 창 드래그 이동
         background.addMouseListener(new MouseAdapter() {
-            @Override
             public void mousePressed(MouseEvent e) {
-                mouseX = e.getX();
-                mouseY = e.getY();
+                mouseX = e.getX(); mouseY = e.getY();
             }
         });
-
         background.addMouseMotionListener(new MouseAdapter() {
-            @Override
             public void mouseDragged(MouseEvent e) {
-                int x = e.getXOnScreen();
-                int y = e.getYOnScreen();
-                setLocation(x - mouseX, y - mouseY);
+                setLocation(e.getXOnScreen() - mouseX, e.getYOnScreen() - mouseY);
             }
         });
 
-        /* ===== 카드 패널 설정 ===== */
+        /* 카드 패널 */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -82,34 +74,25 @@ public class PhotoChangeDialog extends JDialog {
                 new LineBorder(COLOR_BORDER, 2),
                 new EmptyBorder(16, 24, 24, 24)
         ));
-        card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 상단 헤더 (우측 종료 버튼) ===== */
+        /* 헤더 (종료 버튼) */
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
         JLabel closeLabel = new JLabel("✕");
         closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
         closeLabel.setForeground(Color.LIGHT_GRAY);
         closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeLabel.addMouseListener(new MouseAdapter() {
-            @Override
             public void mouseClicked(MouseEvent e) { dispose(); }
-            @Override
-            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
-            @Override
-            public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
         });
         header.add(closeLabel, BorderLayout.EAST);
 
-        /* ===== 제목 섹션 ===== */
         JLabel titleLabel = new JLabel("프로필 사진 변경");
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        titleLabel.setForeground(COLOR_TEXT_DARK);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 사진 프리뷰 영역 및 드래그 앤 드롭 ===== */
+        /* 사진 프리뷰 */
         photoPreview = new JLabel("👤", SwingConstants.CENTER);
         photoPreview.setPreferredSize(new Dimension(140, 140));
         photoPreview.setMaximumSize(new Dimension(140, 140));
@@ -119,114 +102,78 @@ public class PhotoChangeDialog extends JDialog {
         photoPreview.setAlignmentX(Component.CENTER_ALIGNMENT);
         photoPreview.setBorder(new LineBorder(COLOR_DIVIDER, 1));
 
+        /* 드래그 앤 드롭 */
         photoPreview.setTransferHandler(new TransferHandler() {
-            @Override
             public boolean canImport(TransferSupport support) {
                 return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
             }
-
-            @Override
             public boolean importData(TransferSupport support) {
-                if (!canImport(support)) return false;
                 try {
-                    Transferable t = support.getTransferable();
-                    List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
-                    if (files.size() > 0) {
-                        File file = files.get(0);
-                        String path = file.getAbsolutePath().toLowerCase();
-                        if (path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg")) {
-                            currentSelectedPath = file.getAbsolutePath(); // 경로 저장
-                            updatePreview(currentSelectedPath);
-                            removeBtn.setVisible(true);
-                            applyBtn.setVisible(true);
-                            revalidate(); repaint();
-                            return true;
-                        }
+                    List<File> files = (List<File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    if (!files.isEmpty()) {
+                        currentSelectedPath = files.get(0).getAbsolutePath();
+                        updatePreview(currentSelectedPath);
+                        updateActionLayout(true); // 버튼 2개(삭제/적용) 모드
+                        return true;
                     }
                 } catch (Exception e) { e.printStackTrace(); }
                 return false;
             }
         });
 
-        /* 3. [DB Point 1: 초기 데이터 로드] */
+        /* 초기 데이터 로드 */
         String initialPath = userController.getProfileImagePath();
-        
         updatePreview(initialPath);
 
-        if (initialPath != null && !initialPath.contains("default.png")) {
-            removeBtn.setVisible(true);
-            applyBtn.setVisible(true);
-        } else {
-            removeBtn.setVisible(false);
-            applyBtn.setVisible(false);
-        }
-        
-        /* ===== 버튼 영역 및 조립 ===== */
-        JButton uploadBtn = new JButton("사진 업로드");
-        stylePrimaryBtn(uploadBtn, COLOR_PRIMARY);
-        
+        /* 하단 버튼 영역 (여기가 핵심!) */
         actionRow = new JPanel();
-        actionRow.setLayout(new BoxLayout(actionRow, BoxLayout.X_AXIS));
         actionRow.setOpaque(false);
         actionRow.setMaximumSize(new Dimension(320, 45));
+        
+        if (initialPath != null && !initialPath.contains("default.png")) {
+            updateActionLayout(true);
+        } else {
+            updateActionLayout(false);
+            applyBtn.setVisible(false);
+        }
 
-        actionRow.add(removeBtn);
-        actionRow.add(Box.createHorizontalStrut(10));
-        actionRow.add(applyBtn);
+        JButton uploadBtn = new JButton("사진 업로드");
+        stylePrimaryBtn(uploadBtn, COLOR_PRIMARY);
 
-        /* ===== 액션 리스너 설정 ===== */
+        /* 리스너 */
         uploadBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("이미지 파일", "jpg", "png", "jpeg"));
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 currentSelectedPath = fileChooser.getSelectedFile().getAbsolutePath();
                 updatePreview(currentSelectedPath);
-                removeBtn.setVisible(true);
-                applyBtn.setVisible(true);
-                revalidate(); repaint();
+                updateActionLayout(true);
             }
         });
 
         removeBtn.addActionListener(e -> {
-
-            String defaultPath = "resources/images/profiles/default.png";
-            
-            // String defaultPath = userController.getProfileDefaultPath(); // (필요시 추가)
-
-            // 프리뷰를 이모지가 아닌 파일 이미지로 업데이트
-            updatePreview(defaultPath); 
-            
-            // 상태 저장 및 버튼 제어
-            currentSelectedPath = "DELETE_ACTION"; // 서버에 "삭제됨"을 알릴 신호
-            removeBtn.setVisible(false);
-            applyBtn.setVisible(true);
-            
-            revalidate(); 
-            repaint();
+            updatePreview("resources/images/profiles/default.png"); 
+            currentSelectedPath = "DELETE_ACTION";
+            updateActionLayout(false); // 적용 버튼 1개만 꽉 차게 배치
         });
 
         applyBtn.addActionListener(e -> {
-            if (currentSelectedPath == null) {
-                JOptionPane.showMessageDialog(this, "사진을 먼저 선택하거나 드래그해 주세요.");
-                return;
-            }
-            String errorMessage = userController.requestProfileImageChange(currentSelectedPath);
-            if (errorMessage == null) {
-                JOptionPane.showMessageDialog(this, "프로필 사진이 성공적으로 변경되었습니다.");
+            if (currentSelectedPath == null) return;
+            String result = userController.requestProfileImageChange(currentSelectedPath);
+            if (result == null) {
+                JOptionPane.showMessageDialog(this, "성공적으로 변경되었습니다.");
+                
+                // [원래 로직 유지] MainPage 찾아서 갱신
                 Window ancestor = SwingUtilities.getWindowAncestor(this);
                 if (ancestor instanceof MainPage) {
-                    System.out.println("✅ MainPage 찾음! 갱신을 시작합니다."); // 디버깅용 출력
                     ((MainPage) ancestor).updateProfileUI(); 
-                } else {
-                    System.out.println("❌ MainPage를 찾지 못함. ancestor 타입: " + (ancestor != null ? ancestor.getClass().getName() : "null"));
                 }
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, errorMessage, "변경 실패", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, result, "에러", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        /* ===== 최종 카드 조립 ===== */
+        /* 최종 조립 */
         card.add(header);
         card.add(Box.createVerticalStrut(10));
         card.add(titleLabel);
@@ -243,27 +190,35 @@ public class PhotoChangeDialog extends JDialog {
         setLocationRelativeTo(parent);
     }
 
+    // [버튼 너비 맞춤 핵심 메서드]
+    private void updateActionLayout(boolean showDelete) {
+        actionRow.removeAll();
+        if (showDelete) {
+            actionRow.setLayout(new GridLayout(1, 2, 10, 0)); // 2개 버튼 동일 너비
+            actionRow.add(removeBtn);
+            actionRow.add(applyBtn);
+            removeBtn.setVisible(true);
+        } else {
+            actionRow.setLayout(new GridLayout(1, 1)); // 1개 버튼 전체 너비
+            actionRow.add(applyBtn);
+            removeBtn.setVisible(false);
+        }
+        applyBtn.setVisible(true);
+        actionRow.revalidate();
+        actionRow.repaint();
+    }
+
     private void updatePreview(String path) {
         try {
             File imgFile = new File(path);
-            
-            if (!imgFile.exists()) {
-                path = "resources/images/profiles/default.png";
-                if (!new File(path).exists()) {
-                    path = "src/resources/images/profiles/default.png";
-                }
-            }
-
+            if (!imgFile.exists()) path = "src/resources/images/profiles/default.png";
             ImageIcon icon = new ImageIcon(path);
             Image img = icon.getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH);
-            photoPreview.setText(""); // 이모지 텍스트 지우기
+            photoPreview.setText(""); 
             photoPreview.setIcon(new ImageIcon(img));
-            
         } catch (Exception e) {
-            // 정말로 파일이 하나도 없을 때만 최후의 수단으로 이모지 표시
             photoPreview.setIcon(null);
             photoPreview.setText("👤");
-            System.err.println("❌ 프리뷰 로딩 실패: " + e.getMessage());
         }
     }
 
@@ -274,8 +229,8 @@ public class PhotoChangeDialog extends JDialog {
         b.setFocusPainted(false);
         b.setBorderPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setAlignmentX(Component.CENTER_ALIGNMENT);
         b.setMaximumSize(new Dimension(320, 45));
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 
     private void styleSecondaryBtn(JButton b, Color fg) {
@@ -285,7 +240,7 @@ public class PhotoChangeDialog extends JDialog {
         b.setFocusPainted(false);
         b.setBorder(new LineBorder(fg));
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setAlignmentX(Component.CENTER_ALIGNMENT);
         b.setMaximumSize(new Dimension(320, 45));
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 }
