@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 <meta charset="UTF-8">
 <title>네이버 지도 - TrueOil</title>
 <script type="text/javascript"
 	src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2&submodules=geocoder"></script>
+
 <style>
 body {
 	margin: 0;
@@ -17,31 +17,13 @@ body {
 	width: 100%;
 	height: 100vh;
 }
-
-/* 디버그용 콘솔 (필요 없을 시 display: none 유지) */
-#debug {
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	width: 100%;
-	height: 80px;
-	background: rgba(0, 0, 0, 0.8);
-	color: lime;
-	overflow-y: auto;
-	font-size: 13px;
-	padding: 10px;
-	display: none;
-	box-sizing: border-box;
-}
 </style>
-</head>
 
+</head>
 <body>
 	<div id="map"></div>
 	<div id="debug"></div>
-
 	<script>
-		// 에러 로깅용 함수
 		function log(msg) {
 			console.log(msg);
 		}
@@ -50,6 +32,7 @@ body {
 		var markers = [];
 		var isMapLoaded = false;
 		var currentMode = "STATION"; // 기본값은 주유소 모드
+		var activeMarker = null;
 		function setMapMode(mode) {
 			currentMode = mode; // "STATION" 또는 "REPAIR"
 			log("현재 지도 모드 변경: " + mode);
@@ -65,17 +48,14 @@ body {
 
 			map = new naver.maps.Map('map', mapOptions);
 			isMapLoaded = true;
-
-			// 2. [핵심] 지도 움직임이 멈췄을 때 (idle 이벤트)
 			naver.maps.Event.addListener(map, 'idle',
+
 					function() {
 						if (currentMode === "STATION" && window.javaConnector) {
 							var center = map.getCenter(); // 현재 중심 위경도
-
 							// 네이버 위경도(LatLng) -> 오피넷 KATECH(TM128) 변환
 							var tm128 = naver.maps.TransCoord
 									.fromLatLngToTM128(center);
-
 							// Java에 연결된 객체가 있으면 좌표 전송
 							if (window.javaConnector) {
 								window.javaConnector.searchStations(tm128.x,
@@ -83,7 +63,6 @@ body {
 							}
 						}
 					});
-
 		} catch (e) {
 			log('❌ 지도 초기화 오류: ' + e.message);
 		}
@@ -91,8 +70,8 @@ body {
 		// ==========================================
 		// ▼ Java에서 호출할 외부 함수들 ▼
 		// ==========================================
-
 		// 기존 마커 모두 삭제
+
 		function clearMarkers() {
 			try {
 				for (var i = 0; i < markers.length; i++) {
@@ -109,11 +88,10 @@ body {
 			try {
 				if (!x || !y || x == 0 || y == 0)
 					return;
-
 				// KATECH(TM128) -> 네이버 위경도(LatLng) 변환
+
 				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
 				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
-
 				var marker = new naver.maps.Marker(
 						{
 							position : latLng,
@@ -128,11 +106,11 @@ body {
 
 				var infowindow = new naver.maps.InfoWindow(
 						{
-							content : '<div style="padding:10px;min-width:150px;"><strong>'
+							content : '<div style="padding:10px;min-width:150px;"><strong' + '> '
 									+ name
-									+ '</strong><br>가격: '
+									+ ' <' + '/strong><br>가격: '
 									+ price
-									+ '원/L</div>'
+									+ '원/L<' + '/div>'
 						});
 
 				naver.maps.Event.addListener(marker, 'click', function() {
@@ -141,95 +119,120 @@ body {
 					else
 						infowindow.open(map, marker);
 				});
-
 				markers.push(marker);
 			} catch (e) {
 				log('❌ addMarker 에러: ' + e.message);
 			}
 		}
-		// [추가] 정비소 전용 마커 추가 함수
-		function addRepair(x, y, name, infoText) {
+
+		function setRepairMarkers(dataJson) {
+			if (!map) {
+				log("⚠️ 지도가 준비되지 않음. 재시도...");
+				setTimeout(function() {
+					setRepairMarkers(dataJson);
+				}, 500);
+
+				return;
+			}
+
 			try {
-				log("addRepair 호출(위경도 모드): " + name + " (" + y + ", " + x + ")");
+				clearMarkers();
 
-				if (!map) {
-					log("❌ 에러: 지도 객체가 없습니다.");
+				var data = JSON.parse(dataJson);
+				log("📍 수신된 데이터 수: " + data.length);
+				if (data.length === 0)
 					return;
+				var bounds = new naver.maps.LatLngBounds(); // 모든 마커를 포함할 영역
+				data
+						.forEach(function(item) {
+							var latLng;
+							var x = parseFloat(item.x);
+							var y = parseFloat(item.y);
+							var latLng = (x > 130) ? naver.maps.TransCoord
+									.fromTM128ToLatLng(new naver.maps.Point(x,
+											y)) : new naver.maps.LatLng(y, x);
+
+							var marker = new naver.maps.Marker(
+									{
+										position : latLng,
+										map : map,
+										icon : {
+											content : '<div style="width:12px;height:12px;background:#059669;border:2px solid white;border-radius:50%;"></div>',
+											anchor : new naver.maps.Point(6, 6)
+										}
+
+									});
+							marker.set('shopData', item);
+							naver.maps.Event.addListener(marker, 'click',
+
+							function() {
+								focusRepair(item.name);
+							});
+							markers.push(marker);
+							bounds.extend(latLng);
+						});
+
+				if (!bounds.isEmpty()) {
+					map.fitBounds(bounds);
 				}
-
-				// ✅ 위경도 데이터이므로 변환 없이 바로 사용 (y가 위도, x가 경도)
-				var latLng = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
-
-				log("📍 마커 좌표: " + latLng.toString());
-
-				var marker = new naver.maps.Marker(
-						{
-							position : latLng,
-							map : map,
-							title : name,
-							zIndex : 100,
-							icon : {
-								content : '<div style="background:#059669; color:white; padding:5px 12px; border-radius:15px; font-size:12px; font-weight:bold; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">'
-										+ name + '</div>',
-								anchor : new naver.maps.Point(30, 15)
-							}
-						});
-
-				marker.set('name', name);
-
-				var infowindow = new naver.maps.InfoWindow(
-						{
-							content : '<div style="padding:10px; min-width:150px;"><strong>'
-									+ name
-									+ '</strong><br>'
-									+ infoText
-									+ '</div>'
-						});
-				marker.set('info', infowindow);
-
-				naver.maps.Event.addListener(marker, 'click', function() {
-					if (infowindow.getMap())
-						infowindow.close();
-					else
-						infowindow.open(map, marker);
-				});
-
-				markers.push(marker);
-				log("✅ 마커 생성 성공!");
-
 			} catch (e) {
-				log('❌ addRepair 에러: ' + e.message);
+				log("❌ 마커 생성 중 에러: " + e.message);
 			}
 		}
 
 		// [추가] 정비소 목록 클릭 시 호출할 전용 함수 (기존 showMarkerDetail과 동일 로직이나 명칭 통일)
-		function focusRepair(targetName) {
-			log("focusRepair 호출됨: " + targetName);
-			for (var i = 0; i < markers.length; i++) {
-				if (markers[i].get('name') === targetName) {
-					var marker = markers[i];
-					var info = marker.get('info');
-					info.open(map, marker);
-					map.panTo(marker.getPosition());
-					log("🎯 해당 마커로 이동 완료");
-					break;
-				}
-			}
-		}
 
+		function focusRepair(targetName) {
+			if (activeMarker) {
+				activeMarker
+						.setIcon({
+							content : '<div style="width:12px;height:12px;background:#059669;border:2px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.2);"></div>',
+							anchor : new naver.maps.Point(6, 6)
+						});
+				activeMarker.setZIndex(1);
+				activeMarker = null;
+			}
+
+			markers
+					.forEach(function(marker) {
+						var item = marker.get('shopData');
+						if (!item)
+							return;
+
+						if (item.name === targetName) {
+							marker
+									.setIcon({
+										content : '<div style="background:#059669; color:white; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); white-space:nowrap;">'
+												+ item.name + '</div>',
+										anchor : new naver.maps.Point(40, 15)
+									});
+
+							map.panTo(marker.getPosition());
+							marker.setZIndex(1000);
+							activeMarker = marker; // 현재 강조된 마커 저장
+
+							if (window.javaConnector) {
+								window.javaConnector.onShopClick(item.name);
+							}
+						}
+					});
+		}
 		// 지도 중심 이동하기
 		function setCenter(x, y) {
 			try {
 				if (!x || !y || x == 0 || y == 0)
 					return;
+
 				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
 				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
 				map.setCenter(latLng);
+
 			} catch (e) {
 				log('❌ setCenter 에러');
 			}
+
 		}
 	</script>
-</body>
 
+</body>
 </html>

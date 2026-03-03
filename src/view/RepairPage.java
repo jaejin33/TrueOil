@@ -7,6 +7,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
 import apiService.RepairDao;
 import apiService.RepairDto;
 import javafx.application.Platform;
@@ -15,6 +16,7 @@ import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import netscape.javascript.JSObject;
 import reservation.RepairReservationController;
 
 /**
@@ -22,6 +24,7 @@ import reservation.RepairReservationController;
  * DB 포인트: 정비소 정보 불러오기(GET), 예약 정보 저장하기(POST)
  */
 public class RepairPage extends JScrollPane {
+
 	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
 	private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
 	private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
@@ -41,31 +44,59 @@ public class RepairPage extends JScrollPane {
 
 	private WebEngine webEngine;
 
+	// JS(지도)에서 Java로 통신하기 위한 커넥터
+	public class JavaConnector {
+		public void onShopClick(String shopName) {
+
+			SwingUtilities.invokeLater(() -> {
+				// ✅ 무한 피드백 루프 방지
+				if (shopName != null && shopName.equals(selectedShopName)) {
+					return;
+				}
+
+				selectedShopName = shopName;
+				shopDisplayField.setText(" " + shopName);
+				refreshShopSelection(); // 왼쪽 목록 하이라이트
+				updateFormVisibility(); // 폼 활성화
+			});
+		}
+	}
+
 	public RepairPage() {
 
 		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		getVerticalScrollBar().setUnitIncrement(20);
 		setBorder(null);
 
-		JPanel container = new JPanel();
-		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+		// ✅ StationPage 방식의 GridBagLayout 적용
+		JPanel container = new JPanel(new GridBagLayout());
 		container.setBackground(COLOR_BG_GRAY);
-		container.setBorder(new EmptyBorder(30, 60, 30, 60));
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = GridBagConstraints.RELATIVE;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.weightx = 1.0;
+		gbc.insets = new Insets(10, 60, 10, 60);
 
 		JLabel title = new JLabel("정비소 예약");
 		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-		title.setForeground(COLOR_TEXT_DARK);
-		title.setAlignmentX(Component.LEFT_ALIGNMENT);
-		container.add(title);
-		container.add(Box.createVerticalStrut(25));
+		gbc.insets = new Insets(30, 60, 20, 60);
+		container.add(title, gbc);
 
-		container.add(createMapSection());
-		container.add(Box.createVerticalStrut(25));
-		container.add(createShopSection());
-		container.add(Box.createVerticalStrut(25));
-		container.add(createFormSection());
+		gbc.insets = new Insets(10, 60, 10, 60);
+		container.add(createMapSection(), gbc);
+		container.add(createShopSection(), gbc);
+		container.add(createFormSection(), gbc);
 
-		container.add(Box.createVerticalGlue());
+		// 하단 여백 채우기
+		gbc.weighty = 1.0;
+		container.add(new JPanel() {
+			{
+				setOpaque(false);
+			}
+		}, gbc);
+
 		setViewportView(container);
 
 		// [이벤트] 탭 전환 시 데이터 갱신 리스너
@@ -92,15 +123,41 @@ public class RepairPage extends JScrollPane {
 			RepairDao dao = new RepairDao();
 			// 예시: 부산진구 기준, 내 위치 (35.15, 129.03)
 			List<RepairDto> shops = dao.getNearestShops(35.1417545, 129.0341064, "부산진구", 10);
+			StringBuilder jsonBuilder = new StringBuilder("[");
 
-			for (RepairDto s : shops) {
+			for (int i = 0; i < shops.size(); i++) {
+				RepairDto s = shops.get(i);
 				shopListPanel.add(createShopItem(s));
+
+				// JS 안전을 위해 따옴표와 특수문자 제거
+				String safeName = s.getName().replaceAll("['\"\\\\]", "");
+				jsonBuilder.append(String.format(java.util.Locale.US, "{\"name\":\"%s\", \"x\":%f, \"y\":%f}", safeName,
+						s.getX(), s.getY()));
+				if (i < shops.size() - 1)
+					jsonBuilder.append(",");
 			}
+			jsonBuilder.append("]");
+			String finalJson = jsonBuilder.toString();
+
+			Platform.runLater(() -> {
+				if (webEngine != null) {
+					String escapedJson = finalJson.replace("\\", "\\\\").replace("'", "\\'");
+					String script = String
+							.format("if(typeof setRepairMarkers === 'function') { setRepairMarkers('%s'); } "
+									+ "else { console.error('setRepairMarkers 함수가 아직 정의되지 않음'); }", escapedJson);
+					try {
+						webEngine.executeScript(script);
+					} catch (Exception e) {
+						System.err.println("마커 전송 실패: " + e.getMessage());
+					}
+				}
+			});
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		if (selectedShopName != null) {
+		if (selectedShopName != null && !selectedShopName.isEmpty()) {
 			refreshShopSelection();
 		}
 
@@ -119,16 +176,23 @@ public class RepairPage extends JScrollPane {
 		Platform.runLater(() -> {
 			WebView webView = new WebView();
 			webEngine = webView.getEngine();
+			webEngine.setUserAgent(
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
 			webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
 				if (newState == Worker.State.SUCCEEDED) {
-					// 안전한 모드 전환 호출
-					String script = "if(typeof setMapMode === 'function') { setMapMode('REPAIR'); }";
-					try {
-						webEngine.executeScript(script);
-					} catch (Exception e) {
-						System.err.println("JS 로딩 지연: " + e.getMessage());
-					}
+					JSObject window = (JSObject) webEngine.executeScript("window");
+					window.setMember("javaConnector", new JavaConnector());
+
+					Platform.runLater(() -> {
+						try {
+							webEngine.executeScript("if(typeof setMapMode === 'function') { setMapMode('REPAIR'); }");
+							// StationPage처럼 초기 좌표 전송 로직을 넣거나 refreshData 호출
+							refreshData();
+						} catch (Exception e) {
+							System.err.println("JS 초기 호출 실패: " + e.getMessage());
+						}
+					});
 				}
 			});
 
@@ -151,11 +215,8 @@ public class RepairPage extends JScrollPane {
 	private JPanel createShopSection() {
 
 		JPanel card = createBaseCard("📍 근처 정비소");
-
-		// 정비소 목록이 들어갈 컨테이너 초기화
 		shopListPanel = new JPanel(new GridLayout(0, 2, 15, 15));
 		shopListPanel.setOpaque(false);
-
 		((JPanel) card.getComponent(1)).add(shopListPanel);
 		return card;
 	}
@@ -166,18 +227,16 @@ public class RepairPage extends JScrollPane {
 		JPanel body = (JPanel) card.getComponent(1);
 		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
 
-		// 1. 선택한 정비소 표시
 		shopDisplayField = new JTextField();
 		shopDisplayField.setEditable(false);
 		shopDisplayField.setPreferredSize(new Dimension(0, 35));
 		body.add(createInputGroup("선택한 정비소", shopDisplayField));
 		body.add(Box.createVerticalStrut(15));
 
-		// 2. 예약 날짜 및 시간
 		JPanel grid = new JPanel(new GridLayout(1, 2, 15, 0));
 		grid.setOpaque(false);
 		grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-		String today = java.time.LocalDate.now().toString(); 
+		String today = java.time.LocalDate.now().toString();
 		dateField = new JTextField(today);
 		timeCombo = new JComboBox<>(
 				new String[] { "시간 선택", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00" });
@@ -187,7 +246,6 @@ public class RepairPage extends JScrollPane {
 		body.add(grid);
 		body.add(Box.createVerticalStrut(15));
 
-		// 3. 정비 서비스 선택
 		JPanel serviceGrid = new JPanel(new GridLayout(2, 3, 0, 5));
 		serviceGrid.setOpaque(false);
 		serviceChecks = new ArrayList<>();
@@ -202,7 +260,6 @@ public class RepairPage extends JScrollPane {
 		body.add(createInputGroup("정비 서비스 (복수 선택 가능)", serviceGrid));
 		body.add(Box.createVerticalStrut(15));
 
-		// 4. 요청사항 입력
 		noteArea = new JTextArea(4, 20);
 		noteArea.setBorder(new LineBorder(COLOR_DIVIDER));
 		JScrollPane noteScroll = new JScrollPane(noteArea);
@@ -210,7 +267,6 @@ public class RepairPage extends JScrollPane {
 		body.add(createInputGroup("요청사항", noteScroll));
 		body.add(Box.createVerticalStrut(20));
 
-		// 5. 버튼 및 예약 실행 (API/DB 연동)
 		JButton submitBtn = new JButton("예약하기");
 		submitBtn.setBackground(COLOR_PRIMARY);
 		submitBtn.setForeground(Color.WHITE);
@@ -219,12 +275,7 @@ public class RepairPage extends JScrollPane {
 		submitBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
 		submitBtn.addActionListener(e -> {
-			/** * [예약 실행 로직]
-			 * Controller를 통해 UI 입력값을 DB에 저장합니다.
-			 */
-
-			// 1) 필수 선택 검증
-			if (selectedShopName == null) {
+			if (selectedShopName == null || selectedShopName.isEmpty()) {
 				JOptionPane.showMessageDialog(null, "정비소를 먼저 선택해 주세요.", "알림", JOptionPane.WARNING_MESSAGE);
 				return;
 			}
@@ -233,7 +284,6 @@ public class RepairPage extends JScrollPane {
 				return;
 			}
 
-			// 2) 체크된 서비스 항목 수집 (콤마로 구분된 문자열 생성)
 			StringBuilder sb = new StringBuilder();
 			for (JCheckBox cb : serviceChecks) {
 				if (cb.isSelected()) {
@@ -242,21 +292,18 @@ public class RepairPage extends JScrollPane {
 					sb.append(cb.getText());
 				}
 			}
-
 			if (sb.length() == 0) {
 				JOptionPane.showMessageDialog(null, "최소 하나 이상의 정비 서비스를 선택해 주세요.", "알림", JOptionPane.WARNING_MESSAGE);
 				return;
 			}
 
-			// 3) 컨트롤러 호출
 			boolean success = reservationController.requestReservation(selectedShopName, dateField.getText().trim(),
 					timeCombo.getSelectedItem().toString(), sb.toString(), noteArea.getText().trim());
 
-			// 4) 결과 처리
 			if (success) {
 				JOptionPane.showMessageDialog(null, selectedShopName + "에 예약이 성공적으로 완료되었습니다!", "예약 완료",
 						JOptionPane.INFORMATION_MESSAGE);
-				resetForm(); // 입력 폼 초기화 (선택 사항)
+				resetForm();
 			} else {
 				JOptionPane.showMessageDialog(null, "예약 처리 중 오류가 발생했습니다. 다시 시도해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
 			}
@@ -267,21 +314,35 @@ public class RepairPage extends JScrollPane {
 	}
 
 	/**
-	 * 예약 완료 후 입력 폼을 초기 상태로 되돌립니다.
+	 * 예약 완료 후 입력 폼과 지도 마커를 초기 상태로 되돌립니다.
 	 */
 	private void resetForm() {
 
 		selectedShopName = "";
-		dateField.setText("2026-03-03"); // 현재 날짜 등으로 초기화
+		dateField.setText(java.time.LocalDate.now().toString());
 		timeCombo.setSelectedIndex(0);
 		noteArea.setText("");
 		for (JCheckBox cb : serviceChecks)
 			cb.setSelected(false);
+
 		updateFormVisibility();
 		refreshShopSelection();
+
+		// ✅ 예약 완료 후 지도 위의 강조된 이름표 마커를 모두 없애고 초기 상태로 되돌림
+		Platform.runLater(() -> {
+			try {
+				if (webEngine != null) {
+					// focusRepair에 빈 문자열이나 존재하지 않는 이름을 주면 모두 원상복구(점)됨
+					webEngine.executeScript("if(typeof focusRepair === 'function') { focusRepair(''); }");
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		});
 	}
 
 	private JPanel createShopItem(RepairDto s) {
+
 		JPanel item = new JPanel(new BorderLayout());
 		item.setBackground(Color.WHITE);
 		item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
@@ -296,22 +357,16 @@ public class RepairPage extends JScrollPane {
 		item.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
 
+				// ✅ 무한 피드백 루프 방지
+				if (s.getName().equals(selectedShopName)) {
+					return;
+				}
 
 				selectedShopName = s.getName();
-
 				Platform.runLater(() -> {
 					try {
 						if (webEngine != null) {
-							System.out.println("JS 호출 시작: " + selectedShopName); // Java 콘솔에 출력되는지 확인
-							webEngine.executeScript("console.log('Java에서 마커 추가 요청됨');");
-
-							webEngine.executeScript("clearMarkers();");
-
 							String nameEscaped = s.getName().replace("'", "\\'");
-							String addScript = String.format(java.util.Locale.US, "addRepair(%f, %f, '%s', '%s')",
-									s.getX(), s.getY(), nameEscaped, "정비 예약 가능");
-
-							webEngine.executeScript(addScript);
 							webEngine.executeScript(String.format("focusRepair('%s');", nameEscaped));
 						}
 					} catch (Exception ex) {
@@ -323,6 +378,7 @@ public class RepairPage extends JScrollPane {
 				updateFormVisibility();
 			}
 		});
+
 		return item;
 	}
 
@@ -333,8 +389,9 @@ public class RepairPage extends JScrollPane {
 				JPanel item = (JPanel) c;
 				item.setBackground(Color.WHITE);
 				item.setBorder(new LineBorder(COLOR_DIVIDER, 1));
-				// 텍스트 매칭을 통해 현재 선택된 항목 식별
-				if (((JLabel) item.getComponent(0)).getText().contains("<b>" + selectedShopName + "</b>")) {
+
+				if (!selectedShopName.isEmpty()
+						&& ((JLabel) item.getComponent(0)).getText().contains("<b>" + selectedShopName + "</b>")) {
 					item.setBackground(COLOR_SELECTED_BG);
 					item.setBorder(new LineBorder(COLOR_PRIMARY, 2));
 				}
@@ -344,8 +401,10 @@ public class RepairPage extends JScrollPane {
 
 	private void updateFormVisibility() {
 
-		boolean enabled = (selectedShopName != null);
-		shopDisplayField.setText(selectedShopName.isEmpty() ? " 정비소를 먼저 선택해주세요" : " " + selectedShopName);
+		// ✅ 빈 문자열 검사를 추가하여 처음 로드 시 폼이 비활성화되도록 수정
+		boolean enabled = (selectedShopName != null && !selectedShopName.isEmpty());
+
+		shopDisplayField.setText(!enabled ? " 정비소를 먼저 선택해주세요" : " " + selectedShopName);
 		dateField.setEnabled(enabled);
 		timeCombo.setEnabled(enabled);
 		noteArea.setEnabled(enabled);
@@ -381,6 +440,7 @@ public class RepairPage extends JScrollPane {
 		t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 		t.setForeground(COLOR_TEXT_DARK);
 		t.setBorder(new EmptyBorder(0, 0, 20, 0));
+
 		p.add(t, BorderLayout.NORTH);
 
 		JPanel body = new JPanel();

@@ -177,7 +177,6 @@ public class StationPage extends JScrollPane {
 		Platform.runLater(() -> {
 			webView = new WebView();
 			webEngine = webView.getEngine();
-			// 네이버 지도 로딩을 위한 필수 설정
 			webEngine.setUserAgent(
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
@@ -196,7 +195,6 @@ public class StationPage extends JScrollPane {
 					window.setMember("javaConnector", myConnector);
 					System.out.println("✅ Java-HTML 브릿지 연결 완료!");
 
-					// 2. 💡 [추가] 연결되자마자 지도(HTML) 화면에 성공 메시지를 띄우고, 현재 중심 좌표를 강제로 한 번 전송시킴!
 					String initScript = "if (typeof map !== 'undefined') {" + "    var center = map.getCenter();"
 							+ "    var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);"
 							+ "    window.javaConnector.searchStations(tm128.x, tm128.y);" + "}";
@@ -209,14 +207,12 @@ public class StationPage extends JScrollPane {
 
 				if (mapFile.exists()) {
 					webEngine.load(mapFile.toURI().toURL().toExternalForm());
-			    } else {
-			        // 4. 파일이 없을 경우 예외 처리
-			        System.err.println("❌ map.html 파일을 찾을 수 없습니다: " + mapFile.getAbsolutePath());
-			        webView.getEngine().loadContent(
-			            "<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3><p>경로: " + mapFile.getAbsolutePath() + "</p></body></html>",
-			            "text/html"
-			        );
-			    }
+				} else {
+					// 4. 파일이 없을 경우 예외 처리
+					System.err.println("❌ map.html 파일을 찾을 수 없습니다: " + mapFile.getAbsolutePath());
+					webView.getEngine().loadContent("<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3><p>경로: "
+							+ mapFile.getAbsolutePath() + "</p></body></html>", "text/html");
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
