@@ -5,8 +5,18 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URI;
+import java.util.Map;
+
+// JavaFX 연동을 위한 import
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.concurrent.Worker;
 
 public class StationDetailPage extends JScrollPane {
+	// 컬러 상수 정의
 	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
 	private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
 	private static final Color COLOR_BORDER_LIGHT = new Color(225, 228, 232);
@@ -16,8 +26,12 @@ public class StationDetailPage extends JScrollPane {
 	private static final Color COLOR_NAVER_GREEN = new Color(0, 199, 60);
 	private static final Color COLOR_BLUE_LIGHT = new Color(59, 130, 246);
 	private static final Color COLOR_GRAY_BORDER = new Color(209, 213, 219);
-
 	private static final int MAX_CARD_WIDTH = 900;
+
+	// 지도 관련 필드
+	private JFXPanel jfxPanel;
+	private WebEngine webEngine;
+	private String stationX, stationY, stationName, representativePrice;
 
 	public StationDetailPage(String uniId) {
 
@@ -29,14 +43,14 @@ public class StationDetailPage extends JScrollPane {
 		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
 		container.setBackground(COLOR_BG_GRAY);
 		container.setBorder(new EmptyBorder(40, 60, 40, 60));
+		container.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		try {
-			// ✅ [추가] 전국 평균 유가 Map 형태로 불러오기
-			java.util.Map<String, apiService.AvgPriceDto> avgPrices = apiService.AvgPrice.getAvgPrice();
-			// ✅ detailById API 호출
-			String apiUrl = "https://www.opinet.co.kr/api/detailById.do?" + "code=F260206147" + "&id=" + uniId
-					+ "&out=xml";
+			// 1. 전국 평균 유가 정보 로드
+			Map<String, apiService.AvgPriceDto> avgPrices = apiService.AvgPrice.getAvgPrice();
 
+			// 2. 오피넷 상세정보 API 호출
+			String apiUrl = "https://www.opinet.co.kr/api/detailById.do?code=F260206147&id=" + uniId + "&out=xml";
 			java.net.URL url = new java.net.URL(apiUrl);
 			java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
@@ -46,24 +60,31 @@ public class StationDetailPage extends JScrollPane {
 			javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
 			org.w3c.dom.Document doc = builder.parse(is);
 
-			// ✅ 상세정보 파싱
-			String name = getTagValue(doc, "OS_NM");
+			// 3. 상세 정보 및 좌표 파싱
+			this.stationName = getTagValue(doc, "OS_NM");
 			String addr = getTagValue(doc, "NEW_ADR");
 			String tel = getTagValue(doc, "TEL");
+			this.stationX = getTagValue(doc, "GIS_X_COOR"); // 오피넷 KATECH X
+			this.stationY = getTagValue(doc, "GIS_Y_COOR"); // 오피넷 KATECH Y
 
-			// 유가 정보는 OIL_PRICE 태그 반복문으로 파싱 가능
 			org.w3c.dom.NodeList priceList = doc.getElementsByTagName("OIL_PRICE");
 
-			container.add(createHeader(name, uniId));
+			// 대표 가격 추출 (첫 번째 항목)
+			if (priceList.getLength() > 0) {
+				this.representativePrice = ((org.w3c.dom.Element) priceList.item(0)).getElementsByTagName("PRICE")
+						.item(0).getTextContent();
+			}
+
+			// UI 구성
+			container.add(createHeader(stationName, uniId));
 			container.add(Box.createVerticalStrut(30));
-			container.add(createBasicInfoCard(name, addr, tel));
+			container.add(createBasicInfoCard(stationName, addr, tel));
 			container.add(Box.createVerticalStrut(25));
-			// ✅ [수정] avgPrices를 파라미터로 같이 넘겨줌
 			container.add(createPriceInfoCard(priceList, avgPrices));
 			container.add(Box.createVerticalStrut(25));
 			container.add(createDistanceCostCard());
 			container.add(Box.createVerticalStrut(25));
-			container.add(createMapCard(name));
+			container.add(createMapCard(stationName)); // 지도 카드 생성
 			container.add(Box.createVerticalStrut(60));
 
 		} catch (Exception e) {
@@ -72,19 +93,157 @@ public class StationDetailPage extends JScrollPane {
 		}
 
 		setViewportView(container);
+		
+		SwingUtilities.invokeLater(() -> {
+			revalidate();
+			repaint();
+		});
 	}
 
-	// XML 태그 값 추출 유틸
 	private String getTagValue(org.w3c.dom.Document doc, String tag) {
 
 		org.w3c.dom.NodeList nl = doc.getElementsByTagName(tag);
-		if (nl.getLength() > 0) {
+		if (nl.getLength() > 0)
 			return nl.item(0).getTextContent();
-		}
 		return "";
 	}
 
-	// ✅ 주소/전화 표시용
+	// ✅ 지도 카드 생성 (JavaFX WebView 통합)
+	private JPanel createMapCard(String name) {
+
+		JPanel card = createBaseCard("📍 주유소 위치");
+
+		// JavaFX 컨테이너 생성
+		jfxPanel = new JFXPanel();
+		Dimension mapDim = new Dimension(MAX_CARD_WIDTH - 80, 400);
+		jfxPanel.setPreferredSize(mapDim);
+		jfxPanel.setMinimumSize(mapDim);
+		jfxPanel.setMaximumSize(mapDim);
+
+		// JavaFX 스레드에서 WebView 초기화 실행
+		Platform.runLater(() -> {
+			WebView webView = new WebView();
+			webEngine = webView.getEngine();
+			webEngine.setUserAgent(
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+			try {
+				// ✅ 현재 작업 디렉토리(프로젝트 루트)에서 map.html 찾기
+				String projectRoot = System.getProperty("user.dir");
+				java.io.File mapFile = new java.io.File(projectRoot, "map.html");
+
+				if (mapFile.exists()) {
+					String mapUrl = mapFile.toURI().toURL().toExternalForm();
+					webEngine.load(mapUrl);
+
+					webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+						if (newState == Worker.State.SUCCEEDED) {
+							if (stationX != null && !stationX.isEmpty()) {
+								// 소수점 좌표를 위한 Locale.US 설정 포함
+								String script = String.format(java.util.Locale.US,
+										"if(typeof setCenter === 'function'){ " + "setCenter(%s, %s); "
+												+ "addMarker(%s, %s, '%s', '%s'); }",
+										stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
+										representativePrice);
+
+								webEngine.executeScript(script);
+							}
+						}
+					});
+				} else {
+					// 💡 상위 폴더 경로 디버깅을 위한 출력
+					System.err.println("❌ map.html 못 찾음. 실행 위치: " + projectRoot);
+					webEngine.loadContent("<html><body><h3 style='color:red;'>map.html missing at: "
+							+ mapFile.getAbsolutePath() + "</h3></body></html>");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			jfxPanel.setScene(new Scene(webView));
+		});
+
+		JPanel mapWrapper = new JPanel(new BorderLayout());
+		mapWrapper.setBackground(COLOR_MAP_BG);
+		mapWrapper.setBorder(new LineBorder(COLOR_MAP_BORDER));
+		mapWrapper.add(jfxPanel);
+		mapWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+		mapWrapper.setMaximumSize(mapDim);
+
+		// 하단 버튼 구성
+		JPanel btnGrid = new JPanel(new GridLayout(1, 2, 15, 0));
+		btnGrid.setOpaque(false);
+		btnGrid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 50));
+		btnGrid.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+		JButton naviBtn = createStyledButton("네이버 지도에서 보기", COLOR_NAVER_GREEN);
+		JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
+
+		naviBtn.addActionListener(e -> {
+		    try {
+		        String urlWithFixedSpace = "https://map.naver.com/v5/search/" + stationName.replace(" ", "%20");
+		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+		    } catch (Exception ex) {
+		        ex.printStackTrace();
+		    }
+		});
+		
+		routeBtn.addActionListener(e -> {
+		    try {
+		        String urlWithFixedSpace = "https://map.naver.com/v5/directions/-/-/" + stationName.replace(" ", "%20") + ",PLACE_ID/route";
+		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+		    } catch (Exception ex) {
+		        ex.printStackTrace();
+		    }
+		});
+
+		btnGrid.add(naviBtn);
+		btnGrid.add(routeBtn);
+
+		card.add(mapWrapper);
+		card.add(Box.createVerticalStrut(20));
+		card.add(btnGrid);
+		return card;
+	}
+
+	// --- 나머지 기존 UI 빌더 메서드 (동일) ---
+
+	private JPanel createHeader(String name, String uniId) {
+
+		JPanel p = new JPanel(new BorderLayout());
+		p.setOpaque(false);
+		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 80));
+		p.setAlignmentX(Component.CENTER_ALIGNMENT);
+		JLabel title = new JLabel("<html><div style='line-height:1.2;'>" + "주유소 상세 정보<br>"
+				+ "<span style='font-size:16px; font-weight:bold; color:#444444;'>(" + name + ")</span>"
+				+ "</div></html>");
+		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+
+		JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+		btnPanel.setOpaque(false);
+
+		JButton recordBtn = createStyledButton("+ 주유 기록 추가", COLOR_PRIMARY);
+		recordBtn.setPreferredSize(new Dimension(160, 40));
+		recordBtn.addActionListener(e -> {
+			Window parentWindow = SwingUtilities.getWindowAncestor(this);
+			new AddFuelLogDialog((Frame) parentWindow).setVisible(true);
+		});
+
+		JButton backBtn = new JButton("← 뒤로가기");
+		backBtn.setBackground(Color.WHITE);
+		backBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+		backBtn.setPreferredSize(new Dimension(120, 40));
+		backBtn.addActionListener(e -> {
+			Window win = SwingUtilities.getWindowAncestor(this);
+			if (win instanceof MainPage)
+				((MainPage) win).showStationList();
+		});
+
+		btnPanel.add(recordBtn);
+		btnPanel.add(backBtn);
+		p.add(title, BorderLayout.WEST);
+		p.add(btnPanel, BorderLayout.EAST);
+		return p;
+	}
+
 	private JPanel createBasicInfoCard(String name, String addr, String tel) {
 
 		JPanel card = createBaseCard("🔵 기본 정보");
@@ -92,18 +251,16 @@ public class StationDetailPage extends JScrollPane {
 		stationTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
 		stationTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-		// [DB Point] SELECT address FROM stations WHERE station_name = ?
 		JLabel addrLabel = new JLabel(addr, SwingConstants.CENTER);
 		addrLabel.setForeground(Color.GRAY);
 		addrLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
-		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 90));
-
-		// [DB Point] stations 테이블의 business_hours, phone_number 컬럼 데이터 매핑
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 100));
+		grid.setAlignmentX(Component.CENTER_ALIGNMENT);
 		grid.add(createSubInfoBox("전화번호", tel.isEmpty() ? "정보없음" : tel));
-		grid.add(createSubInfoBox("영업시간", "24시간")); // 필요시 DB 연동
+		grid.add(createSubInfoBox("영업시간", "24시간"));
 
 		card.add(stationTitle);
 		card.add(Box.createVerticalStrut(10));
@@ -113,171 +270,50 @@ public class StationDetailPage extends JScrollPane {
 		return card;
 	}
 
-	// ✅ 유가 정보 카드 (동적 칸 늘리기 적용)
-	private JPanel createPriceInfoCard(org.w3c.dom.NodeList priceList,
-			java.util.Map<String, apiService.AvgPriceDto> avgPrices) {
+	private JPanel createPriceInfoCard(org.w3c.dom.NodeList priceList, Map<String, apiService.AvgPriceDto> avgPrices) {
 
 		JPanel card = createBaseCard("💲 유가 정보");
-
-		// [DB Point] prices 테이블에서 유종별 최신 가격 데이터 로드
-		// [Logic Point] 전국 평균가(다른 테이블 혹은 API 결과)와 비교 연산 수행 후 'compare' 텍스트 생성
 		JPanel priceContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
 		priceContainer.setOpaque(false);
-		priceContainer.setMaximumSize(new Dimension(MAX_CARD_WIDTH, Integer.MAX_VALUE));
+		priceContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		for (int i = 0; i < priceList.getLength(); i++) {
 			org.w3c.dom.Element oilPrice = (org.w3c.dom.Element) priceList.item(i);
 			String prodcd = oilPrice.getElementsByTagName("PRODCD").item(0).getTextContent();
 			String price = oilPrice.getElementsByTagName("PRICE").item(0).getTextContent();
-			String type = mapProdcd(prodcd); // 코드 → 한글 유종명 변환
+			String type = mapProdcd(prodcd);
 
 			String compareText = "평균 정보 없음";
 			Color compareColor = Color.GRAY;
 			if (avgPrices != null && avgPrices.containsKey(prodcd)) {
-				try {
-					double stationPrice = Double.parseDouble(price);
-					double avgPriceVal = Double.parseDouble(avgPrices.get(prodcd).getAvgPrice());
-					int diff = (int) Math.round(stationPrice - avgPriceVal); // 반올림 처리
-
-					if (diff < 0) {
-						compareText = String.format("평균보다 %,d원 저렴 ▼", Math.abs(diff));
-						compareColor = COLOR_BLUE_LIGHT; // 저렴하면 파란색
-					} else if (diff > 0) {
-						compareText = String.format("평균보다 %,d원 비쌈 ▲", diff);
-						compareColor = new Color(220, 38, 38); // 비싸면 빨간색
-					} else {
-						compareText = "전국 평균가와 동일";
-						compareColor = Color.GRAY;
-					}
-				} catch (NumberFormatException e) {
-					compareText = "계산 오류";
+				int diff = (int) Math
+						.round(Double.parseDouble(price) - Double.parseDouble(avgPrices.get(prodcd).getAvgPrice()));
+				if (diff < 0) {
+					compareText = String.format("평균보다 %,d원 저렴 ▼", Math.abs(diff));
+					compareColor = COLOR_BLUE_LIGHT;
+				} else if (diff > 0) {
+					compareText = String.format("평균보다 %,d원 비쌈 ▲", diff);
+					compareColor = Color.RED;
+				} else {
+					compareText = "평균가와 동일";
 				}
 			}
-			JPanel priceBox = createPriceDetailBox(type, price + "원", compareText, compareColor);
-			priceBox.setPreferredSize(new Dimension(200, 105));
-			priceContainer.add(priceBox);
+			priceContainer.add(createPriceDetailBox(type, price + "원", compareText, compareColor));
 		}
-
-		// [DB Point] 데이터 수집/업데이트 로그 시간 표시 (updated_at 컬럼)
-		JLabel updateLabel = new JLabel("* 최종 업데이트: 2026-02-13 09:00", SwingConstants.CENTER);
-		updateLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-		updateLabel.setForeground(Color.LIGHT_GRAY);
-		updateLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
 		card.add(priceContainer);
-		card.add(Box.createVerticalStrut(15));
-		card.add(updateLabel);
 		return card;
 	}
 
 	private String mapProdcd(String code) {
 
-		switch (code) {
-		case "B027":
-			return "휘발유";
-		case "D047":
-			return "경유";
-		case "B034":
-			return "고급휘발유";
-		case "C004":
-			return "등유";
-		case "K015":
-			return "LPG";
-		default:
-			return "기타";
-		}
-
-	}
-
-	private JPanel createMapCard(String name) {
-
-		JPanel card = createBaseCard("지도");
-
-		JPanel mapArea = new JPanel(new GridBagLayout());
-		mapArea.setPreferredSize(new Dimension(0, 300));
-		mapArea.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 300));
-		mapArea.setBackground(COLOR_MAP_BG);
-		mapArea.setBorder(new LineBorder(COLOR_MAP_BORDER));
-
-		// [API Point] 네이버 지도 정적/동적 지도 API 로드
-		// - DB에서 가져온 주유소의 위도(Lat), 경도(Lng) 값을 기반으로 지도 렌더링
-		mapArea.add(new JLabel("네이버 지도 API 연동 영역"));
-
-		JPanel btnGrid = new JPanel(new GridLayout(1, 2, 15, 0));
-		btnGrid.setOpaque(false);
-		btnGrid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 50));
-
-		JButton naviBtn = createStyledButton("네이버 지도에서 보기", COLOR_NAVER_GREEN);
-		JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
-
-		// [API/System Point] 외부 브라우저 호출
-		naviBtn.addActionListener(e -> {
-			/** * 1. DB에서 조회한 해당 주유소의 주소 또는 좌표 데이터를 URL 파라미터로 구성
-			 * 2. Desktop.getDesktop().browse(new URI("https://map.naver.com/v5/search/주소...")) 실행
-			 */
-		});
-
-		// [API/System Point] 네이버 지도 길찾기 연동
-		routeBtn.addActionListener(e -> {
-			/** * 1. 사용자의 현재 위치(API 호출 또는 설정값) + 주유소 목적지 좌표 결합
-			 * 2. 길찾기 스키마 URL을 생성하여 외부 브라우저 실행
-			 */
-		});
-
-		btnGrid.add(naviBtn);
-		btnGrid.add(routeBtn);
-
-		card.add(mapArea);
-		card.add(Box.createVerticalStrut(20));
-		card.add(btnGrid);
-		return card;
-	}
-
-	private JPanel createHeader(String name, String uniId) {
-
-		JPanel p = new JPanel(new BorderLayout());
-		p.setOpaque(false);
-		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 80));
-		JLabel title = new JLabel("<html><div style='line-height:1.2;'>"
-	            + "주유소 상세 정보<br>"
-	            + "<span style='font-size:16px; font-weight:bold; color:#444444;'>(" + name + ")</span>"
-	            + "</div></html>");
-		title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
-
-		JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-		btnPanel.setOpaque(false);
-
-		int commonHeight = 40;
-
-		JButton recordBtn = createStyledButton("+ 주유 기록 추가", COLOR_PRIMARY);
-		recordBtn.setPreferredSize(new Dimension(160, commonHeight));
-		recordBtn.addActionListener(e -> {
-			Window parentWindow = SwingUtilities.getWindowAncestor(this);
-			AddFuelLogDialog addPage = new AddFuelLogDialog((Frame) parentWindow);
-			addPage.setVisible(true);
-		});
-
-		JButton backBtn = new JButton("← 뒤로가기");
-		backBtn.setBackground(Color.WHITE);
-		backBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-		backBtn.setFocusPainted(false);
-		backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		backBtn.setBorder(new LineBorder(COLOR_GRAY_BORDER));
-		backBtn.setPreferredSize(new Dimension(120, commonHeight));
-
-		backBtn.addActionListener(e -> {
-			Window win = SwingUtilities.getWindowAncestor(this);
-			if (win instanceof MainPage)
-				((MainPage) win).showStationList();
-		});
-
-		btnPanel.add(recordBtn);
-		btnPanel.add(backBtn);
-
-		p.add(title, BorderLayout.WEST);
-		p.add(btnPanel, BorderLayout.EAST);
-		p.setAlignmentX(Component.CENTER_ALIGNMENT);
-		return p;
+		return switch (code) {
+		case "B027" -> "휘발유";
+		case "D047" -> "경유";
+		case "B034" -> "고급휘발유";
+		case "C004" -> "등유";
+		case "K015" -> "LPG";
+		default -> "기타";
+		};
 	}
 
 	private JPanel createDistanceCostCard() {
@@ -285,18 +321,13 @@ public class StationDetailPage extends JScrollPane {
 		JPanel card = createBaseCard("🚩 거리 / 예상 이동 비용");
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
-		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 90));
-
-		// [Logic/API Point]
-		// 1. Haversine 공식 등을 사용하여 사용자의 좌표와 주유소 좌표 사이의 직선/이동 거리 계산
-		// 2. (거리 / 사용자 차량 연비) * 휘발유 단가 계산하여 예상 비용 도출
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 100));
+		grid.setAlignmentX(Component.CENTER_ALIGNMENT);
 		grid.add(createSubInfoBox("현재 위치에서 거리", "1.5km"));
 		grid.add(createSubInfoBox("예상 이동 비용", "약 300원 (연비 12km/L 기준)"));
 		card.add(grid);
 		return card;
 	}
-
-	/* ===== 공통 UI 빌더 메서드 ===== */
 
 	private JPanel createBaseCard(String title) {
 
@@ -306,7 +337,7 @@ public class StationDetailPage extends JScrollPane {
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT), new EmptyBorder(30, 40, 30, 40)));
 		p.setAlignmentX(Component.CENTER_ALIGNMENT);
 		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, Integer.MAX_VALUE));
-		JLabel t = new JLabel(title, SwingConstants.CENTER);
+		JLabel t = new JLabel(title);
 		t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 		t.setForeground(COLOR_PRIMARY);
 		t.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -321,7 +352,6 @@ public class StationDetailPage extends JScrollPane {
 		p.setBackground(Color.WHITE);
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
 		JLabel t = new JLabel(title);
-		t.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
 		t.setForeground(Color.GRAY);
 		JLabel v = new JLabel(value);
 		v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 17));
@@ -334,6 +364,10 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel p = new JPanel(new GridLayout(3, 1, 0, 3));
 		p.setBackground(Color.WHITE);
+		Dimension boxSize = new Dimension(200, 105);
+		p.setPreferredSize(boxSize);
+		p.setMinimumSize(boxSize);
+		p.setMaximumSize(boxSize);
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
 		JLabel t = new JLabel(type);
 		t.setForeground(Color.GRAY);
@@ -341,7 +375,6 @@ public class StationDetailPage extends JScrollPane {
 		v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
 		v.setForeground(COLOR_PRIMARY);
 		JLabel c = new JLabel(compare);
-		c.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
 		c.setForeground(compareColor);
 		p.add(t);
 		p.add(v);

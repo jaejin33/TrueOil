@@ -18,8 +18,8 @@ public class RepairDto {
     // Getter
     public String getName() { return name; }
     public String getAddress() { return address; }
-    public double getLat() { return lat; }
-    public double getLng() { return lng; }
+    public double getX() { return lng; }
+    public double getY() { return lat; }
     public double getDistance() { return distance; }
 
     @Override

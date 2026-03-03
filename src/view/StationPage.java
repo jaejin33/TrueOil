@@ -13,6 +13,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.List;
+import javax.swing.Timer;
 
 public class StationPage extends JScrollPane {
 	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -37,19 +38,34 @@ public class StationPage extends JScrollPane {
 	private JavaConnector myConnector = new JavaConnector();
 
 	public class JavaConnector {
+		private Timer debounceTimer;
+		private static final int DEBOUNCE_DELAY = 1500; // 1.5초 대기
+
 		public void searchStations(double x, double y) {
 
-			System.out.println("✅ 지도가 이동했습니다! KATECH 좌표: X=" + x + ", Y=" + y);
-			currentX = x;
-			currentY = y;
+			if (debounceTimer != null && debounceTimer.isRunning()) {
+				debounceTimer.stop();
+			}
+			debounceTimer = new Timer(DEBOUNCE_DELAY, new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
 
-			// UI 업데이트는 반드시 Swing 쓰레드에서 처리해야 안전합니다.
-			SwingUtilities.invokeLater(() -> {
-				String keyword = searchInput != null ? searchInput.getText().trim() : "";
-				if (keyword.equals("주유소 이름을 입력하세요"))
-					keyword = "";
-				refreshData(keyword);
+					System.out.println("✅ 지도 정지 감지! API 호출 시작: X=" + x + ", Y=" + y);
+					currentX = x;
+					currentY = y;
+
+					SwingUtilities.invokeLater(() -> {
+						String keyword = searchInput != null ? searchInput.getText().trim() : "";
+						if (keyword.equals("주유소 이름을 입력하세요"))
+							keyword = "";
+						refreshData(keyword);
+					});
+
+					debounceTimer.stop(); // 실행 후 타이머 정지
+				}
 			});
+			debounceTimer.setRepeats(false); // 한 번만 실행되도록 설정
+			debounceTimer.start();
 		}
 	}
 
@@ -93,8 +109,6 @@ public class StationPage extends JScrollPane {
 				refreshData();
 			}
 		});
-
-		refreshData();
 	}
 
 	public void refreshData() {
@@ -104,8 +118,8 @@ public class StationPage extends JScrollPane {
 
 	public void refreshData(String keyword) {
 
+		gridContainer.removeAll();
 		if (gridContainer != null) {
-			gridContainer.removeAll();
 			try {
 				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
 				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
@@ -139,7 +153,7 @@ public class StationPage extends JScrollPane {
 				for (apiService.ValueStationDto s : stations) {
 					int price = parsePrice(s.getPrice());
 					String dist = String.format("%.1fkm", s.getDistance() / 1000.0);
-					gridContainer.add(createStationItem(s.getUniId(), s.getName(), price, dist));
+					gridContainer.add(createStationItem(s, price, dist));
 				}
 
 			} catch (Exception e) {
@@ -161,51 +175,48 @@ public class StationPage extends JScrollPane {
 		jfxPanel.setPreferredSize(new Dimension(0, 400));
 
 		Platform.runLater(() -> {
-			webView = new WebView(); 
-            webEngine = webView.getEngine();
+			webView = new WebView();
+			webEngine = webView.getEngine();
 			// 네이버 지도 로딩을 위한 필수 설정
 			webEngine.setUserAgent(
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
 			webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue == Worker.State.SUCCEEDED) {
-                    netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine.executeScript("window");
-                    
-                    // 1. myConnector 연결
-                    window.setMember("javaConnector", myConnector);
-                    System.out.println("✅ Java-HTML 브릿지 연결 완료!");
-
-                    // 2. 💡 [추가] 연결되자마자 지도(HTML) 화면에 성공 메시지를 띄우고, 현재 중심 좌표를 강제로 한 번 전송시킴!
-                    String initScript = 
-                        "if (typeof map !== 'undefined') {" +
-                        "    var center = map.getCenter();" +
-                        "    var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);" +
-                        "    window.javaConnector.searchStations(tm128.x, tm128.y);" +
-                        "}";
-                    webEngine.executeScript(initScript);
-                }
-            });
-			try {
-				// 1. 파일의 실제 URL 경로를 얻어옵니다.
-				// resources 폴더 내의 map.html을 찾습니다.
-				java.net.URL url = getClass().getResource("/map.html");
-
-				if (url == null) {
-					// 리소스에서 못 찾을 경우 실제 물리적 경로 시도
-					java.io.File file = new java.io.File("C:\\Java\\TrueOil\\map.html");
-					if (file.exists()) {
-						url = file.toURI().toURL();
+				if (newValue == Worker.State.SUCCEEDED) {
+					String script = "if(typeof setMapMode === 'function') { setMapMode('STATION'); }";
+					try {
+						webEngine.executeScript(script);
+					} catch (Exception e) {
+						System.err.println("StationPage에서 setMapMode 호출 실패: " + e.getMessage());
 					}
-				}
+					netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine
+							.executeScript("window");
 
-				if (url != null) {
-					// 2. loadContent 대신 load를 사용하여 파일 URL을 직접 호출합니다.
-					// 이렇게 로드하면 WebView가 로컬 호스트 컨텍스트를 더 잘 인식합니다.
-					webView.getEngine().load(url.toExternalForm());
-				} else {
-					webView.getEngine().loadContent("<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3></body></html>",
-							"text/html");
+					// 1. myConnector 연결
+					window.setMember("javaConnector", myConnector);
+					System.out.println("✅ Java-HTML 브릿지 연결 완료!");
+
+					// 2. 💡 [추가] 연결되자마자 지도(HTML) 화면에 성공 메시지를 띄우고, 현재 중심 좌표를 강제로 한 번 전송시킴!
+					String initScript = "if (typeof map !== 'undefined') {" + "    var center = map.getCenter();"
+							+ "    var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);"
+							+ "    window.javaConnector.searchStations(tm128.x, tm128.y);" + "}";
+					webEngine.executeScript(initScript);
 				}
+			});
+			try {
+				String projectRoot = System.getProperty("user.dir");
+				File mapFile = new File(projectRoot, "map.html");
+
+				if (mapFile.exists()) {
+					webEngine.load(mapFile.toURI().toURL().toExternalForm());
+			    } else {
+			        // 4. 파일이 없을 경우 예외 처리
+			        System.err.println("❌ map.html 파일을 찾을 수 없습니다: " + mapFile.getAbsolutePath());
+			        webView.getEngine().loadContent(
+			            "<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3><p>경로: " + mapFile.getAbsolutePath() + "</p></body></html>",
+			            "text/html"
+			        );
+			    }
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -332,7 +343,7 @@ public class StationPage extends JScrollPane {
 		return card;
 	}
 
-	private JPanel createStationItem(String uniId, String name, int price, String dist) {
+	private JPanel createStationItem(apiService.ValueStationDto s, int price, String dist) {
 
 		JPanel item = new JPanel(new BorderLayout(10, 0));
 		item.setBackground(Color.WHITE);
@@ -341,7 +352,7 @@ public class StationPage extends JScrollPane {
 
 		JPanel info = new JPanel(new GridLayout(2, 1, 0, 5));
 		info.setOpaque(false);
-		JLabel nameLabel = new JLabel(name);
+		JLabel nameLabel = new JLabel(s.getName());
 		nameLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
 		JLabel subLabel = new JLabel("<html>" + "<br>" + dist + "</html>");
 		subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
@@ -360,9 +371,11 @@ public class StationPage extends JScrollPane {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 
+				handleStationSelection(s.getX(), s.getY(), s.getName(), String.format("%,d", price));
+
 				Window win = SwingUtilities.getWindowAncestor(item);
 				if (win instanceof MainPage) {
-					((MainPage) win).showStationDetail(uniId);
+					((MainPage) win).showStationDetail(s.getUniId());
 				}
 			}
 
@@ -411,5 +424,23 @@ public class StationPage extends JScrollPane {
 		} catch (NumberFormatException e) {
 			return Integer.MAX_VALUE;
 		}
+	}
+
+	// 주유소 리스트에서 항목을 클릭했을 때 실행할 로직
+	public void handleStationSelection(double x, double y, String name, String price) {
+
+		Platform.runLater(() -> { // WebView 호출은 반드시 Platform.runLater 내부에서!
+			if (webEngine == null)
+				return;
+			try {
+				webEngine.executeScript("clearMarkers();");
+				// %f를 사용하여 double 값을 안전하게 전달
+				webEngine.executeScript(String.format(java.util.Locale.US, "setCenter(%f, %f);", x, y));
+				webEngine.executeScript(String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s');", x, y,
+						name.replace("'", "\\'"), price));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
 	}
 }
