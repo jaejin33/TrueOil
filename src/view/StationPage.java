@@ -5,6 +5,7 @@ import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import user.SessionManager;
 import javafx.concurrent.Worker;
 import database.LocationData;
 
@@ -128,8 +129,11 @@ public class StationPage extends JScrollPane {
 			try {
 				String selectedFuel = fuelTypeCombo != null ? (String) fuelTypeCombo.getSelectedItem() : "휘발유";
 				String selectedSort = sortCombo != null ? (String) sortCombo.getSelectedItem() : "가격순";
-				String prodCd = "B027";
+				String prodCd = "";// getSession
 				switch (selectedFuel) {
+				case "휘발유":
+					prodCd = "B027";
+					break;
 				case "경유":
 					prodCd = "D047";
 					break;
@@ -138,6 +142,9 @@ public class StationPage extends JScrollPane {
 					break;
 				case "고급휘발유":
 					prodCd = "B034";
+					break;
+				case "등유":
+					prodCd = "C004";
 					break;
 				}
 				String sortCode = "1";
@@ -174,13 +181,17 @@ public class StationPage extends JScrollPane {
 
 		JPanel card = createBaseCard("");
 		JPanel body = (JPanel) card.getComponent(1);
-		JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-		titlePanel.setOpaque(false);
-		titlePanel.setBorder(new EmptyBorder(0, 0, 20, 0));
+		JPanel headerPanel = new JPanel(new BorderLayout());
+		headerPanel.setOpaque(false);
+		headerPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
 
 		JLabel titleLabel = new JLabel("🗺️ 주변 지도 확인");
 		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 		titleLabel.setForeground(COLOR_LABEL_DARK);
+		headerPanel.add(titleLabel, BorderLayout.WEST);
+
+		JPanel rightWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+		rightWrapper.setOpaque(false);
 
 		locationCombo = new JComboBox<>(LocationData.values());
 		locationCombo.setSelectedItem(LocationData.selected); // 초기값 설정
@@ -193,8 +204,10 @@ public class StationPage extends JScrollPane {
 				updateLocation(loc);
 			}
 		});
-		titlePanel.add(locationCombo);
-		card.add(titlePanel, BorderLayout.NORTH);
+		rightWrapper.add(new JLabel("기준 지역: "));
+		rightWrapper.add(locationCombo);
+		headerPanel.add(rightWrapper, BorderLayout.EAST);
+		card.add(headerPanel, BorderLayout.NORTH);
 		// -------------------------------------------
 		JFXPanel jfxPanel = new JFXPanel();
 		jfxPanel.setPreferredSize(new Dimension(0, 400));
@@ -205,28 +218,33 @@ public class StationPage extends JScrollPane {
 			webEngine.setUserAgent(
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
-			webEngine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-				if (newValue == Worker.State.SUCCEEDED) {
-					String script = "if(typeof setMapMode === 'function') { setMapMode('STATION'); }";
+			webEngine.getLoadWorker().stateProperty().addListener((obs, oldVal, newVal) -> {
+				if (newVal == Worker.State.SUCCEEDED) {
 					try {
-						webEngine.executeScript(script);
-					} catch (Exception e) {
-						System.err.println("StationPage에서 setMapMode 호출 실패: " + e.getMessage());
+						// 지도 모드 설정 (STATION)
+						webEngine.executeScript("if(typeof setMapMode === 'function') { setMapMode('STATION'); }");
+
+						// Java-JS 브릿지 설정
+						netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine
+								.executeScript("window");
+						window.setMember("javaConnector", myConnector);
+
+						// 초기 중심점 설정
+						LocationData currentLoc = LocationData.selected;
+						String moveScript = String.format(java.util.Locale.US,
+								"if(typeof setCenter === 'function') { setCenter(%f, %f); }", currentLoc.getX(),
+								currentLoc.getY());
+						webEngine.executeScript(moveScript);
+
+						// 초기 데이터 로드
+						refreshData();
+						System.out.println("✅ 지도 및 브릿지 초기화 완료");
+					} catch (Exception ex) {
+						System.err.println("❌ 지도 초기화 스크립트 실행 실패: " + ex.getMessage());
 					}
-					netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine
-							.executeScript("window");
-
-					window.setMember("javaConnector", myConnector);
-					System.out.println("✅ Java-HTML 브릿지 연결 완료!");
-					LocationData currentLoc = LocationData.selected;
-					String moveScript = String.format(java.util.Locale.US,
-							"if(typeof setCenter === 'function') { setCenter(%f, %f); }", currentLoc.getX(),
-							currentLoc.getY());
-					webEngine.executeScript(moveScript);
-
-					refreshData();
 				}
 			});
+			// HTML 로드
 			try {
 				String projectRoot = System.getProperty("user.dir");
 				File mapFile = new File(projectRoot, "map.html");
@@ -234,10 +252,8 @@ public class StationPage extends JScrollPane {
 				if (mapFile.exists()) {
 					webEngine.load(mapFile.toURI().toURL().toExternalForm());
 				} else {
-					// 4. 파일이 없을 경우 예외 처리
-					System.err.println("❌ map.html 파일을 찾을 수 없습니다: " + mapFile.getAbsolutePath());
-					webView.getEngine().loadContent("<html><body><h3>map.html 파일을 찾을 수 없습니다.</h3><p>경로: "
-							+ mapFile.getAbsolutePath() + "</p></body></html>", "text/html");
+					webEngine.loadContent(
+							"<html><body><h3 style='color:red;'>map.html 파일을 찾을 수 없습니다.</h3></body></html>");
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -280,18 +296,19 @@ public class StationPage extends JScrollPane {
 				String checkScript = "typeof isMapLoaded !== 'undefined' && isMapLoaded && typeof clearMarkers === 'function'";
 				Object isReady = webEngine.executeScript(checkScript);
 				if (isReady instanceof Boolean && (Boolean) isReady) {
-	                webEngine.executeScript("clearMarkers();");
-	                for (apiService.ValueStationDto s : stations) {
-	                    int price = parsePrice(s.getPrice());
-	                    double x = s.getX();
-	                    double y = s.getY();
+					webEngine.executeScript("clearMarkers();");
 
-	                    String script = String.format(java.util.Locale.US, 
-	                        "if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s'); }", 
-	                        x, y, s.getName().replace("'", "\\'"), String.format("%,d", price));
-	                    webEngine.executeScript(script);
-	                }
-	            }
+					String currentFuel = (String) fuelTypeCombo.getSelectedItem();
+
+					for (apiService.ValueStationDto s : stations) {
+						int price = parsePrice(s.getPrice());
+						String script = String.format(java.util.Locale.US,
+								"if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s', '%s'); }",
+								s.getX(), s.getY(), s.getName().replace("'", "\\'"), String.format("%,d", price),
+								currentFuel);
+						webEngine.executeScript(script);
+					}
+				}
 			} catch (Exception e) {
 				System.out.println("지도가 아직 완전히 로드되지 않아 마커 업데이트를 대기합니다.");
 			}
@@ -353,7 +370,7 @@ public class StationPage extends JScrollPane {
 		JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 		filterRow.setOpaque(false);
 
-		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유" });
+		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유", "등유" });
 		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
 		ActionListener filterListener = e -> {
 			String keyword = searchInput.getText().trim();
@@ -362,6 +379,7 @@ public class StationPage extends JScrollPane {
 			}
 			refreshData(keyword);
 		};
+		fuelTypeCombo.setSelectedItem(SessionManager.getFuelType());
 		fuelTypeCombo.addActionListener(filterListener);
 		sortCombo.addActionListener(filterListener);
 
@@ -413,7 +431,7 @@ public class StationPage extends JScrollPane {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 
-				handleStationSelection(s.getX(), s.getY(), s.getName(), String.format("%,d", price));
+				handleStationSelection(s.getX(), s.getY(), s.getName(), String.format("%,d", price),s.getFuelType());
 
 				Window win = SwingUtilities.getWindowAncestor(item);
 				if (win instanceof MainPage) {
@@ -469,16 +487,16 @@ public class StationPage extends JScrollPane {
 	}
 
 	// 주유소 리스트에서 항목을 클릭했을 때 실행할 로직
-	public void handleStationSelection(double x, double y, String name, String price) {
+	public void handleStationSelection(double x, double y, String name, String price, String fuelType) {
 
-		Platform.runLater(() -> { 
+		Platform.runLater(() -> {
 			if (webEngine == null)
 				return;
 			try {
 				webEngine.executeScript("clearMarkers();");
 				webEngine.executeScript(String.format(java.util.Locale.US, "setCenter(%f, %f);", x, y));
-				webEngine.executeScript(String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s');", x, y,
-						name.replace("'", "\\'"), price));
+				webEngine.executeScript(String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s','%s');", x, y,
+						name.replace("'", "\\'"), price, fuelType));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

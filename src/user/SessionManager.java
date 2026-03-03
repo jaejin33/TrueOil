@@ -23,6 +23,6 @@ public class SessionManager {
     }
     
     public static String getFuelType() {
-        return (loginUser != null) ? loginUser.getFuelType() : "가솔린"; // 기본값 설정
+        return (loginUser != null) ? loginUser.getFuelType() : "휘발유"; // 기본값 설정
     }
 }

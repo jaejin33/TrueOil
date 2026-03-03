@@ -137,7 +137,7 @@ public class SignupDialog extends JFrame {
         carPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JTextField carNumberField = new JTextField();
-        JComboBox<String> fuelTypeBox = new JComboBox<>(new String[]{"휘발유", "경유", "LPG", "전기", "하이브리드"});
+        JComboBox<String> fuelTypeBox = new JComboBox<>(new String[]{"휘발유", "경유", "LPG", "고급휘발유", "등유"});
         JTextField mileageField = new JTextField();
         JPanel mileageWrapper = new JPanel(new BorderLayout(6, 0));
         mileageWrapper.setBackground(Color.WHITE);

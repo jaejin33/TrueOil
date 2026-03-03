@@ -22,14 +22,15 @@ public class ValueStationService {
 
 	public static List<ValueStationDto> getStations(double x, double y, int radius, String keyword, String prodCd,
 			String sortCode) throws Exception {
+
 		if (prodCd == null || prodCd.trim().isEmpty()) {
 			prodCd = "B027";
 		}
 		if (sortCode == null || sortCode.trim().isEmpty()) {
 			sortCode = "1";
 		}
-		String apiUrl = "https://www.opinet.co.kr/api/aroundAll.do?" + "code="+AvgPrice.apiKey + "&out=xml" + "&x=" + x
-				+ "&y=" + y + "&radius=" + radius + "&prodcd=" + prodCd + "&sort=" + sortCode;
+		String apiUrl = "https://www.opinet.co.kr/api/aroundAll.do?" + "code=" + AvgPrice.apiKey + "&out=xml" + "&x="
+				+ x + "&y=" + y + "&radius=" + radius + "&prodcd=" + prodCd + "&sort=" + sortCode;
 
 		URL url = new URL(apiUrl);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -53,7 +54,7 @@ public class ValueStationService {
 			double gy = Double.parseDouble(getTagValue(oil, "GIS_Y_COOR"));
 
 			if (keyword == null || keyword.isEmpty() || name.contains(keyword)) {
-				stations.add(new ValueStationDto(uniId, name, price, distance, gx, gy));
+				stations.add(new ValueStationDto(uniId, name, price, prodCd, distance, gx, gy));
 			}
 		}
 
