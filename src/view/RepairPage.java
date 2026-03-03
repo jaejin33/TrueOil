@@ -177,8 +177,8 @@ public class RepairPage extends JScrollPane {
 		JPanel grid = new JPanel(new GridLayout(1, 2, 15, 0));
 		grid.setOpaque(false);
 		grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-		dateField = new JTextField("2026-02-20"); // 예시 날짜
+		String today = java.time.LocalDate.now().toString(); 
+		dateField = new JTextField(today);
 		timeCombo = new JComboBox<>(
 				new String[] { "시간 선택", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00" });
 
