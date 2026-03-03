@@ -7,6 +7,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JDialog;
 import javax.swing.Timer;
 import java.awt.Component;
+import java.io.File;
 
 public class UserController {
     private final UserService userService;
@@ -84,8 +85,8 @@ public class UserController {
     }
     
     /**
-     * 마이페이지 조회를 위해 현재 로그인한 사용자의 전체 프로필 데이터를 요청합니다.
-     * * @return 현재 세션 사용자의 UserDto 객체
+     * 마이페이지 조회를 위해 현재 로그인한 사용자의 상세 프로필 데이터를 가져옵니다.
+     * * @return 현재 세션 사용자의 UserDto 객체 (세션 만료 시 null)
      */
     public UserDto getMyProfile() {
         int userId = SessionManager.getUserId();
@@ -94,9 +95,8 @@ public class UserController {
     }
     
     /**
-     * 현재 로그인된 사용자의 탈퇴 처리를 수행합니다.
-     * 세션에서 사용자 ID를 식별하여 DAO의 삭제 로직을 호출합니다.
-     * * @return 탈퇴 성공 여부
+     * 현재 로그인된 사용자의 회원 탈퇴를 처리합니다.
+     * * @return 탈퇴 처리 성공 여부
      */
     public boolean withdrawAccount() {
         int userId = SessionManager.getUserId();
@@ -116,7 +116,9 @@ public class UserController {
     }
     
     /**
-     * 비밀번호 변경 전 현재 비밀번호를 검증합니다.
+     * 비밀번호 변경 전 사용자의 현재 비밀번호가 일치하는지 검증합니다.
+     * * @param currentPw 입력받은 현재 비밀번호
+     * @return 비밀번호 일치 여부
      */
     public boolean verifyPassword(String currentPw) {
         int userId = SessionManager.getUserId();
@@ -124,10 +126,61 @@ public class UserController {
     }
 
     /**
-     * 새로운 비밀번호로 변경을 요청합니다.
+     * 사용자의 비밀번호를 새로운 비밀번호로 변경합니다.
+     * * @param newPw 변경하고자 하는 새로운 비밀번호
+     * @return 비밀번호 변경 성공 여부
      */
     public boolean changePassword(String newPw) {
         int userId = SessionManager.getUserId();
         return userDao.updatePassword(userId, newPw);
+    }
+    
+    /**
+     * 사용자의 프로필 이미지 변경 요청을 서비스 레이어로 전달하여 처리합니다.
+     * 물리적 파일 복사와 데이터베이스 경로 업데이트를 포함합니다.
+     * * @param sourcePath 사용자가 선택한 원본 이미지 파일의 절대 경로
+     * @return 처리 성공 시 null, 실패 시 원인이 담긴 에러 메시지
+     */
+    public String requestProfileImageChange(String sourcePath) {
+        return userService.updateProfileImage(sourcePath);
+    }
+    
+    /**
+     * 현재 로그인한 사용자의 유효한 프로필 이미지 경로를 반환합니다.
+     */
+    public String getProfileImagePath() {
+        UserDto user = getMyProfile();
+        
+        // [핵심 디버깅] Dto에서 꺼낸 값이 실제로 무엇인지 확인합니다.
+        if (user == null) {
+            System.out.println("❌ 에러: 유저 정보를 불러오지 못했습니다.");
+            return "resources/images/profiles/default.png";
+        }
+
+        // DB 컬럼명과 DTO 필드명이 'profileImg'가 맞는지 확인하세요!
+        String fileName = user.getProfileImg();
+        System.out.println("🔍 DB에서 읽어온 파일명: [" + fileName + "]");
+
+        if (fileName == null || fileName.isEmpty()) {
+            System.out.println("ℹ️ 파일명이 비어있어 default.png를 사용합니다.");
+            fileName = "default.png";
+        }
+        
+        // 경로 후보들
+        String[] candidatePaths = {
+            "resources/images/profiles/" + fileName,
+            "src/resources/images/profiles/" + fileName
+        };
+        
+        for (String path : candidatePaths) {
+            File file = new File(path);
+            if (file.exists()) {
+                System.out.println("✅ 실제 파일 발견: " + file.getAbsolutePath());
+                return path; 
+            }
+        }
+        
+        System.out.println("❌ 파일이 물리적으로 존재하지 않음: " + fileName);
+        return "resources/images/profiles/default.png"; 
     }
 }

@@ -11,6 +11,7 @@ import user.dto.UserDto;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.util.List;
 
 public class MyPage extends JScrollPane {
@@ -78,25 +79,40 @@ public class MyPage extends JScrollPane {
         JPanel card = createCardFrame("👤 내 정보");
         UserDto user = userController.getMyProfile();
         
-        // 데이터 추출 (null 방지)
+        // 데이터 추출
         String name = (user != null) ? user.getName() : "정보 없음";
         String email = (user != null) ? user.getEmail() : "-";
         String carNum = (user != null) ? user.getCarNumber() : "차량 등록 필요";
-        String fuelType = (user != null) ? user.getFuelType() : "미설정"; // 연료 종류
+        String fuelType = (user != null) ? user.getFuelType() : "미설정";
         String joinDate = (user != null) ? user.getCreatedAt() : "-";
-        /** [DB 포인트 1: 사용자 정보 로드] */
+
         JPanel profileHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         profileHeader.setBackground(Color.WHITE);
         profileHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         profileHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-        JLabel avatar = new JLabel("👤", SwingConstants.CENTER);
+        // [이미지 렌더링 영역 - 리팩토링됨]
+        JLabel avatar = new JLabel("", SwingConstants.CENTER);
         avatar.setPreferredSize(new Dimension(80, 80));
         avatar.setOpaque(true);
         avatar.setBackground(COLOR_BG_GRAY);
-        avatar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 40));
         avatar.setBorder(new LineBorder(COLOR_DIVIDER, 1));
+
+        // 컨트롤러에게 "그려야 할 이미지 경로"를 가져오라고 시킵니다. (View는 로직을 모름)
+        String finalPath = userController.getProfileImagePath();
         
+        try {
+            ImageIcon icon = new ImageIcon(finalPath);
+            Image img = icon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+            avatar.setIcon(new ImageIcon(img));
+            avatar.setText(""); // 이미지가 로드되면 텍스트 제거
+        } catch (Exception e) {
+            // 예외 발생 시 기본 아이콘
+            avatar.setText("👤");
+            avatar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 40));
+        }
+        
+        /* ===== 이후 UI 구성 로직은 이전과 동일 (infoAndBtnTexts 등) ===== */
         JPanel infoAndBtnTexts = new JPanel();
         infoAndBtnTexts.setLayout(new BoxLayout(infoAndBtnTexts, BoxLayout.Y_AXIS));
         infoAndBtnTexts.setOpaque(false);
@@ -117,9 +133,9 @@ public class MyPage extends JScrollPane {
         changePhotoBtn.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER), new EmptyBorder(3, 8, 3, 8)));
         
         changePhotoBtn.addActionListener(e -> {
-            /** [DB 포인트 2: 프로필 사진 업데이트] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             new PhotoChangeDialog(parentFrame).setVisible(true);
+            refreshPage(); // 변경 후 즉시 반영
         });
 
         infoAndBtnTexts.add(nameLbl);
@@ -133,12 +149,11 @@ public class MyPage extends JScrollPane {
         
         card.add(profileHeader);
         card.add(Box.createVerticalStrut(25));
-
         card.add(createDataRow("✉️ 이메일", email));
         card.add(Box.createVerticalStrut(10));
         card.add(createDataRow("🚗 차량번호", carNum));
         card.add(Box.createVerticalStrut(10));
-        card.add(createDataRow("⛽ 연료 종류", fuelType)); // 새로 추가된 유종 정보
+        card.add(createDataRow("⛽ 연료 종류", fuelType));
         card.add(Box.createVerticalStrut(10));
         card.add(createDataRow("📅 가입일", joinDate));
         card.add(Box.createVerticalStrut(25));
@@ -148,28 +163,22 @@ public class MyPage extends JScrollPane {
         btns.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         btns.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        JButton b1 = new JButton("정보 수정"); 
-        styleBtn(b1);
+        JButton b1 = new JButton("정보 수정"); styleBtn(b1);
         b1.addActionListener(e -> {
-            /** [DB 포인트 3: 회원 정보 UPDATE] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             new EditProfileDialog(parentFrame).setVisible(true);
             refreshPage();
         });
 
-        JButton b2 = new JButton("비밀번호 변경"); 
-        styleBtn(b2);
+        JButton b2 = new JButton("비밀번호 변경"); styleBtn(b2);
         b2.addActionListener(e -> {
-            /** [DB 포인트 4: 비밀번호 UPDATE] */
             Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
             new PasswordChangeDialog(parentFrame).setVisible(true);
             refreshPage();
         });
         
-        btns.add(b1);
-        btns.add(b2);
+        btns.add(b1); btns.add(b2);
         card.add(btns);
-        
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height));
         return card;
     }
