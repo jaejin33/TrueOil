@@ -8,8 +8,6 @@ import java.net.URL;
 import java.util.*;
 
 public class FuelTrendService {
-    //F260303263
-    //F260206147
     public List<FuelTrendDto> getWeeklyTrend(String prodcd) {
         List<FuelTrendDto> list = new ArrayList<>();
         try {

@@ -2,6 +2,7 @@ package apiService;
 
 import java.util.List;
 
+// 최적 알고리즘
 public class BestValueService {
 
     private static final double DISTANCE_PENALTY_PER_KM = 50.0;

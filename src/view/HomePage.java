@@ -238,7 +238,7 @@ public class HomePage extends JScrollPane {
 		return card;
 	}
 
-	// [섹션 3] 가성비 추천 박스
+	// 가성비 추천 박스
 	private JPanel createEfficiencyBox() {
 
 		JPanel card = createBaseCard("💰 가성비 추천");
@@ -254,10 +254,6 @@ public class HomePage extends JScrollPane {
 		 * 2. 알고리즘: (가격) + (이동 거리 비용)을 계산하여 최적의 주유소 도출
 		 */
 		try {
-			// 예시 좌표 (KATEC 기준) + 반경 3000m
-			/*
-			494152,282437 // 동의대 좌표(KATECH 좌표계)
-			*/
 			List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(494152, 282437,
 					3000);
 			apiService.BestValueService.EfficiencyResult result = apiService.BestValueService.getBestStations(stations);
@@ -266,7 +262,7 @@ public class HomePage extends JScrollPane {
 					COLOR_PRIMARY));
 
 			grid.add(
-					createNestedBox("거리 고려 추천", result.bestValue.getName(),
+					createNestedBox("거리 비례 가성비 추천", result.bestValue.getName(),
 							result.bestValue.getPrice() + "원/L ("
 									+ String.format("%.1fkm", result.bestValue.getDistance() / 1000.0) + ")",
 							COLOR_PRIMARY));
@@ -279,7 +275,7 @@ public class HomePage extends JScrollPane {
 		return card;
 	}
 
-	// [섹션 4] 주유비 요약 박스
+	// 주유비 요약 박스
 	private JPanel createSummaryBox() {
 
 		JPanel card = createBaseCard("📅 이번 달 주유비 요약");
@@ -397,25 +393,22 @@ public class HomePage extends JScrollPane {
 	private JPanel createTrendChartBox() {
 	    JPanel card = createBaseCard("📊 최근 7일 유가 흐름");
 	    
-	    // 유종 버튼 패널 (5개 종류) 
 	    JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 	    btnPanel.setOpaque(false);
 	    
-	    // 제품 코드: B027(휘발유), D047(경유), B034(고급), C004(등유), K015(LPG) 
 	    String[][] types = {
 	        {"B027", "휘발유"}, {"D047", "경유"}, 
 	        {"B034", "고급"}, {"C004", "등유"}, {"K015", "LPG"}
 	    };
 
 	    chart = new FuelChartPanel();
-	    chart.setPreferredSize(new Dimension(0, 250)); // 그래프 높이 조절
+	    chart.setPreferredSize(new Dimension(0, 250));
 
 	    for (String[] t : types) {
 	        JButton btn = new JButton(t[1]);
-	        btn.putClientProperty("prodCd", t[0]); // 유종 코드 저장 
+	        btn.putClientProperty("prodCd", t[0]);
 	        styleSecondaryBtn(btn, COLOR_PRIMARY);
 	        
-	        // 초기 버튼 스타일 설정
 	        if(t[0].equals(selectedProdCd)) {
 	            btn.setBackground(COLOR_PRIMARY);
 	            btn.setForeground(Color.WHITE);
@@ -423,7 +416,7 @@ public class HomePage extends JScrollPane {
 
 	        btn.addActionListener(e -> {
 	            selectedProdCd = t[0];
-	            updateButtonStyles(btnPanel); // 버튼 색상 갱신
+	            updateButtonStyles(btnPanel);
 	            
 	            new SwingWorker<List<FuelTrendDto>, Void>() {
 	                @Override protected List<FuelTrendDto> doInBackground() {
@@ -451,9 +444,9 @@ public class HomePage extends JScrollPane {
 	    b.setForeground(fg);
 	    b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
 	    b.setFocusPainted(false);
-	    b.setBorder(new LineBorder(fg, 1)); // 전달받은 색상으로 테두리 설정
+	    b.setBorder(new LineBorder(fg, 1));
 	    b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-	    b.setPreferredSize(new Dimension(80, 35)); // 버튼 크기 고정
+	    b.setPreferredSize(new Dimension(80, 35));
 	}
 	
 	private void updateButtonStyles(JPanel btnPanel) {

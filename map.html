@@ -86,20 +86,42 @@ body {
 							map : map,
 							title : name,
 							icon : {
-								content : '<div style="background:#2563eb;color:white;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:bold;box-shadow: 0 2px 4px rgba(0,0,0,0.2);">'
-										+ price + '원</div>',
-								anchor : new naver.maps.Point(30, 30)
+								content : [
+										'<div style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">',
+										'    <div style="background:#2563eb; color:white; padding:6px 12px; border-radius:20px; font-family: sans-serif; white-space:nowrap; display:flex; align-items:center; line-height: 1;">',
+										'        <span style="font-size:11px; font-weight:800; margin-right:3px; vertical-align: middle;">₩</span>',
+										'        <span style="font-size:14px; font-weight:800; vertical-align: middle;">'
+												+ price
+												+ '</span>',
+										'    </div>',
+										'    <div style="width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #2563eb; margin: -1px auto 0;"></div>',
+										'</div>' ].join(''),
+								anchor : new naver.maps.Point(35, 30)
 							}
 						});
-
-				var infowindow = new naver.maps.InfoWindow(
-						{
-							content : '<div style="padding:10px;min-width:150px;"><strong' + '> '
-									+ name
-									+ ' <' + '/strong><br>가격: '
-									+ price
-									+ '원/L<' + '/div>'
-						});
+				var infoContent = [
+						'<div style="padding: 15px; min-width: 200px; background: white; border-radius: 12px; border: none; font-family: sans-serif;">',
+						'    <div style="display: flex; align-items: center; margin-bottom: 8px;">',
+						'        <div style="background: #eff6ff; padding: 6px; border-radius: 8px; margin-right: 10px;">',
+						'            <span style="font-size: 16px;">⛽</span>',
+						'        </div>',
+						'        <strong style="font-size: 15px; color: #1e293b; letter-spacing: -0.5px;">'
+								+ name + '</strong>',
+						'    </div>',
+						'    <div style="height: 1px; background: #f1f5f9; margin-bottom: 10px;"></div>',
+						'    <div style="display: flex; justify-content: space-between; align-items: center;">',
+						'        <span style="font-size: 13px; color: #64748b;">휘발유 가격</span>',
+						'        <span style="font-size: 18px; font-weight: 800; color: #2563eb;">'
+								+ price
+								+ '<small style="font-size: 12px; font-weight: 400; color: #94a3b8; margin-left: 2px;">원</small></span>',
+						'    </div>', '</div>' ].join('');
+				var infowindow = new naver.maps.InfoWindow({
+					content : infoContent,
+					backgroundColor : "transparent",
+					borderWidth : 0,
+					disableAnchor : false,
+					pixelOffset : new naver.maps.Point(0, -10)
+				});
 
 				naver.maps.Event.addListener(marker, 'click', function() {
 					if (infowindow.getMap())

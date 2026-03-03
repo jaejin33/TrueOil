@@ -63,10 +63,10 @@ public class StationPage extends JScrollPane {
 						refreshData(keyword);
 					});
 
-					debounceTimer.stop(); // 실행 후 타이머 정지
+					debounceTimer.stop();
 				}
 			});
-			debounceTimer.setRepeats(false); // 한 번만 실행되도록 설정
+			debounceTimer.setRepeats(false);
 			debounceTimer.start();
 		}
 	}
@@ -189,12 +189,12 @@ public class StationPage extends JScrollPane {
 		locationCombo.addActionListener(e -> {
 			LocationData loc = (LocationData) locationCombo.getSelectedItem();
 			if (loc != null) {
-				LocationData.selected = loc; // 전역 상태 업데이트
-				updateLocation(loc); // 현재 페이지 UI 업데이트
+				LocationData.selected = loc;
+				updateLocation(loc);
 			}
 		});
 		titlePanel.add(locationCombo);
-		card.add(titlePanel, BorderLayout.NORTH); // 기존 NORTH 레이블을 대체
+		card.add(titlePanel, BorderLayout.NORTH);
 		// -------------------------------------------
 		JFXPanel jfxPanel = new JFXPanel();
 		jfxPanel.setPreferredSize(new Dimension(0, 400));
@@ -216,7 +216,6 @@ public class StationPage extends JScrollPane {
 					netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine
 							.executeScript("window");
 
-					// 1. myConnector 연결
 					window.setMember("javaConnector", myConnector);
 					System.out.println("✅ Java-HTML 브릿지 연결 완료!");
 					LocationData currentLoc = LocationData.selected;
@@ -225,7 +224,6 @@ public class StationPage extends JScrollPane {
 							currentLoc.getY());
 					webEngine.executeScript(moveScript);
 
-					// 4. 데이터 초기 로드
 					refreshData();
 				}
 			});
@@ -473,12 +471,11 @@ public class StationPage extends JScrollPane {
 	// 주유소 리스트에서 항목을 클릭했을 때 실행할 로직
 	public void handleStationSelection(double x, double y, String name, String price) {
 
-		Platform.runLater(() -> { // WebView 호출은 반드시 Platform.runLater 내부에서!
+		Platform.runLater(() -> { 
 			if (webEngine == null)
 				return;
 			try {
 				webEngine.executeScript("clearMarkers();");
-				// %f를 사용하여 double 값을 안전하게 전달
 				webEngine.executeScript(String.format(java.util.Locale.US, "setCenter(%f, %f);", x, y));
 				webEngine.executeScript(String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s');", x, y,
 						name.replace("'", "\\'"), price));

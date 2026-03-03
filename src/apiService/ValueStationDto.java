@@ -1,7 +1,7 @@
 package apiService;
 
 public class ValueStationDto {
-    private String uniId;   // ✅ 주유소 고유 ID
+    private String uniId;
     private String name;
     private String price;
     private double distance;

@@ -1,7 +1,8 @@
 package apiService;
 
+// 평균유가 관리용
 public class AvgPriceDto {
-    private String prodcd; // 유종 코드 추가
+    private String prodcd;
     private String avgPrice;
     private String diffPrice;
 

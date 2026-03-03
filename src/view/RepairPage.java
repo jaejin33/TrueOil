@@ -55,8 +55,8 @@ public class RepairPage extends JScrollPane {
 
 				selectedShopName = shopName;
 				shopDisplayField.setText(" " + shopName);
-				refreshShopSelection(); // 왼쪽 목록 하이라이트
-				updateFormVisibility(); // 폼 활성화
+				refreshShopSelection();
+				updateFormVisibility();
 			});
 		}
 	}
@@ -67,7 +67,6 @@ public class RepairPage extends JScrollPane {
 		getVerticalScrollBar().setUnitIncrement(20);
 		setBorder(null);
 
-		// ✅ StationPage 방식의 GridBagLayout 적용
 		JPanel container = new JPanel(new GridBagLayout());
 		container.setBackground(COLOR_BG_GRAY);
 
@@ -88,7 +87,6 @@ public class RepairPage extends JScrollPane {
 		container.add(createShopSection(), gbc);
 		container.add(createFormSection(), gbc);
 
-		// 하단 여백 채우기
 		gbc.weighty = 1.0;
 		container.add(new JPanel() {
 			{
@@ -98,7 +96,6 @@ public class RepairPage extends JScrollPane {
 
 		setViewportView(container);
 
-		// [이벤트] 탭 전환 시 데이터 갱신 리스너
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
 				if (locationCombo != null) {
@@ -124,7 +121,7 @@ public class RepairPage extends JScrollPane {
 
 		try {
 			RepairDao dao = new RepairDao();
-			// 예시: 부산진구 기준, 내 위치 (35.15, 129.03)
+			// 부산
 			List<RepairDto> shops = dao.getNearestShops(loc.getLat(), loc.getLng(), "부산", 10);
 			StringBuilder jsonBuilder = new StringBuilder("[");
 
@@ -170,11 +167,9 @@ public class RepairPage extends JScrollPane {
 
 	private JPanel createMapSection() {
 
-		// 1. 기본 카드 생성 (타이틀은 수동으로 넣기 위해 빈 값 전달)
 		JPanel card = createBaseCard("");
 		JPanel body = (JPanel) card.getComponent(1);
 
-		// 2. 상단 타이틀 + 콤보박스 영역 구성 (StationPage와 동일한 레이아웃)
 		JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
 		titlePanel.setOpaque(false);
 		titlePanel.setBorder(new EmptyBorder(0, 0, 20, 0));
@@ -182,12 +177,10 @@ public class RepairPage extends JScrollPane {
 		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 		titleLabel.setForeground(COLOR_TEXT_DARK);
 
-		// 콤보박스 생성 및 설정
 		locationCombo = new JComboBox<>(LocationData.values());
-		locationCombo.setSelectedItem(LocationData.selected); // 전역 값으로 초기화
+		locationCombo.setSelectedItem(LocationData.selected);
 		locationCombo.setPreferredSize(new Dimension(120, 30));
 
-		// 리스너: 여기서 바꿔도 전역 변수가 바뀌고 데이터가 갱신됨
 		locationCombo.addActionListener(e -> {
 			LocationData loc = (LocationData) locationCombo.getSelectedItem();
 			if (loc != null) {

@@ -11,6 +11,8 @@ import java.util.Map;
 
 public class AvgPrice {
 	public static String apiKey = "F260303263";
+    //F260303263
+    //F260206147
 	
 	// 전국 평균 유가 가져오기
 	public static Map<String, AvgPriceDto> getAvgPrice() throws Exception {
@@ -22,7 +24,6 @@ public class AvgPrice {
 		Document doc = builder.parse(url);
 		doc.getDocumentElement().normalize();
 
-		// 유종 코드(String)를 Key로, AvgPriceDto를 Value로 담을 Map 생성
 		Map<String, AvgPriceDto> avgPriceMap = new HashMap<>();
 		NodeList oilNodes = doc.getElementsByTagName("OIL");
 
@@ -35,7 +36,6 @@ public class AvgPrice {
 				String parsedAvgPrice = element.getElementsByTagName("PRICE").item(0).getTextContent();
 				String parsedDiffPrice = element.getElementsByTagName("DIFF").item(0).getTextContent();
 
-				// Map에 유종별 데이터 저장
 				avgPriceMap.put(prodcd, new AvgPriceDto(prodcd, parsedAvgPrice, parsedDiffPrice));
 			}
 		}
