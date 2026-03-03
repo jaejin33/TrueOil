@@ -2,6 +2,7 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+import apiService.AvgPrice;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URI;
@@ -33,6 +34,9 @@ public class StationDetailPage extends JScrollPane {
 	private WebEngine webEngine;
 	private String stationX, stationY, stationName, representativePrice;
 
+	private JLabel distanceValueLabel;
+	private JLabel travelCostValueLabel;
+
 	public StationDetailPage(String uniId) {
 
 		setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -50,7 +54,8 @@ public class StationDetailPage extends JScrollPane {
 			Map<String, apiService.AvgPriceDto> avgPrices = apiService.AvgPrice.getAvgPrice();
 
 			// 2. 오피넷 상세정보 API 호출
-			String apiUrl = "https://www.opinet.co.kr/api/detailById.do?code=F260206147&id=" + uniId + "&out=xml";
+			String apiUrl = "https://www.opinet.co.kr/api/detailById.do?code=" + AvgPrice.apiKey + "&id=" + uniId
+					+ "&out=xml";
 			java.net.URL url = new java.net.URL(apiUrl);
 			java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
@@ -93,7 +98,7 @@ public class StationDetailPage extends JScrollPane {
 		}
 
 		setViewportView(container);
-		
+
 		SwingUtilities.invokeLater(() -> {
 			revalidate();
 			repaint();
@@ -139,9 +144,11 @@ public class StationDetailPage extends JScrollPane {
 						if (newState == Worker.State.SUCCEEDED) {
 							if (stationX != null && !stationX.isEmpty()) {
 								// 소수점 좌표를 위한 Locale.US 설정 포함
+								updateRealTimeData();
 								String script = String.format(java.util.Locale.US,
-										"if(typeof setCenter === 'function'){ " + "setCenter(%s, %s); "
-												+ "addMarker(%s, %s, '%s', '%s'); }",
+										"if(typeof setCenter === 'function' && typeof addMarker === 'function'){ "
+												+ "    setCenter(%s, %s); " + "    addMarker(%s, %s, '%s', '%s'); "
+												+ "}",
 										stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
 										representativePrice);
 
@@ -178,21 +185,22 @@ public class StationDetailPage extends JScrollPane {
 		JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
 
 		naviBtn.addActionListener(e -> {
-		    try {
-		        String urlWithFixedSpace = "https://map.naver.com/v5/search/" + stationName.replace(" ", "%20");
-		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
-		    } catch (Exception ex) {
-		        ex.printStackTrace();
-		    }
+			try {
+				String urlWithFixedSpace = "https://map.naver.com/v5/search/" + stationName.replace(" ", "%20");
+				Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 		});
-		
+
 		routeBtn.addActionListener(e -> {
-		    try {
-		        String urlWithFixedSpace = "https://map.naver.com/v5/directions/-/-/" + stationName.replace(" ", "%20") + ",PLACE_ID/route";
-		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
-		    } catch (Exception ex) {
-		        ex.printStackTrace();
-		    }
+			try {
+				String urlWithFixedSpace = "https://map.naver.com/v5/directions/-/-/" + stationName.replace(" ", "%20")
+						+ ",PLACE_ID/route";
+				Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 		});
 
 		btnGrid.add(naviBtn);
@@ -304,6 +312,27 @@ public class StationDetailPage extends JScrollPane {
 		return card;
 	}
 
+	private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+
+		double theta = lon1 - lon2;
+		double dist = Math.sin(Math.toRadians(lat1)) * Math.sin(Math.toRadians(lat2))
+				+ Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.cos(Math.toRadians(theta));
+		dist = Math.acos(dist);
+		dist = Math.toDegrees(dist);
+		return dist * 60 * 1.1515 * 1.609344;
+	}
+
+	private int parsePrice(String priceStr) {
+
+		if (priceStr == null)
+			return 0;
+		try {
+			return Integer.parseInt(priceStr.replace(",", ""));
+		} catch (NumberFormatException e) {
+			return 0;
+		}
+	}
+
 	private String mapProdcd(String code) {
 
 		return switch (code) {
@@ -322,11 +351,60 @@ public class StationDetailPage extends JScrollPane {
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
 		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 100));
+		distanceValueLabel = new JLabel("계산 중...");
+		travelCostValueLabel = new JLabel("계산 중...");
 		grid.setAlignmentX(Component.CENTER_ALIGNMENT);
-		grid.add(createSubInfoBox("현재 위치에서 거리", "1.5km"));
-		grid.add(createSubInfoBox("예상 이동 비용", "약 300원 (연비 12km/L 기준)"));
+		grid.add(createSubInfoBox("현재 위치에서 거리", distanceValueLabel));
+		grid.add(createSubInfoBox("예상 이동 비용", travelCostValueLabel));
 		card.add(grid);
 		return card;
+	}
+
+	private void updateRealTimeData() {
+
+		Platform.runLater(() -> {
+			if (webEngine == null)
+				return;
+			String checkScript = String.format(java.util.Locale.US,
+					"if (typeof getLatLngFromKatech === 'function') { getLatLngFromKatech(%s, %s); } else { null; }",
+					stationX, stationY);
+			Object result = null;
+			try {
+				result = webEngine.executeScript(checkScript);
+			} catch (Exception e) {
+				return;
+			}
+			if (result instanceof String && !((String) result).isEmpty()) {
+				String[] latLng = ((String) result).split(",");
+				double sLat = Double.parseDouble(latLng[0]);
+				double sLng = Double.parseDouble(latLng[1]);
+
+				// 거리 및 비용 계산 로직...
+				database.LocationData current = database.LocationData.selected;
+				double distance = calculateDistance(current.getLat(), current.getLng(), sLat, sLng);
+				int price = parsePrice(this.representativePrice);
+				double travelCost = (distance / 12.0) * price;
+
+				SwingUtilities.invokeLater(() -> {
+					distanceValueLabel.setText(String.format("%.2f km", distance));
+					travelCostValueLabel.setText(String.format("약 %,.0f원", travelCost));
+
+					Platform.runLater(() -> {
+						String mapUpdateScript = String.format(java.util.Locale.US,
+								"if (typeof setCenter === 'function') { " + "    setCenter(%s, %s); "
+										+ "    if (typeof addMarker === 'function') { " + "        clearMarkers(); " + // 기존
+																														// 마커
+																														// 제거
+																														// (필요시)
+										"        addMarker(%s, %s, '%s', '%s'); " + "    } " + "}",
+								stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
+								representativePrice);
+
+						webEngine.executeScript(mapUpdateScript);
+					});
+				});
+			}
+		});
 	}
 
 	private JPanel createBaseCard(String title) {
@@ -346,17 +424,18 @@ public class StationDetailPage extends JScrollPane {
 		return p;
 	}
 
-	private JPanel createSubInfoBox(String title, String value) {
+	private JPanel createSubInfoBox(String title, Object valueObj) {
 
 		JPanel p = new JPanel(new GridLayout(2, 1, 0, 5));
 		p.setBackground(Color.WHITE);
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
 		JLabel t = new JLabel(title);
 		t.setForeground(Color.GRAY);
-		JLabel v = new JLabel(value);
-		v.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 17));
 		p.add(t);
-		p.add(v);
+		if (valueObj instanceof JLabel)
+			p.add((JLabel) valueObj);
+		else
+			p.add(new JLabel(valueObj.toString()));
 		return p;
 	}
 

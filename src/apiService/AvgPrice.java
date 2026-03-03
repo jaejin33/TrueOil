@@ -10,11 +10,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AvgPrice {
-
+	public static String apiKey = "F260303263";
+	
 	// 전국 평균 유가 가져오기
 	public static Map<String, AvgPriceDto> getAvgPrice() throws Exception {
 
-		String url = "http://www.opinet.co.kr/api/avgAllPrice.do?out=xml&code=F260206147";
+		String url = "http://www.opinet.co.kr/api/avgAllPrice.do?out=xml&code="+apiKey;
 
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();

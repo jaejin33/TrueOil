@@ -16,7 +16,7 @@ public class NearStationService {
     public static List<NearStationDto> getNearStations(String areaCode) throws Exception {
         // 오피넷 API URL
         String apiUrl = "https://www.opinet.co.kr/api/lowTop10.do?"
-                + "code=F260206147"
+                + "code="+AvgPrice.apiKey
                 + "&out=xml"
                 + "&prodcd=B027"   // 휘발유
                 + "&area=" + areaCode

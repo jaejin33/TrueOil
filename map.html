@@ -34,46 +34,25 @@ body {
 			if (!map)
 				return; // 지도 미로드 시 무시
 			try {
-				var latlng = new naver.maps.LatLng(parseFloat(lat),
-						parseFloat(lng));
-				map.setCenter(latlng);
+				var latlng;
+				// KATECH 좌표계(수십만 단위)인지 위경도(100단위 이하)인지 판별
+				if (Math.abs(lat) > 1000) {
+					// KATECH -> 위경도 변환 (naver.maps.TransCoord submodule 필요)
+					var tm128 = new naver.maps.Point(parseFloat(lat),
+							parseFloat(lng));
+					latlng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+				} else {
+					latlng = new naver.maps.LatLng(parseFloat(lat),
+							parseFloat(lng));
+				}
+
+				if (map && latlng) {
+					map.setCenter(latlng);
+					map.setZoom(15); // 상세 페이지이므로 줌 레벨 확대
+				}
 			} catch (e) {
-				console.error(e);
+				console.error("setCenter 에러:", e);
 			}
-		};
-
-		function setMapMode(mode) {
-			currentMode = mode; // "STATION" 또는 "REPAIR"
-			log("현재 지도 모드 변경: " + mode);
-		}
-
-		try {
-			// 1. 지도 초기 옵션 (기본 위치: 동의대역)
-			var mapOptions = {
-				center : new naver.maps.LatLng(35.154031, 129.032212),
-				zoom : 14,
-				zoomControl : true
-			};
-
-			map = new naver.maps.Map('map', mapOptions);
-			isMapLoaded = true;
-			naver.maps.Event.addListener(map, 'idle',
-
-					function() {
-						if (currentMode === "STATION" && window.javaConnector) {
-							var center = map.getCenter(); // 현재 중심 위경도
-							// 네이버 위경도(LatLng) -> 오피넷 KATECH(TM128) 변환
-							var tm128 = naver.maps.TransCoord
-									.fromLatLngToTM128(center);
-							// Java에 연결된 객체가 있으면 좌표 전송
-							if (window.javaConnector) {
-								window.javaConnector.searchStations(tm128.x,
-										tm128.y);
-							}
-						}
-					});
-		} catch (e) {
-			log('❌ 지도 초기화 오류: ' + e.message);
 		}
 
 		// ==========================================
@@ -141,6 +120,49 @@ body {
 			map = new naver.maps.Map('map', mapOptions);
 			window.isMapLoaded = true;
 		}
+		function setMapMode(mode) {
+			currentMode = mode; // "STATION" 또는 "REPAIR"
+			log("현재 지도 모드 변경: " + mode);
+		}
+		window.getLatLngFromKatech = function(x, y) {
+			try {
+				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
+				var latlng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+				return latlng.lat() + "," + latlng.lng();
+			} catch (e) {
+				return null;
+			}
+		};
+		try {
+			// 1. 지도 초기 옵션 (기본 위치: 동의대역)
+			var mapOptions = {
+				center : new naver.maps.LatLng(35.154031, 129.032212),
+				zoom : 14,
+				zoomControl : true
+			};
+
+			map = new naver.maps.Map('map', mapOptions);
+			isMapLoaded = true;
+			naver.maps.Event.addListener(map, 'idle',
+
+					function() {
+						isMapLoaded = true;
+						if (currentMode === "STATION" && window.javaConnector) {
+							var center = map.getCenter(); // 현재 중심 위경도
+							// 네이버 위경도(LatLng) -> 오피넷 KATECH(TM128) 변환
+							var tm128 = naver.maps.TransCoord
+									.fromLatLngToTM128(center);
+							// Java에 연결된 객체가 있으면 좌표 전송
+							if (window.javaConnector) {
+								window.javaConnector.searchStations(tm128.x,
+										tm128.y);
+							}
+						}
+					});
+		} catch (e) {
+			log('❌ 지도 초기화 오류: ' + e.message);
+		}
+
 		function setRepairMarkers(dataJson) {
 			if (!map) {
 				log("⚠️ 지도가 준비되지 않음. 재시도...");

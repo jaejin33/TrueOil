@@ -147,9 +147,9 @@ public class RepairPage extends JScrollPane {
 			Platform.runLater(() -> {
 				if (webEngine != null) {
 					String escapedJson = finalJson.replace("\\", "\\\\").replace("'", "\\'");
-					String script = String
-							.format("if(typeof setRepairMarkers === 'function') { setRepairMarkers('%s'); } "
-									+ "else { console.error('setRepairMarkers 함수가 아직 정의되지 않음'); }", escapedJson);
+					String script = String.format(
+				            "if(typeof setRepairMarkers === 'function') { setRepairMarkers('%s'); }", 
+				            escapedJson);
 					try {
 						webEngine.executeScript(script);
 					} catch (Exception e) {
@@ -253,12 +253,17 @@ public class RepairPage extends JScrollPane {
 	private void updateLocation(LocationData loc) {
 
 		Platform.runLater(() -> {
-			if (webEngine != null) {
-				webEngine.executeScript(
-						String.format(java.util.Locale.US, "setCenter(%f, %f);", loc.getLat(), loc.getLng()));
-
-			}
-		});
+	        if (webEngine != null) {
+	            String script = String.format(java.util.Locale.US, 
+	                "if(typeof setCenter === 'function') { setCenter(%f, %f); }", 
+	                loc.getLat(), loc.getLng());
+	            try {
+	                webEngine.executeScript(script);
+	            } catch (Exception e) {
+	                System.err.println("RepairPage: 지도 이동 함수 없음");
+	            }
+	        }
+	    });
 		refreshData();
 	}
 

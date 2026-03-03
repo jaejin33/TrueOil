@@ -28,7 +28,7 @@ public class ValueStationService {
 		if (sortCode == null || sortCode.trim().isEmpty()) {
 			sortCode = "1";
 		}
-		String apiUrl = "https://www.opinet.co.kr/api/aroundAll.do?" + "code=F260206147" + "&out=xml" + "&x=" + x
+		String apiUrl = "https://www.opinet.co.kr/api/aroundAll.do?" + "code="+AvgPrice.apiKey + "&out=xml" + "&x=" + x
 				+ "&y=" + y + "&radius=" + radius + "&prodcd=" + prodCd + "&sort=" + sortCode;
 
 		URL url = new URL(apiUrl);

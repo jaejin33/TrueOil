@@ -8,14 +8,14 @@ import java.net.URL;
 import java.util.*;
 
 public class FuelTrendService {
-    private final String API_KEY = "F260206147"; // 오피넷 API 키 [cite: 49]
-
+    //F260303263
+    //F260206147
     public List<FuelTrendDto> getWeeklyTrend(String prodcd) {
         List<FuelTrendDto> list = new ArrayList<>();
         try {
             // out=xml로 요청 
             String urlStr = "https://www.opinet.co.kr/api/avgRecentPrice.do?out=xml"
-                          + "&code=" + API_KEY + "&prodcd=" + prodcd;
+                          + "&code=" + AvgPrice.apiKey + "&prodcd=" + prodcd;
             
             Document doc = DocumentBuilderFactory.newInstance()
                             .newDocumentBuilder()

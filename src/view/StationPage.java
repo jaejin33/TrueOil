@@ -35,8 +35,8 @@ public class StationPage extends JScrollPane {
 	private WebView webView;
 	private WebEngine webEngine;
 
-	private double currentX = 494152;
-	private double currentY = 282437;
+	private double currentX = 496541;
+	private double currentY = 283842;
 	private JavaConnector myConnector = new JavaConnector();
 
 	public class JavaConnector {
@@ -260,10 +260,12 @@ public class StationPage extends JScrollPane {
 
 		Platform.runLater(() -> {
 			if (webEngine != null) {
-				if (webEngine != null) {
-					webEngine.executeScript(
-							String.format(java.util.Locale.US, "setCenter(%f, %f);", loc.getLat(), loc.getLng()));
-
+				String script = String.format(java.util.Locale.US,
+						"if(typeof setCenter === 'function') { setCenter(%f, %f); }", loc.getLat(), loc.getLng());
+				try {
+					webEngine.executeScript(script);
+				} catch (Exception e) {
+					System.err.println("지도 함수가 아직 준비되지 않았습니다.");
 				}
 			}
 		});
@@ -278,21 +280,21 @@ public class StationPage extends JScrollPane {
 				return;
 
 			try {
-				Object result = webEngine.executeScript("typeof isMapLoaded !== 'undefined' && isMapLoaded");
-				if (result instanceof Boolean && (Boolean) result) {
-					webEngine.executeScript("clearMarkers();");
-					for (apiService.ValueStationDto s : stations) {
-						int price = parsePrice(s.getPrice());
-						// Dto에 저장된 KATECH 좌표 가져오기 (ValueStationService에서 파싱한 변수명에 맞게 호출)
-						double x = s.getX();
-						double y = s.getY();
+				String checkScript = "typeof isMapLoaded !== 'undefined' && isMapLoaded && typeof clearMarkers === 'function'";
+				Object isReady = webEngine.executeScript(checkScript);
+				if (isReady instanceof Boolean && (Boolean) isReady) {
+	                webEngine.executeScript("clearMarkers();");
+	                for (apiService.ValueStationDto s : stations) {
+	                    int price = parsePrice(s.getPrice());
+	                    double x = s.getX();
+	                    double y = s.getY();
 
-						String script = String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s')", x, y,
-								s.getName().replace("'", "\\'"), String.format("%,d", price));
-
-						webEngine.executeScript(script);
-					}
-				}
+	                    String script = String.format(java.util.Locale.US, 
+	                        "if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s'); }", 
+	                        x, y, s.getName().replace("'", "\\'"), String.format("%,d", price));
+	                    webEngine.executeScript(script);
+	                }
+	            }
 			} catch (Exception e) {
 				System.out.println("지도가 아직 완전히 로드되지 않아 마커 업데이트를 대기합니다.");
 			}
