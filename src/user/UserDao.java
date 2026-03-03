@@ -91,7 +91,7 @@ public class UserDao {
 	    UserSessionDto sessionUser = null;
 
 	    // 식별에 필요한 최소한의 컬럼만 조회
-	    String sql = "SELECT user_id, email, profile_img FROM users WHERE email = ? AND password = ?";
+	    String sql = "SELECT user_id, email, profile_img, fuel_type FROM users WHERE email = ? AND password = ?";
 
 	    try {
 	        con = pool.getConnection();
@@ -106,6 +106,7 @@ public class UserDao {
 	            sessionUser.userId = rs.getInt("user_id");
 	            sessionUser.email = rs.getString("email");
 	            sessionUser.profileImg = rs.getString("profile_img");
+	            sessionUser.fuelType = rs.getString("fuel_type");
 	        }
 	    } catch (Exception e) {
 	        e.printStackTrace();
