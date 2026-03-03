@@ -5,6 +5,9 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.HierarchyEvent;
 import apiService.*;
+import fuel.FuelController;
+import fuel.dto.MonthlySummaryDto;
+
 import java.util.List;
 
 public class HomePage extends JScrollPane {
@@ -18,6 +21,8 @@ public class HomePage extends JScrollPane {
 	private JLabel briefingContent;
 	private JPanel recommendPanel;
 	private JLabel totalCountLabel, totalAmountLabel, avgPriceLabel, diffPercentLabel;
+	
+	private FuelController fuelController = new FuelController(); // 컨트롤러 선언
 
 	public HomePage() {
 
@@ -137,16 +142,35 @@ public class HomePage extends JScrollPane {
 			recommendPanel.add(new JLabel("추천 주유소 정보를 불러오는 데 실패했습니다."));
 		}
 		// --- 3. 주유비 통계 영역 (더미 데이터) ---
-		// TODO: SummaryVO summary = fuelService.getMonthlySummary(currentUser.getId());
-		// 연동
-		totalCountLabel.setText("5회");
-		totalAmountLabel.setText("245,000원");
-		avgPriceLabel.setText("1,555원");
-		diffPercentLabel.setText("-3.2%"); // 전월 대비 감소 예시
+		MonthlySummaryDto summary = fuelController.getMonthlySummary();
 
-		// 갱신 후 화면 다시 그리기
-		revalidate();
-		repaint();
+        if (summary != null) {
+            // 총 주유 횟수
+            totalCountLabel.setText(summary.getTotalCount() + "회");
+            
+            // 총 주유 금액 (3자리 콤마 포맷: 245,000원)
+            totalAmountLabel.setText(String.format("%,d원", summary.getTotalAmount()));
+            
+            // 평균 가격
+            avgPriceLabel.setText(String.format("%,d원", summary.getAvgPrice()));
+            
+            // 지난달 대비 증감률 설정 및 색상 피드백
+            double diff = summary.getDiffPercent();
+            if (diff > 0) {
+                diffPercentLabel.setText(String.format("+%.1f%%", diff));
+                diffPercentLabel.setForeground(COLOR_DANGER); // 지출 증가 시 빨간색
+            } else if (diff < 0) {
+                diffPercentLabel.setText(String.format("%.1f%%", diff));
+                diffPercentLabel.setForeground(COLOR_SUCCESS); // 지출 감소 시 초록색
+            } else {
+                diffPercentLabel.setText("0%");
+                diffPercentLabel.setForeground(COLOR_TEXT_DARK);
+            }
+        }
+
+        // 갱신 후 화면 다시 그리기
+        revalidate();
+        repaint();
 	}
 
 	// [섹션 1] 유가 브리핑 박스
@@ -347,4 +371,6 @@ public class HomePage extends JScrollPane {
 		b.add(valueLabel);
 		return b;
 	}
+	
+	
 }
