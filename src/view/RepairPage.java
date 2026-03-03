@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import apiService.RepairDao;
 import apiService.RepairDto;
+import reservation.RepairReservationController;
 
 /**
  * 정비소 예약 페이지
@@ -24,6 +25,7 @@ public class RepairPage extends JScrollPane {
 
     private String selectedShopId = null;
     private String selectedShopName = "";
+    private RepairReservationController reservationController = new RepairReservationController();
     
     private JTextField shopDisplayField, dateField;
     private JComboBox<String> timeCombo;
@@ -168,22 +170,68 @@ public class RepairPage extends JScrollPane {
         submitBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         
         submitBtn.addActionListener(e -> {
-            /** [API/DB 포인트] 예약 저장 로직
-             * 1. 유효성 검사: if (selectedShopId == null) ...
-             * 2. 서비스 수집: StringBuilder로 체크된 항목 결합 또는 List 생성
-             * 3. DB 연동: 
-             * INSERT INTO reservations (user_id, shop_id, res_date, res_time, services, note) 
-             * VALUES (?, ?, ?, ?, ?, ?)
+        	/** * [예약 실행 로직]
+             * Controller를 통해 UI 입력값을 DB에 저장합니다.
              */
+            
+            // 1) 필수 선택 검증
             if (selectedShopId == null) {
-                JOptionPane.showMessageDialog(null, "정비소를 먼저 선택해 주세요.");
+                JOptionPane.showMessageDialog(null, "정비소를 먼저 선택해 주세요.", "알림", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            JOptionPane.showMessageDialog(null, selectedShopName + "에 예약 신청이 완료되었습니다.");
-        });
-        body.add(submitBtn);
+            if (timeCombo.getSelectedIndex() == 0) {
+                JOptionPane.showMessageDialog(null, "예약 시간을 선택해 주세요.", "알림", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
+            // 2) 체크된 서비스 항목 수집 (콤마로 구분된 문자열 생성)
+            StringBuilder sb = new StringBuilder();
+            for (JCheckBox cb : serviceChecks) {
+                if (cb.isSelected()) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append(cb.getText());
+                }
+            }
+            
+            if (sb.length() == 0) {
+                JOptionPane.showMessageDialog(null, "최소 하나 이상의 정비 서비스를 선택해 주세요.", "알림", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // 3) 컨트롤러 호출
+            boolean success = reservationController.requestReservation(
+                selectedShopName,
+                dateField.getText().trim(),
+                timeCombo.getSelectedItem().toString(),
+                sb.toString(),
+                noteArea.getText().trim()
+            );
+
+            // 4) 결과 처리
+            if (success) {
+                JOptionPane.showMessageDialog(null, selectedShopName + "에 예약이 성공적으로 완료되었습니다!", "예약 완료", JOptionPane.INFORMATION_MESSAGE);
+                resetForm(); // 입력 폼 초기화 (선택 사항)
+            } else {
+                JOptionPane.showMessageDialog(null, "예약 처리 중 오류가 발생했습니다. 다시 시도해주세요.", "오류", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        body.add(submitBtn);
         return card;
+    }
+    
+    /**
+     * 예약 완료 후 입력 폼을 초기 상태로 되돌립니다.
+     */
+    private void resetForm() {
+        selectedShopId = null;
+        selectedShopName = "";
+        dateField.setText("2026-03-03"); // 현재 날짜 등으로 초기화
+        timeCombo.setSelectedIndex(0);
+        noteArea.setText("");
+        for (JCheckBox cb : serviceChecks) cb.setSelected(false);
+        updateFormVisibility();
+        refreshShopSelection();
     }
 
     private JPanel createShopItem(String id, String name, String addr, String dist, String rate) {

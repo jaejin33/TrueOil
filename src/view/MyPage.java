@@ -3,12 +3,15 @@ package view;
 import javax.swing.*;
 import javax.swing.border.*;
 
+import reservation.RepairReservationController;
+import reservation.dto.RepairReservationDto;
 import user.SessionManager;
 import user.UserController;
 import user.dto.UserDto;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.util.List;
 
 public class MyPage extends JScrollPane {
     private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
@@ -22,6 +25,7 @@ public class MyPage extends JScrollPane {
     private JPanel contentPanel;
     private JPanel listPanel;
     private UserController userController = new UserController();
+    private RepairReservationController reservationController = new RepairReservationController();
 
     public MyPage() {
         setBorder(null);
@@ -171,23 +175,97 @@ public class MyPage extends JScrollPane {
     }
 
     private JPanel createReservationBox() {
-        JPanel card = createCardFrame("📅 나의 예약 현황");
+    	JPanel card = createCardFrame("📅 나의 예약 현황");
         
-        /** [DB 포인트 5: 예약 데이터 리스트 조회] */
         listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
         listPanel.setOpaque(false);
         listPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        listPanel.add(createReservationItem("2026-02-25 14:00", "강남 주유소", "휘발유 50L"));
-        listPanel.add(Box.createVerticalStrut(10));
-        listPanel.add(createReservationItem("2026-03-01 10:30", "서초 정비소", "엔진오일 교체"));
-        
-        listPanel.add(Box.createVerticalStrut(5));
+        /** [DB 포인트 5: 실시간 예약 데이터 리스트 조회] */
+        List<RepairReservationDto> resList = reservationController.fetchMyReservations();
+
+        if (resList == null || resList.isEmpty()) {
+            // 예약 내역이 없을 경우
+            JLabel emptyLbl = new JLabel("현재 예약된 내역이 없습니다.");
+            emptyLbl.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+            emptyLbl.setForeground(Color.GRAY);
+            emptyLbl.setBorder(new EmptyBorder(10, 5, 10, 0));
+            listPanel.add(emptyLbl);
+        } else {
+            // 리스트를 순회하며 예약 아이템 추가
+            for (RepairReservationDto res : resList) {
+                // 일시 포맷: 날짜 + 시간
+                String dateTime = res.getResDate() + " " + res.getResTime();
+                // 상세 내용: 정비 서비스 항목
+                String detail = res.getServices();
+                
+                listPanel.add(createReservationItem(res.getResId(), dateTime, res.getShopName(), detail));
+                listPanel.add(Box.createVerticalStrut(10));
+            }
+        }
 
         card.add(listPanel);
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height));
         return card;
+    }
+    
+    /**
+     * 개별 예약 아이템 생성 (취소 기능 포함)
+     * @param resId 예약 고유 번호 (취소 시 사용)
+     * @param dateTime 예약 일시
+     * @param location 정비소 이름
+     * @param detail 정비 서비스 내용
+     */
+    private JPanel createReservationItem(int resId, String dateTime, String location, String detail) {
+        JPanel row = new JPanel(new BorderLayout(15, 0));
+        row.setBackground(COLOR_ROW_BG);
+        row.setBorder(new CompoundBorder(new LineBorder(COLOR_DIVIDER), new EmptyBorder(12, 18, 12, 18)));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
+        infoPanel.setOpaque(false);
+        JLabel dateLabel = new JLabel(dateTime);
+        dateLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        dateLabel.setForeground(COLOR_PRIMARY);
+        
+        // 텍스트가 길어질 경우를 대비한 처리
+        JLabel descLabel = new JLabel(location + " | " + detail);
+        descLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        
+        infoPanel.add(dateLabel);
+        infoPanel.add(descLabel);
+
+        JButton cancelBtn = new JButton("예약 취소");
+        cancelBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setBackground(Color.WHITE);
+        cancelBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        cancelBtn.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(
+                this, "정말로 이 예약을 취소하시겠습니까?", "예약 취소 확인", 
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE
+            );
+            
+            if (result == JOptionPane.YES_OPTION) {
+                /** [DB 포인트 6: 예약 데이터 삭제 실행] */
+                boolean success = reservationController.requestCancel(resId);
+                
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "예약이 정상적으로 취소되었습니다.");
+                    refreshPage(); // 페이지 새로고침하여 리스트 갱신
+                } else {
+                    JOptionPane.showMessageDialog(this, "취소 처리 중 오류가 발생했습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        row.add(infoPanel, BorderLayout.CENTER);
+        row.add(cancelBtn, BorderLayout.EAST);
+        
+        return row;
     }
 
     private JPanel createReservationItem(String dateTime, String location, String detail) {
