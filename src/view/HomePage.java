@@ -21,7 +21,9 @@ public class HomePage extends JScrollPane {
 	private JLabel briefingContent;
 	private JPanel recommendPanel;
 	private JLabel totalCountLabel, totalAmountLabel, avgPriceLabel, diffPercentLabel;
+	private String selectedProdCd = "B027"; // 기본값 휘발유
 	
+	private FuelChartPanel chart;
 	private FuelController fuelController = new FuelController(); // 컨트롤러 선언
 
 	public HomePage() {
@@ -39,6 +41,8 @@ public class HomePage extends JScrollPane {
 
 		container.add(createBriefingBox());
 		container.add(Box.createVerticalStrut(25));
+		container.add(createTrendChartBox()); 
+	    container.add(Box.createVerticalStrut(25));
 		container.add(createRecommendBox());
 		container.add(Box.createVerticalStrut(25));
 		container.add(createEfficiencyBox());
@@ -167,6 +171,24 @@ public class HomePage extends JScrollPane {
                 diffPercentLabel.setForeground(COLOR_TEXT_DARK);
             }
         }
+     // 처음 실행 시 휘발유(B027) 데이터를 자동으로 불러오게 합니다.
+        new SwingWorker<List<FuelTrendDto>, Void>() {
+            @Override 
+            protected List<FuelTrendDto> doInBackground() {
+                // 오피넷 API에서 휘발유(B027) 7일치 데이터를 가져옴 [cite: 101]
+                return new FuelTrendService().getWeeklyTrend("B027"); 
+            }
+            @Override 
+            protected void done() {
+                try {
+                    List<FuelTrendDto> result = get();
+                    if (result != null && !result.isEmpty()) {
+                        // 아래에서 올라오는 애니메이션과 함께 출력
+                        chart.setDataWithAnim(result); 
+                    }
+                } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        }.execute();
 
         // 갱신 후 화면 다시 그리기
         revalidate();
@@ -372,5 +394,80 @@ public class HomePage extends JScrollPane {
 		return b;
 	}
 	
+	private JPanel createTrendChartBox() {
+	    JPanel card = createBaseCard("📊 최근 7일 유가 흐름");
+	    
+	    // 유종 버튼 패널 (5개 종류) 
+	    JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+	    btnPanel.setOpaque(false);
+	    
+	    // 제품 코드: B027(휘발유), D047(경유), B034(고급), C004(등유), K015(LPG) 
+	    String[][] types = {
+	        {"B027", "휘발유"}, {"D047", "경유"}, 
+	        {"B034", "고급"}, {"C004", "등유"}, {"K015", "LPG"}
+	    };
+
+	    chart = new FuelChartPanel();
+	    chart.setPreferredSize(new Dimension(0, 250)); // 그래프 높이 조절
+
+	    for (String[] t : types) {
+	        JButton btn = new JButton(t[1]);
+	        btn.putClientProperty("prodCd", t[0]); // 유종 코드 저장 
+	        styleSecondaryBtn(btn, COLOR_PRIMARY);
+	        
+	        // 초기 버튼 스타일 설정
+	        if(t[0].equals(selectedProdCd)) {
+	            btn.setBackground(COLOR_PRIMARY);
+	            btn.setForeground(Color.WHITE);
+	        }
+
+	        btn.addActionListener(e -> {
+	            selectedProdCd = t[0];
+	            updateButtonStyles(btnPanel); // 버튼 색상 갱신
+	            
+	            new SwingWorker<List<FuelTrendDto>, Void>() {
+	                @Override protected List<FuelTrendDto> doInBackground() {
+	                    return new FuelTrendService().getWeeklyTrend(t[0]);
+	                }
+	                @Override protected void done() {
+	                    try { chart.setDataWithAnim(get()); } catch (Exception ex) {}
+	                }
+	            }.execute();
+	        });
+	        btnPanel.add(btn);
+	    }
+	    
+	    card.add(btnPanel);
+	    card.add(Box.createVerticalStrut(20));
+	    card.add(chart);
+	    return card;
+	}
 	
+	/**
+	 * 보조 버튼 스타일 (흰색 배경 + 유색 테두리)
+	 */
+	private void styleSecondaryBtn(JButton b, Color fg) {
+	    b.setBackground(Color.WHITE);
+	    b.setForeground(fg);
+	    b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+	    b.setFocusPainted(false);
+	    b.setBorder(new LineBorder(fg, 1)); // 전달받은 색상으로 테두리 설정
+	    b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+	    b.setPreferredSize(new Dimension(80, 35)); // 버튼 크기 고정
+	}
+	
+	private void updateButtonStyles(JPanel btnPanel) {
+	    for (Component c : btnPanel.getComponents()) {
+	        if (c instanceof JButton) {
+	            JButton btn = (JButton) c;
+	            // 버튼의 ActionCommand나 텍스트로 비교 (여기선 텍스트 예시)
+	            if (btn.getClientProperty("prodCd").equals(selectedProdCd)) {
+	                btn.setBackground(COLOR_PRIMARY); // 파란색 채우기
+	                btn.setForeground(Color.WHITE);
+	            } else {
+	                styleSecondaryBtn(btn, COLOR_PRIMARY); // 다시 테두리만
+	            }
+	        }
+	    }
+	}
 }
