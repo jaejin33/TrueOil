@@ -2,6 +2,10 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import user.UserController;
+import user.dto.UserDto;
+
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -25,6 +29,8 @@ public class PhotoChangeDialog extends JDialog {
     private JPanel actionRow;
 
     private int mouseX, mouseY;
+    private String currentSelectedPath = null; // 현재 선택된 임시 파일 경로
+    private UserController userController = new UserController();
 
     public PhotoChangeDialog(Frame parent) {
         super(parent, "프로필 사진 변경", true);
@@ -33,7 +39,17 @@ public class PhotoChangeDialog extends JDialog {
         setResizable(false);
         setSize(420, 480);
 
-        /* ===== 전체 배경 ===== */
+        /* 1. 버튼 객체들 먼저 생성 (순서가 가장 중요합니다) */
+        removeBtn = new JButton("삭제");
+        styleSecondaryBtn(removeBtn, COLOR_DANGER);
+        applyBtn = new JButton("적용");
+        stylePrimaryBtn(applyBtn, COLOR_SUCCESS);
+
+        /* 2. 초기에는 버튼 숨김 처리 */
+        removeBtn.setVisible(false);
+        applyBtn.setVisible(false);
+
+        /* ===== 전체 배경 설정 ===== */
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(COLOR_BG_GRAY);
         background.setBorder(new CompoundBorder(
@@ -58,7 +74,7 @@ public class PhotoChangeDialog extends JDialog {
             }
         });
 
-        /* ===== 카드 패널 ===== */
+        /* ===== 카드 패널 설정 ===== */
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -93,7 +109,7 @@ public class PhotoChangeDialog extends JDialog {
         titleLabel.setForeground(COLOR_TEXT_DARK);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 사진 프리뷰 영역 ===== */
+        /* ===== 사진 프리뷰 영역 및 드래그 앤 드롭 ===== */
         photoPreview = new JLabel("👤", SwingConstants.CENTER);
         photoPreview.setPreferredSize(new Dimension(140, 140));
         photoPreview.setMaximumSize(new Dimension(140, 140));
@@ -119,11 +135,11 @@ public class PhotoChangeDialog extends JDialog {
                         File file = files.get(0);
                         String path = file.getAbsolutePath().toLowerCase();
                         if (path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg")) {
-                            updatePreview(file.getAbsolutePath());
+                            currentSelectedPath = file.getAbsolutePath(); // 경로 저장
+                            updatePreview(currentSelectedPath);
                             removeBtn.setVisible(true);
                             applyBtn.setVisible(true);
-                            revalidate();
-                            repaint();
+                            revalidate(); repaint();
                             return true;
                         }
                     }
@@ -132,14 +148,20 @@ public class PhotoChangeDialog extends JDialog {
             }
         });
 
-        /**
-         * [DB Point 1: 초기 데이터 로드] 
-         * - SELECT profile_path FROM members WHERE user_id = ?
-         * - 사용자가 기존에 설정한 이미지가 있다면 updatePreview() 호출 
-         * - 기존 이미지가 있다면 removeBtn과 applyBtn을 보이게 설정 가능
-         */
+        /* 3. [DB Point 1: 초기 데이터 로드] */
+        String initialPath = userController.getProfileImagePath();
+        
+        updatePreview(initialPath);
 
-        /* ===== 버튼 영역 ===== */
+        if (initialPath != null && !initialPath.contains("default.png")) {
+            removeBtn.setVisible(true);
+            applyBtn.setVisible(true);
+        } else {
+            removeBtn.setVisible(false);
+            applyBtn.setVisible(false);
+        }
+        
+        /* ===== 버튼 영역 및 조립 ===== */
         JButton uploadBtn = new JButton("사진 업로드");
         stylePrimaryBtn(uploadBtn, COLOR_PRIMARY);
         
@@ -148,53 +170,56 @@ public class PhotoChangeDialog extends JDialog {
         actionRow.setOpaque(false);
         actionRow.setMaximumSize(new Dimension(320, 45));
 
-        removeBtn = new JButton("삭제");
-        styleSecondaryBtn(removeBtn, COLOR_DANGER);
-        applyBtn = new JButton("적용");
-        stylePrimaryBtn(applyBtn, COLOR_SUCCESS);
-        
-        // 초기에는 숨김 처리
-        removeBtn.setVisible(false);
-        applyBtn.setVisible(false);
-
         actionRow.add(removeBtn);
         actionRow.add(Box.createHorizontalStrut(10));
         actionRow.add(applyBtn);
 
-        /* ===== 액션 리스너 ===== */
+        /* ===== 액션 리스너 설정 ===== */
         uploadBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("이미지 파일", "jpg", "png", "jpeg"));
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
-                updatePreview(selectedPath);
+                currentSelectedPath = fileChooser.getSelectedFile().getAbsolutePath();
+                updatePreview(currentSelectedPath);
                 removeBtn.setVisible(true);
                 applyBtn.setVisible(true);
-                revalidate();
-                repaint();
+                revalidate(); repaint();
             }
         });
 
         removeBtn.addActionListener(e -> {
-            photoPreview.setIcon(null);
-            photoPreview.setText("👤");
+
+            String defaultPath = "resources/images/profiles/default.png";
+            
+            // String defaultPath = userController.getProfileDefaultPath(); // (필요시 추가)
+
+            // 프리뷰를 이모지가 아닌 파일 이미지로 업데이트
+            updatePreview(defaultPath); 
+            
+            // 상태 저장 및 버튼 제어
+            currentSelectedPath = "DELETE_ACTION"; // 서버에 "삭제됨"을 알릴 신호
             removeBtn.setVisible(false);
-            applyBtn.setVisible(false);
-            revalidate();
+            applyBtn.setVisible(true);
+            
+            revalidate(); 
             repaint();
         });
 
         applyBtn.addActionListener(e -> {
-            /**
-             * [DB Point 2: 최종 데이터 저장] 
-             * - UPDATE members SET profile_path = ? WHERE user_id = ?
-             * - 현재 photoPreview의 상태를 DB에 저장
-             * - 마이페이지 UI 새로고침 메서드 호출
-             */
-            JOptionPane.showMessageDialog(this, "프로필 사진이 변경되었습니다.");
-            dispose();
+            if (currentSelectedPath == null) {
+                JOptionPane.showMessageDialog(this, "사진을 먼저 선택하거나 드래그해 주세요.");
+                return;
+            }
+            String errorMessage = userController.requestProfileImageChange(currentSelectedPath);
+            if (errorMessage == null) {
+                JOptionPane.showMessageDialog(this, "프로필 사진이 성공적으로 변경되었습니다.");
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, errorMessage, "변경 실패", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
-        /* ===== 카드 조립 ===== */
+        /* ===== 최종 카드 조립 ===== */
         card.add(header);
         card.add(Box.createVerticalStrut(10));
         card.add(titleLabel);
@@ -204,7 +229,7 @@ public class PhotoChangeDialog extends JDialog {
         card.add(uploadBtn);
         card.add(Box.createVerticalStrut(10));
         card.add(actionRow);
-        card.add(Box.createVerticalStrut(10)); // 하단 여백
+        card.add(Box.createVerticalStrut(10));
 
         background.add(card, BorderLayout.CENTER);
         add(background);
@@ -213,13 +238,25 @@ public class PhotoChangeDialog extends JDialog {
 
     private void updatePreview(String path) {
         try {
+            File imgFile = new File(path);
+            
+            if (!imgFile.exists()) {
+                path = "resources/images/profiles/default.png";
+                if (!new File(path).exists()) {
+                    path = "src/resources/images/profiles/default.png";
+                }
+            }
+
             ImageIcon icon = new ImageIcon(path);
             Image img = icon.getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH);
-            photoPreview.setText("");
+            photoPreview.setText(""); // 이모지 텍스트 지우기
             photoPreview.setIcon(new ImageIcon(img));
+            
         } catch (Exception e) {
-            photoPreview.setText("👤");
+            // 정말로 파일이 하나도 없을 때만 최후의 수단으로 이모지 표시
             photoPreview.setIcon(null);
+            photoPreview.setText("👤");
+            System.err.println("❌ 프리뷰 로딩 실패: " + e.getMessage());
         }
     }
 

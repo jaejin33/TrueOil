@@ -1,5 +1,11 @@
 package user;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import database.DBConnectionMgr;
@@ -84,5 +90,43 @@ public class UserService {
             }
         }
         return isSuccess;
+    }
+    
+    /**
+     * 프로필 이미지를 물리적으로 저장하고 DB 경로를 업데이트합니다.
+     * @param sourcePath 원본 파일 경로
+     * @return 처리 결과 메시지 (성공 시 null, 실패 시 에러 메시지)
+     */
+    public String updateProfileImage(String sourcePath) {
+        int userId = SessionManager.getUserId();
+        String destDir = "resources/images/profiles/";
+        String fileName;
+
+        try {
+            if (sourcePath == null || sourcePath.equals("DELETE_ACTION")) {
+                // [삭제 로직] 사용자가 삭제를 원할 경우 기본 파일명으로 설정
+                fileName = "default.png";
+            } else {
+                // [업로드 로직] 폴더 생성 및 파일 복사
+                File dir = new File(destDir);
+                if (!dir.exists()) dir.mkdirs();
+
+                String ext = sourcePath.substring(sourcePath.lastIndexOf("."));
+                fileName = "profile_" + userId + ext;
+                
+                Path targetPath = Paths.get(destDir + fileName);
+                Files.copy(Paths.get(sourcePath), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            // 공통: DB 업데이트
+            if (userDao.updateProfileImg(userId, fileName)) {
+                return null; // 성공
+            } else {
+                return "데이터베이스 업데이트에 실패했습니다.";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "파일 처리 중 오류가 발생했습니다.";
+        }
     }
 }

@@ -243,9 +243,9 @@ public class UserDao {
 	}
 	
 	/**
-	 * 사용자의 고유 번호(ID)를 기반으로 이름, 이메일, 차량번호, 연료 종류, 가입일 정보를 상세 조회합니다.
-	 * * @param userId 조회할 사용자의 고유 번호
-	 * @return 사용자 상세 정보를 담은 UserDto 객체, 데이터가 없을 경우 null 반환
+	 * 사용자의 고유 번호(ID)를 기반으로 상세 정보를 조회합니다. (프로필 이미지 포함)
+	 * @param userId 조회할 사용자의 고유 번호
+	 * @return 사용자 상세 정보를 담은 UserDto 객체
 	 */
 	public UserDto getUserInfo(int userId) {
 	    Connection con = null;
@@ -253,8 +253,7 @@ public class UserDao {
 	    ResultSet rs = null;
 	    UserDto user = null;
 
-	    // fuel_type 컬럼 추가
-	    String sql = "SELECT name, email, car_number, fuel_type, created_at FROM users WHERE user_id = ?";
+	    String sql = "SELECT name, email, car_number, fuel_type, profile_img, created_at FROM users WHERE user_id = ?";
 
 	    try {
 	        con = pool.getConnection();
@@ -268,7 +267,9 @@ public class UserDao {
 	            user.setName(rs.getString("name"));
 	            user.setEmail(rs.getString("email"));
 	            user.setCarNumber(rs.getString("car_number"));
-	            user.setFuelType(rs.getString("fuel_type")); // 연료 종류 추가
+	            user.setFuelType(rs.getString("fuel_type"));
+	            user.setProfileImg(rs.getString("profile_img")); 
+	            
 	            user.setCreatedAt(rs.getString("created_at"));
 	        }
 	    } catch (Exception e) {
@@ -421,5 +422,29 @@ public class UserDao {
             pool.freeConnection(con, pstmt);
         }
         return flag;
+    }
+    
+    /**
+     * 사용자의 프로필 이미지 파일명을 업데이트합니다.
+     * @param userId 사용자 고유 번호
+     * @param fileName 저장된 파일 이름 (예: profile_26.jpg)
+     * @return 성공 여부
+     */
+    public boolean updateProfileImg(int userId, String fileName) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        String sql = "UPDATE users SET profile_img = ? WHERE user_id = ?";
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, fileName);
+            pstmt.setInt(2, userId);
+            return pstmt.executeUpdate() == 1;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
     }
 }
