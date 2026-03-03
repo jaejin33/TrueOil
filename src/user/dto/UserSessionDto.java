@@ -4,6 +4,7 @@ public class UserSessionDto {
 	public int userId;
     public String email;
     public String profileImg;
+    public String fuelType; 
     
 	public int getUserId() {
 		return userId;
@@ -23,6 +24,11 @@ public class UserSessionDto {
 	public void setProfileImg(String profileImg) {
 		this.profileImg = profileImg;
 	}
-    
+	public String getFuelType() {
+		return fuelType;
+	}
+	public void setFuelType(String fuelType) {
+		this.fuelType = fuelType;
+	}
     
 }

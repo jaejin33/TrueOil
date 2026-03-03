@@ -21,4 +21,8 @@ public class SessionManager {
     public static void logout() {
         loginUser = null;
     }
+    
+    public static String getFuelType() {
+        return (loginUser != null) ? loginUser.getFuelType() : "가솔린"; // 기본값 설정
+    }
 }
