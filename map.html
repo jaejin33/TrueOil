@@ -25,6 +25,7 @@ body {
 		}
 
 		var map;
+		var currentInfoWindow = null;
 		var markers = [];
 		var isMapLoaded = false;
 		var currentMode = "STATION"; // 기본값은 주유소 모드
@@ -62,6 +63,10 @@ body {
 
 		function clearMarkers() {
 			try {
+				if (currentInfoWindow) {
+					currentInfoWindow.close();
+					currentInfoWindow = null;
+				}
 				for (var i = 0; i < markers.length; i++) {
 					markers[i].setMap(null);
 				}
@@ -123,11 +128,18 @@ body {
 					pixelOffset : new naver.maps.Point(0, -10)
 				});
 
-				naver.maps.Event.addListener(marker, 'click', function() {
-					if (infowindow.getMap())
+				naver.maps.Event.addListener(marker, 'click', function() {// 다른 마커 클릭 시 기존에 열려있던 창 닫기
+					if (currentInfoWindow) {
+						currentInfoWindow.close();
+					}
+
+					if (infowindow.getMap()) {
 						infowindow.close();
-					else
+						currentInfoWindow = null;
+					} else {
 						infowindow.open(map, marker);
+						currentInfoWindow = infowindow;
+					}
 				});
 				markers.push(marker);
 			} catch (e) {
@@ -271,9 +283,6 @@ body {
 							marker.setZIndex(1000);
 							activeMarker = marker; // 현재 강조된 마커 저장
 
-							if (window.javaConnector) {
-								window.javaConnector.onShopClick(item.name);
-							}
 						}
 					});
 		}
