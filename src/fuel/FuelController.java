@@ -3,6 +3,7 @@ package fuel;
 import fuel.FuelService;
 import fuel.dto.FuelLogDto;
 import fuel.dto.FuelStatsDto;
+import fuel.dto.MonthlySummaryDto;
 import user.SessionManager;
 
 import java.util.List;
@@ -38,5 +39,13 @@ public class FuelController {
     public String getLastFuelDate() {
         int userId = SessionManager.getUserId();
         return fuelService.getLastFuelDate(userId);
+    }
+    
+    /**
+     * 메인 페이지 요약용 주유 통계를 가져옵니다.
+     */
+    public MonthlySummaryDto getMonthlySummary() {
+        int userId = SessionManager.getUserId();
+        return fuelService.getMonthlyFuelSummary(userId);
     }
 }

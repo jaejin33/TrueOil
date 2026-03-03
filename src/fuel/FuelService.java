@@ -7,6 +7,7 @@ import java.util.Map;
 
 import database.DBConnectionMgr;
 import fuel.dto.FuelLogDto;
+import fuel.dto.MonthlySummaryDto;
 import user.UserDao;
 import maintenance.MaintenanceDao;
 
@@ -90,4 +91,27 @@ public class FuelService {
     public Map<String, Integer> getMonthlyStats(int userId) {
         return fuelDao.getMonthlyFuelExpenses(userId);
     }
+    
+    /**
+     * 특정 사용자의 이번 달 주유 요약 데이터를 계산합니다.
+     */
+    public MonthlySummaryDto getMonthlyFuelSummary(int userId) {
+        // 1. 이번 달 기본 정보 가져오기
+        MonthlySummaryDto summary = fuelDao.getThisMonthSummary(userId);
+        
+        // 2. 지난달 총액 가져오기
+        int lastMonthAmount = fuelDao.getLastMonthTotalAmount(userId);
+        int thisMonthAmount = summary.getTotalAmount();
+
+        // 3. [비즈니스 로직] 증감률 계산
+        if (lastMonthAmount > 0) {
+            double diff = ((double) (thisMonthAmount - lastMonthAmount) / lastMonthAmount) * 100;
+            summary.setDiffPercent(diff);
+        } else {
+            summary.setDiffPercent(0.0); // 지난달 기록이 없으면 0%
+        }
+
+        return summary;
+    }
+    
 }

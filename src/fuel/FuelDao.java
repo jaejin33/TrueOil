@@ -8,6 +8,7 @@ import java.util.Map;
 
 import database.DBConnectionMgr;
 import fuel.dto.FuelLogDto;
+import fuel.dto.MonthlySummaryDto;
 
 public class FuelDao {
     private DBConnectionMgr pool;
@@ -124,5 +125,72 @@ public class FuelDao {
             pool.freeConnection(con, pstmt, rs);
         }
         return lastDate;
+    }
+    
+    /**
+     * 특정 사용자의 이번 달(Current Month) 주유 합계 데이터를 가져옵니다.
+     */
+    public MonthlySummaryDto getThisMonthSummary(int userId) {
+        MonthlySummaryDto dto = new MonthlySummaryDto();
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        // 실제 DB 컬럼명 적용: fuel_price, fuel_amount, fuel_date
+        String sql = "SELECT COUNT(*) as cnt, SUM(fuel_price) as total, AVG(fuel_price / fuel_amount) as avg_p " +
+                     "FROM fuel_logs " +
+                     "WHERE user_id = ? " +
+                     "AND fuel_date >= DATE_FORMAT(NOW(), '%Y-%m-01')";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                dto.setTotalCount(rs.getInt("cnt"));
+                dto.setTotalAmount(rs.getInt("total"));
+                dto.setAvgPrice((int) rs.getDouble("avg_p"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return dto;
+    }
+    
+    /**
+     * 특정 사용자의 지난달(Last Month) 총 주유 금액만 가져옵니다. (증감률 계산용)
+     */
+    public int getLastMonthTotalAmount(int userId) {
+        int lastTotal = 0;
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        // 실제 DB 컬럼명 적용: fuel_price, fuel_date
+        String sql = "SELECT SUM(fuel_price) as last_total " +
+                     "FROM fuel_logs " +
+                     "WHERE user_id = ? " +
+                     "AND fuel_date >= DATE_FORMAT(NOW() - INTERVAL 1 MONTH, '%Y-%m-01') " +
+                     "AND fuel_date < DATE_FORMAT(NOW(), '%Y-%m-01')";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                lastTotal = rs.getInt("last_total");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return lastTotal;
     }
 }
