@@ -43,6 +43,7 @@ public class StationDetailPage extends JScrollPane {
 		container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
 		container.setBackground(COLOR_BG_GRAY);
 		container.setBorder(new EmptyBorder(40, 60, 40, 60));
+		container.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		try {
 			// 1. 전국 평균 유가 정보 로드
@@ -92,6 +93,11 @@ public class StationDetailPage extends JScrollPane {
 		}
 
 		setViewportView(container);
+		
+		SwingUtilities.invokeLater(() -> {
+			revalidate();
+			repaint();
+		});
 	}
 
 	private String getTagValue(org.w3c.dom.Document doc, String tag) {
@@ -109,8 +115,10 @@ public class StationDetailPage extends JScrollPane {
 
 		// JavaFX 컨테이너 생성
 		jfxPanel = new JFXPanel();
-		jfxPanel.setPreferredSize(new Dimension(MAX_CARD_WIDTH - 80, 400));
-		jfxPanel.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 400));
+		Dimension mapDim = new Dimension(MAX_CARD_WIDTH - 80, 400);
+		jfxPanel.setPreferredSize(mapDim);
+		jfxPanel.setMinimumSize(mapDim);
+		jfxPanel.setMaximumSize(mapDim);
 
 		// JavaFX 스레드에서 WebView 초기화 실행
 		Platform.runLater(() -> {
@@ -157,21 +165,34 @@ public class StationDetailPage extends JScrollPane {
 		mapWrapper.setBackground(COLOR_MAP_BG);
 		mapWrapper.setBorder(new LineBorder(COLOR_MAP_BORDER));
 		mapWrapper.add(jfxPanel);
+		mapWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+		mapWrapper.setMaximumSize(mapDim);
 
 		// 하단 버튼 구성
 		JPanel btnGrid = new JPanel(new GridLayout(1, 2, 15, 0));
 		btnGrid.setOpaque(false);
-		btnGrid.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 50));
+		btnGrid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 50));
+		btnGrid.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		JButton naviBtn = createStyledButton("네이버 지도에서 보기", COLOR_NAVER_GREEN);
 		JButton routeBtn = createStyledButton("길찾기", COLOR_PRIMARY);
 
 		naviBtn.addActionListener(e -> {
-			try {
-				Desktop.getDesktop().browse(new URI("https://map.naver.com/v5/search/" + stationName));
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
+		    try {
+		        String urlWithFixedSpace = "https://map.naver.com/v5/search/" + stationName.replace(" ", "%20");
+		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+		    } catch (Exception ex) {
+		        ex.printStackTrace();
+		    }
+		});
+		
+		routeBtn.addActionListener(e -> {
+		    try {
+		        String urlWithFixedSpace = "https://map.naver.com/v5/directions/-/-/" + stationName.replace(" ", "%20") + ",PLACE_ID/route";
+		        Desktop.getDesktop().browse(new URI(urlWithFixedSpace));
+		    } catch (Exception ex) {
+		        ex.printStackTrace();
+		    }
 		});
 
 		btnGrid.add(naviBtn);
@@ -190,6 +211,7 @@ public class StationDetailPage extends JScrollPane {
 		JPanel p = new JPanel(new BorderLayout());
 		p.setOpaque(false);
 		p.setMaximumSize(new Dimension(MAX_CARD_WIDTH, 80));
+		p.setAlignmentX(Component.CENTER_ALIGNMENT);
 		JLabel title = new JLabel("<html><div style='line-height:1.2;'>" + "주유소 상세 정보<br>"
 				+ "<span style='font-size:16px; font-weight:bold; color:#444444;'>(" + name + ")</span>"
 				+ "</div></html>");
@@ -235,6 +257,8 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 100));
+		grid.setAlignmentX(Component.CENTER_ALIGNMENT);
 		grid.add(createSubInfoBox("전화번호", tel.isEmpty() ? "정보없음" : tel));
 		grid.add(createSubInfoBox("영업시간", "24시간"));
 
@@ -251,6 +275,7 @@ public class StationDetailPage extends JScrollPane {
 		JPanel card = createBaseCard("💲 유가 정보");
 		JPanel priceContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
 		priceContainer.setOpaque(false);
+		priceContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 		for (int i = 0; i < priceList.getLength(); i++) {
 			org.w3c.dom.Element oilPrice = (org.w3c.dom.Element) priceList.item(i);
@@ -296,6 +321,8 @@ public class StationDetailPage extends JScrollPane {
 		JPanel card = createBaseCard("🚩 거리 / 예상 이동 비용");
 		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
 		grid.setOpaque(false);
+		grid.setMaximumSize(new Dimension(MAX_CARD_WIDTH - 80, 100));
+		grid.setAlignmentX(Component.CENTER_ALIGNMENT);
 		grid.add(createSubInfoBox("현재 위치에서 거리", "1.5km"));
 		grid.add(createSubInfoBox("예상 이동 비용", "약 300원 (연비 12km/L 기준)"));
 		card.add(grid);
@@ -337,7 +364,10 @@ public class StationDetailPage extends JScrollPane {
 
 		JPanel p = new JPanel(new GridLayout(3, 1, 0, 3));
 		p.setBackground(Color.WHITE);
-		p.setPreferredSize(new Dimension(200, 105));
+		Dimension boxSize = new Dimension(200, 105);
+		p.setPreferredSize(boxSize);
+		p.setMinimumSize(boxSize);
+		p.setMaximumSize(boxSize);
 		p.setBorder(new CompoundBorder(new LineBorder(COLOR_ITEM_BORDER), new EmptyBorder(15, 20, 15, 20)));
 		JLabel t = new JLabel(type);
 		t.setForeground(Color.GRAY);
