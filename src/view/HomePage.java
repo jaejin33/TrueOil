@@ -138,7 +138,7 @@ public class HomePage extends JScrollPane {
 			List<apiService.NearStationDto> stations = apiService.NearStationService.getNearStations("1005"); // 예시: 부산
 																												// 부산진구
 			for (apiService.NearStationDto s : stations) {
-				recommendPanel.add(createGasRow(s.getName(), s.getAddr(), s.getPrice(), s.getDist()));
+				recommendPanel.add(createGasRow(s.getName(), s.getAddr(), s.getPrice()));
 				recommendPanel.add(Box.createVerticalStrut(12));
 			}
 		} catch (Exception e) {
@@ -330,7 +330,7 @@ public class HomePage extends JScrollPane {
 		return card;
 	}
 
-	private JPanel createGasRow(String name, String addr, String price, String dist) {
+	private JPanel createGasRow(String name, String addr, String price) {
 
 		JPanel row = new JPanel(new BorderLayout());
 		row.setBackground(new Color(249, 250, 251));
@@ -340,7 +340,7 @@ public class HomePage extends JScrollPane {
 		JPanel left = new JPanel(new GridLayout(2, 1));
 		left.setOpaque(false);
 		left.add(new JLabel("<html><b>" + name + "</b></html>"));
-		JLabel sub = new JLabel(addr + " | " + dist);
+		JLabel sub = new JLabel(addr + " | ");
 		sub.setForeground(Color.GRAY);
 		left.add(sub);
 

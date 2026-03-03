@@ -145,7 +145,6 @@ public class StationPage extends JScrollPane {
 					sortCode = "2";
 				}
 
-				// API 데이터 호출
 				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(currentX,
 						currentY, 3000, keyword, prodCd, sortCode);
 

@@ -41,9 +41,8 @@ public class NearStationService {
             String name = getTagValue(oil, "OS_NM");
             String addr = getTagValue(oil, "NEW_ADR");
             String price = getTagValue(oil, "PRICE");
-            String dist = ""; // 좌표로 거리 계산 예정 distance
 
-            stations.add(new NearStationDto(name, addr, price + "원", dist));
+            stations.add(new NearStationDto(name, addr, price + "원"));
         }
 
         return stations;

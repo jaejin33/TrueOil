@@ -45,12 +45,10 @@ public class RepairPage extends JScrollPane {
 	private JComboBox<LocationData> locationCombo;
 	private WebEngine webEngine;
 
-	// JS(지도)에서 Java로 통신하기 위한 커넥터
 	public class JavaConnector {
 		public void onShopClick(String shopName) {
 
 			SwingUtilities.invokeLater(() -> {
-				// ✅ 무한 피드백 루프 방지
 				if (shopName != null && shopName.equals(selectedShopName)) {
 					return;
 				}
