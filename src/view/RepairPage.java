@@ -7,6 +7,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import database.LocationData;
 
 import apiService.RepairDao;
 import apiService.RepairDto;
@@ -41,7 +42,7 @@ public class RepairPage extends JScrollPane {
 	private JTextArea noteArea;
 	private List<JCheckBox> serviceChecks;
 	private JPanel shopListPanel;
-
+	private JComboBox<LocationData> locationCombo;
 	private WebEngine webEngine;
 
 	// JS(지도)에서 Java로 통신하기 위한 커넥터
@@ -102,10 +103,12 @@ public class RepairPage extends JScrollPane {
 		// [이벤트] 탭 전환 시 데이터 갱신 리스너
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+				if (locationCombo != null) {
+					locationCombo.setSelectedItem(LocationData.selected);
+				}
 				refreshData();
 			}
 		});
-
 		refreshData();
 		updateFormVisibility();
 	}
@@ -115,6 +118,8 @@ public class RepairPage extends JScrollPane {
 	 */
 	public void refreshData() {
 
+		LocationData loc = LocationData.selected;
+
 		if (shopListPanel == null)
 			return;
 		shopListPanel.removeAll();
@@ -122,7 +127,7 @@ public class RepairPage extends JScrollPane {
 		try {
 			RepairDao dao = new RepairDao();
 			// 예시: 부산진구 기준, 내 위치 (35.15, 129.03)
-			List<RepairDto> shops = dao.getNearestShops(35.1417545, 129.0341064, "부산진구", 10);
+			List<RepairDto> shops = dao.getNearestShops(loc.getLat(), loc.getLng(), "부산", 10);
 			StringBuilder jsonBuilder = new StringBuilder("[");
 
 			for (int i = 0; i < shops.size(); i++) {
@@ -167,9 +172,34 @@ public class RepairPage extends JScrollPane {
 
 	private JPanel createMapSection() {
 
-		JPanel card = createBaseCard("📍 위치 확인");
+		// 1. 기본 카드 생성 (타이틀은 수동으로 넣기 위해 빈 값 전달)
+		JPanel card = createBaseCard("");
 		JPanel body = (JPanel) card.getComponent(1);
 
+		// 2. 상단 타이틀 + 콤보박스 영역 구성 (StationPage와 동일한 레이아웃)
+		JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+		titlePanel.setOpaque(false);
+		titlePanel.setBorder(new EmptyBorder(0, 0, 20, 0));
+		JLabel titleLabel = new JLabel("🛠️ 주변 정비소 위치");
+		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		titleLabel.setForeground(COLOR_TEXT_DARK);
+
+		// 콤보박스 생성 및 설정
+		locationCombo = new JComboBox<>(LocationData.values());
+		locationCombo.setSelectedItem(LocationData.selected); // 전역 값으로 초기화
+		locationCombo.setPreferredSize(new Dimension(120, 30));
+
+		// 리스너: 여기서 바꿔도 전역 변수가 바뀌고 데이터가 갱신됨
+		locationCombo.addActionListener(e -> {
+			LocationData loc = (LocationData) locationCombo.getSelectedItem();
+			if (loc != null) {
+				LocationData.selected = loc;
+				updateLocation(loc);
+			}
+		});
+
+		titlePanel.add(locationCombo);
+		card.add(titlePanel, BorderLayout.NORTH);
 		JFXPanel jfxPanel = new JFXPanel();
 		jfxPanel.setPreferredSize(new Dimension(0, 400));
 
@@ -185,13 +215,20 @@ public class RepairPage extends JScrollPane {
 					window.setMember("javaConnector", new JavaConnector());
 
 					Platform.runLater(() -> {
+						LocationData loc = LocationData.selected;
+
+						String script = String.format(java.util.Locale.US,
+								"if (typeof setMapMode === 'function') { setMapMode('REPAIR'); }"
+										+ "if (typeof setCenter === 'function') { setCenter(%.6f, %.6f); }",
+								loc.getX(), loc.getY());
+
 						try {
-							webEngine.executeScript("if(typeof setMapMode === 'function') { setMapMode('REPAIR'); }");
-							// StationPage처럼 초기 좌표 전송 로직을 넣거나 refreshData 호출
-							refreshData();
+							webEngine.executeScript(script);
 						} catch (Exception e) {
-							System.err.println("JS 초기 호출 실패: " + e.getMessage());
+							System.err.println("지도가 아직 완전히 준비되지 않았습니다: " + e.getMessage());
 						}
+
+						refreshData();
 					});
 				}
 			});
@@ -210,6 +247,19 @@ public class RepairPage extends JScrollPane {
 
 		body.add(jfxPanel);
 		return card;
+
+	}
+
+	private void updateLocation(LocationData loc) {
+
+		Platform.runLater(() -> {
+			if (webEngine != null) {
+				webEngine.executeScript(
+						String.format(java.util.Locale.US, "setCenter(%f, %f);", loc.getLat(), loc.getLng()));
+
+			}
+		});
+		refreshData();
 	}
 
 	private JPanel createShopSection() {

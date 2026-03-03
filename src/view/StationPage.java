@@ -6,6 +6,7 @@ import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.concurrent.Worker;
+import database.LocationData;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -29,6 +30,7 @@ public class StationPage extends JScrollPane {
 	private JTextField searchInput;
 	private JComboBox<String> fuelTypeCombo;
 	private JComboBox<String> sortCombo;
+	private JComboBox<LocationData> locationCombo;
 
 	private WebView webView;
 	private WebEngine webEngine;
@@ -106,6 +108,9 @@ public class StationPage extends JScrollPane {
 
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+				if (locationCombo != null) {
+					locationCombo.setSelectedItem(LocationData.selected);
+				}
 				refreshData();
 			}
 		});
@@ -168,9 +173,30 @@ public class StationPage extends JScrollPane {
 
 	private JPanel createMapSection() {
 
-		JPanel card = createBaseCard("🗺️ 주변 지도 확인");
+		JPanel card = createBaseCard("");
 		JPanel body = (JPanel) card.getComponent(1);
+		JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+		titlePanel.setOpaque(false);
+		titlePanel.setBorder(new EmptyBorder(0, 0, 20, 0));
 
+		JLabel titleLabel = new JLabel("🗺️ 주변 지도 확인");
+		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		titleLabel.setForeground(COLOR_LABEL_DARK);
+
+		locationCombo = new JComboBox<>(LocationData.values());
+		locationCombo.setSelectedItem(LocationData.selected); // 초기값 설정
+		locationCombo.setPreferredSize(new Dimension(120, 30));
+
+		locationCombo.addActionListener(e -> {
+			LocationData loc = (LocationData) locationCombo.getSelectedItem();
+			if (loc != null) {
+				LocationData.selected = loc; // 전역 상태 업데이트
+				updateLocation(loc); // 현재 페이지 UI 업데이트
+			}
+		});
+		titlePanel.add(locationCombo);
+		card.add(titlePanel, BorderLayout.NORTH); // 기존 NORTH 레이블을 대체
+		// -------------------------------------------
 		JFXPanel jfxPanel = new JFXPanel();
 		jfxPanel.setPreferredSize(new Dimension(0, 400));
 
@@ -194,11 +220,14 @@ public class StationPage extends JScrollPane {
 					// 1. myConnector 연결
 					window.setMember("javaConnector", myConnector);
 					System.out.println("✅ Java-HTML 브릿지 연결 완료!");
+					LocationData currentLoc = LocationData.selected;
+					String moveScript = String.format(java.util.Locale.US,
+							"if(typeof setCenter === 'function') { setCenter(%f, %f); }", currentLoc.getX(),
+							currentLoc.getY());
+					webEngine.executeScript(moveScript);
 
-					String initScript = "if (typeof map !== 'undefined') {" + "    var center = map.getCenter();"
-							+ "    var tm128 = naver.maps.TransCoord.fromLatLngToTM128(center);"
-							+ "    window.javaConnector.searchStations(tm128.x, tm128.y);" + "}";
-					webEngine.executeScript(initScript);
+					// 4. 데이터 초기 로드
+					refreshData();
 				}
 			});
 			try {
@@ -222,6 +251,24 @@ public class StationPage extends JScrollPane {
 
 		body.add(jfxPanel);
 		return card;
+	}
+
+	private void updateLocation(LocationData loc) {
+
+		this.currentX = loc.getX();
+		this.currentY = loc.getY();
+
+		Platform.runLater(() -> {
+			if (webEngine != null) {
+				if (webEngine != null) {
+					webEngine.executeScript(
+							String.format(java.util.Locale.US, "setCenter(%f, %f);", loc.getLat(), loc.getLng()));
+
+				}
+			}
+		});
+
+		refreshData();
 	}
 
 	private void updateMapMarkers(List<apiService.ValueStationDto> stations) {

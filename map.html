@@ -2,10 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>네이버 지도 - TrueOil</title>
 <script type="text/javascript"
 	src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=jkwi5mphw2&submodules=geocoder"></script>
-
 <style>
 body {
 	margin: 0;
@@ -18,11 +16,9 @@ body {
 	height: 100vh;
 }
 </style>
-
 </head>
 <body>
 	<div id="map"></div>
-	<div id="debug"></div>
 	<script>
 		function log(msg) {
 			console.log(msg);
@@ -33,6 +29,19 @@ body {
 		var isMapLoaded = false;
 		var currentMode = "STATION"; // 기본값은 주유소 모드
 		var activeMarker = null;
+		// 지도 중심 이동하기
+		window.setCenter = function(lat, lng) {
+			if (!map)
+				return; // 지도 미로드 시 무시
+			try {
+				var latlng = new naver.maps.LatLng(parseFloat(lat),
+						parseFloat(lng));
+				map.setCenter(latlng);
+			} catch (e) {
+				console.error(e);
+			}
+		};
+
 		function setMapMode(mode) {
 			currentMode = mode; // "STATION" 또는 "REPAIR"
 			log("현재 지도 모드 변경: " + mode);
@@ -41,7 +50,7 @@ body {
 		try {
 			// 1. 지도 초기 옵션 (기본 위치: 동의대역)
 			var mapOptions = {
-				center : new naver.maps.LatLng(35.1539777, 129.0320804),
+				center : new naver.maps.LatLng(35.154031, 129.032212),
 				zoom : 14,
 				zoomControl : true
 			};
@@ -124,7 +133,14 @@ body {
 				log('❌ addMarker 에러: ' + e.message);
 			}
 		}
-
+		function initMap() {
+			map = new naver.maps.Map('map', {
+				center : new naver.maps.LatLng(35.154031, 129.032212),
+				zoom : 14
+			});
+			map = new naver.maps.Map('map', mapOptions);
+			window.isMapLoaded = true;
+		}
 		function setRepairMarkers(dataJson) {
 			if (!map) {
 				log("⚠️ 지도가 준비되지 않음. 재시도...");
@@ -217,21 +233,7 @@ body {
 						}
 					});
 		}
-		// 지도 중심 이동하기
-		function setCenter(x, y) {
-			try {
-				if (!x || !y || x == 0 || y == 0)
-					return;
-
-				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
-				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
-				map.setCenter(latLng);
-
-			} catch (e) {
-				log('❌ setCenter 에러');
-			}
-
-		}
+		initMap();
 	</script>
 
 </body>
