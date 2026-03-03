@@ -213,6 +213,13 @@ public class PhotoChangeDialog extends JDialog {
             String errorMessage = userController.requestProfileImageChange(currentSelectedPath);
             if (errorMessage == null) {
                 JOptionPane.showMessageDialog(this, "프로필 사진이 성공적으로 변경되었습니다.");
+                Window ancestor = SwingUtilities.getWindowAncestor(this);
+                if (ancestor instanceof MainPage) {
+                    System.out.println("✅ MainPage 찾음! 갱신을 시작합니다."); // 디버깅용 출력
+                    ((MainPage) ancestor).updateProfileUI(); 
+                } else {
+                    System.out.println("❌ MainPage를 찾지 못함. ancestor 타입: " + (ancestor != null ? ancestor.getClass().getName() : "null"));
+                }
                 dispose();
             } else {
                 JOptionPane.showMessageDialog(this, errorMessage, "변경 실패", JOptionPane.ERROR_MESSAGE);
