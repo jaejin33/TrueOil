@@ -2,9 +2,11 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
-import user.SessionManager;
+
 import user.UserController;
 import user.dto.UserSessionDto;
+import util.SessionManager;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;

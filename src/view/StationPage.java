@@ -5,7 +5,7 @@ import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import user.SessionManager;
+import util.SessionManager;
 import javafx.concurrent.Worker;
 import database.LocationData;
 

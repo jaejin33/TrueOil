@@ -2,6 +2,7 @@ package user;
 
 import user.dto.UserDto;
 import user.dto.UserSessionDto;
+import util.SessionManager;
 
 import javax.swing.JOptionPane;
 import javax.swing.JDialog;

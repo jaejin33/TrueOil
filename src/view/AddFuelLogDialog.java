@@ -5,7 +5,7 @@ import javax.swing.border.*;
 
 import fuel.FuelController;
 import fuel.dto.FuelLogDto;
-import user.SessionManager;
+import util.SessionManager;
 
 import java.awt.*;
 import java.awt.event.*;

@@ -9,8 +9,8 @@ import fuel.dto.FuelLogDto;
 import fuel.dto.FuelStatsDto;
 import maintenance.MaintenanceService;
 import maintenance.dto.MaintenanceStatusDto;
-import user.SessionManager;
 import user.UserDao;
+import util.SessionManager;
 
 import java.awt.*;
 import java.awt.event.*;
