@@ -338,7 +338,8 @@ public class StationDetailPage extends JScrollPane {
 		recordBtn.setPreferredSize(new Dimension(160, 40));
 		recordBtn.addActionListener(e -> {
 			Window parentWindow = SwingUtilities.getWindowAncestor(this);
-			new AddFuelLogDialog((Frame) parentWindow).setVisible(true);
+			AddFuelLogDialog dialog = new AddFuelLogDialog((Frame) parentWindow, this.stationName);
+			dialog.setVisible(true);
 		});
 
 		JButton backBtn = new JButton("← 뒤로가기");

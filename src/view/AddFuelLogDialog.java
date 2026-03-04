@@ -26,8 +26,11 @@ public class AddFuelLogDialog extends JDialog {
     private FuelController fuelController = new FuelController();
     
     private Point initialClick; // 드래그를 위한 포인트 저장
-
+    
     public AddFuelLogDialog(Frame parent) {
+    	this(parent,null);
+    }
+    public AddFuelLogDialog(Frame parent, String stationName) {
         super(parent, "주유 기록 추가", true);
         setUndecorated(true);
         setLayout(new BorderLayout());
@@ -102,15 +105,26 @@ public class AddFuelLogDialog extends JDialog {
         formWrapper.setBackground(Color.WHITE);
         formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
         formWrapper.setMaximumSize(new Dimension(320, 400));
-
+        dateF = new JTextField(LocalDate.now().toString());
+        stationF = new JTextField(); // 이 줄이 실행되어야 stationF가 null이 아니게 됩니다.
+        priceF = new JTextField();
+        litersF = new JTextField();
+        mileageF = new JTextField();
+        
         Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
         Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
-
-        addInput(formWrapper, "날짜 (YYYY-MM-DD)", dateF = new JTextField(LocalDate.now().toString()), labelFont, fieldSize);
-        addInput(formWrapper, "주유소", stationF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "가격 (원)", priceF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "주유량 (L)", litersF = new JTextField(), labelFont, fieldSize);
-        addInput(formWrapper, "누적 주행 거리 (km)", mileageF = new JTextField(), labelFont, fieldSize);
+        
+        if (stationName != null && !stationName.isEmpty()) {
+            stationF.setText(stationName);
+            // 상세 페이지에서 넘어온 경우 이름 수정을 방지
+            stationF.setEditable(false); 
+            stationF.setBackground(COLOR_BG_GRAY);
+        }
+        addInput(formWrapper, "날짜 (YYYY-MM-DD)", dateF, labelFont, fieldSize);
+        addInput(formWrapper, "주유소", stationF, labelFont, fieldSize);
+        addInput(formWrapper, "가격 (원)", priceF, labelFont, fieldSize);
+        addInput(formWrapper, "주유량 (L)", litersF, labelFont, fieldSize);
+        addInput(formWrapper, "누적 주행 거리 (km)", mileageF, labelFont, fieldSize);
 
         // [로직] 날짜 입력 시 마일리지 필드 유효성 검사
         dateF.addFocusListener(new FocusAdapter() {
