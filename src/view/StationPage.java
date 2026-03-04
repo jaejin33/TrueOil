@@ -343,12 +343,23 @@ public class StationPage extends JScrollPane {
 		JPanel card = createBaseCard("🔍 주유소 검색 및 필터");
 		JPanel body = (JPanel) card.getComponent(1);
 
+		// 1. 검색바 컨테이너 (BorderLayout 사용)
 		JPanel searchBar = new JPanel(new BorderLayout(10, 0));
 		searchBar.setOpaque(false);
 		searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
+		// 2. 텍스트 필드와 X 버튼을 감쌀 래퍼 패널 (흰색 배경 및 테두리 설정)
+		JPanel searchInputWrapper = new JPanel(new BorderLayout(5, 0));
+		searchInputWrapper.setBackground(Color.WHITE);
+		searchInputWrapper
+				.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER_LIGHT, 1), new EmptyBorder(5, 10, 5, 5)));
+
+		// 기존 변수명 유지: searchInput
 		searchInput = new JTextField("주유소 이름을 입력하세요");
+		searchInput.setBorder(null); // 내부 테두리 제거
 		searchInput.setForeground(COLOR_TEXT_GRAY);
+
+		// 기존 FocusListener 로직 유지
 		searchInput.addFocusListener(new FocusAdapter() {
 			@Override
 			public void focusGained(FocusEvent e) {
@@ -368,41 +379,78 @@ public class StationPage extends JScrollPane {
 				}
 			}
 		});
+
+		// 기존 KeyListener 로직 유지 (엔터 검색)
 		searchInput.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
 
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					performSearch(); // 검색 공통 로직 실행
+					performSearch();
+				} else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+					searchInput.setText("");
+					performSearch();
 				}
 			}
 		});
+
+		// 3. X (초기화) 버튼 추가
+		JLabel clearBtn = new JLabel("✕");
+		clearBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+		clearBtn.setForeground(Color.LIGHT_GRAY);
+		clearBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		clearBtn.setBorder(new EmptyBorder(0, 5, 0, 10));
+
+		// X 버튼 클릭 이벤트
+		clearBtn.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+				searchInput.setText(""); // 텍스트 초기화
+				searchInput.requestFocus(); // 포커스 유지
+				performSearch(); // 리스트 초기화 (전체 목록 표시)
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+
+				clearBtn.setForeground(Color.GRAY);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+
+				clearBtn.setForeground(Color.LIGHT_GRAY);
+			}
+		});
+
+		// 래퍼 패널에 입력창과 X 버튼 배치
+		searchInputWrapper.add(searchInput, BorderLayout.CENTER);
+		searchInputWrapper.add(clearBtn, BorderLayout.EAST);
+
+		// 4. 검색 버튼 생성 (기존 로직 유지)
 		JButton searchBtn = new JButton("검색");
 		searchBtn.setPreferredSize(new Dimension(100, 0));
 		searchBtn.setBackground(COLOR_PRIMARY);
 		searchBtn.setForeground(Color.WHITE);
 		searchBtn.setFocusPainted(false);
 		searchBtn.setBorderPainted(false);
-		// 버튼 클릭 시에도 공통 로직 실행
 		searchBtn.addActionListener(e -> performSearch());
 
-		searchBar.add(searchInput, BorderLayout.CENTER);
+		// 전체 검색바 조립
+		searchBar.add(searchInputWrapper, BorderLayout.CENTER);
 		searchBar.add(searchBtn, BorderLayout.EAST);
 
 		body.add(searchBar);
 		body.add(Box.createVerticalStrut(20));
 
-		searchBar.add(searchInput, BorderLayout.CENTER);
-		searchBar.add(searchBtn, BorderLayout.EAST);
-
-		body.add(searchBar);
-		body.add(Box.createVerticalStrut(20));
-
+		// 5. 필터 영역 (유종, 정렬) 로직 유지
 		JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
 		filterRow.setOpaque(false);
 
 		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유", "등유" });
 		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
+
 		ActionListener filterListener = e -> {
 			String keyword = searchInput.getText().trim();
 			if (keyword.equals("주유소 이름을 입력하세요")) {
@@ -410,6 +458,7 @@ public class StationPage extends JScrollPane {
 			}
 			refreshData(keyword);
 		};
+
 		fuelTypeCombo.setSelectedItem(SessionManager.getFuelType());
 		fuelTypeCombo.addActionListener(filterListener);
 		sortCombo.addActionListener(filterListener);
@@ -421,6 +470,7 @@ public class StationPage extends JScrollPane {
 		filterRow.add(sortCombo);
 
 		body.add(filterRow);
+
 		return card;
 	}
 
