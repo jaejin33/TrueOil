@@ -2,6 +2,9 @@ package view;
 
 import javax.swing.*;
 import javax.swing.border.*;
+
+import user.UserController;
+
 import java.awt.*;
 import java.awt.event.*;
 
@@ -99,9 +102,23 @@ public class FindAccountDialog extends JDialog {
         btnFindId.addActionListener(e -> {
             String name = tfNameForId.getText().trim();
             String carNum = tfCarForId.getText().trim();
-            if(!name.isEmpty() && !carNum.isEmpty()) {
-                // DB 포인트: WHERE name = ? AND car_number = ?
-                lblIdResult.setText("등록된 아이디: user****@gmail.com");
+
+            if (name.isEmpty() || carNum.isEmpty()) {
+                lblIdResult.setText("이름과 차량번호를 모두 입력해주세요.");
+                lblIdResult.setForeground(COLOR_DANGER);
+                return;
+            }
+
+            // 컨트롤러 호출
+            UserController userController = new UserController();
+            String foundEmail = userController.findUserEmail(name, carNum);
+
+            if (foundEmail != null) {
+                lblIdResult.setText("등록된 아이디: " + maskEmail(foundEmail));
+                lblIdResult.setForeground(COLOR_PRIMARY);
+            } else {
+                lblIdResult.setText("일치하는 회원 정보가 없습니다.");
+                lblIdResult.setForeground(COLOR_DANGER);
             }
         });
         formWrapper.add(lblIdResult);
@@ -136,9 +153,28 @@ public class FindAccountDialog extends JDialog {
         btnFindPw.addActionListener(e -> {
             String email = tfEmailForPw.getText().trim();
             String carNum = tfCarForPw.getText().trim();
-            if(!email.isEmpty() && !carNum.isEmpty()) {
-                // DB 포인트: WHERE email = ? AND car_number = ?
-                lblPwResult.setText("비밀번호: 12**56 (임시 발급됨)");
+
+            if (email.isEmpty() || carNum.isEmpty()) {
+                lblPwResult.setText("아이디와 차량번호를 모두 입력해주세요.");
+                lblPwResult.setForeground(COLOR_DANGER);
+                return;
+            }
+
+            // 컨트롤러 호출
+            UserController userController = new UserController();
+            boolean isSuccess = userController.resetUserPassword(email, carNum);
+
+            if (isSuccess) {
+                lblPwResult.setText("임시 비밀번호가 메일로 발송되었습니다.");
+                lblPwResult.setForeground(COLOR_PRIMARY);
+                JOptionPane.showMessageDialog(this, 
+                    email + "님, 임시 비밀번호가 발송되었습니다.\n로그인 후 반드시 비밀번호를 변경해주세요.", 
+                    "발송 완료", JOptionPane.INFORMATION_MESSAGE);
+                
+                dispose();
+            } else {
+                lblPwResult.setText("일치하는 회원 정보가 없습니다.");
+                lblPwResult.setForeground(COLOR_DANGER);
             }
         });
         formWrapper.add(lblPwResult);
@@ -191,5 +227,11 @@ public class FindAccountDialog extends JDialog {
         b.setMaximumSize(BUTTON_SIZE);
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
         return b;
+    }
+    
+    private String maskEmail(String email) {
+        int atIndex = email.indexOf("@");
+        if (atIndex <= 3) return email;
+        return email.substring(0, 3) + "****" + email.substring(atIndex);
     }
 }

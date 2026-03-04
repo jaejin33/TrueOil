@@ -11,6 +11,8 @@ import java.sql.SQLException;
 import database.DBConnectionMgr;
 import user.UserDao;
 import user.dto.UserDto;
+import util.EmailService;
+import util.PasswordUtil;
 import util.SessionManager;
 import maintenance.MaintenanceService;
 
@@ -23,6 +25,7 @@ public class UserService {
     private DBConnectionMgr pool;
     private UserDao userDao;
     private MaintenanceService maintenanceService;
+    private EmailService emailService = new EmailService();
 
     /**
      * UserService를 초기화하고 필요한 DAO 및 서비스 의존성을 주입합니다.
@@ -129,5 +132,41 @@ public class UserService {
             e.printStackTrace();
             return "파일 처리 중 오류가 발생했습니다.";
         }
+    }
+    
+    /**
+     * 아이디 찾기 비즈니스 로직을 수행합니다.
+     * <p>DAO를 호출하여 이름과 차량 번호가 일치하는 이메일 정보를 가져옵니다.</p>
+     * * @param name 사용자 이름
+     * @param carNumber 차량 번호
+     * @return 찾은 이메일 문자열
+     */
+    public String findEmail(String name, String carNumber) {
+        return userDao.findEmail(name, carNumber);
+    }
+
+    /**
+     * 비밀번호 재설정 및 임시 비밀번호 발급 로직을 수행합니다.
+     * <p>1. {@link PasswordUtil#generateTempPassword(int)}를 통해 임시 비밀번호 생성</p>
+     * <p>2. {@link UserDao#resetPassword(String, String, String)}를 호출하여 DB 업데이트 (암호화 저장)</p>
+     * <p>3. 업데이트 성공 시 실제 이메일 발송 서비스(SMTP)를 호출합니다.</p>
+     * * @param email 사용자 이메일
+     * @param carNumber 차량 번호
+     * @return 비밀번호 재설정 프로세스 완료 여부
+     */
+    public boolean resetPassword(String email, String carNumber) {
+        // 1. 무작위 임시 비밀번호 생성 (사용자에게 보여줄 평문)
+        String tempPw = PasswordUtil.generateTempPassword(10);
+        
+        // 2. DB 업데이트 시도 (Dao 내부에서 암호화 처리됨)
+        boolean isUpdated = userDao.resetPassword(email, carNumber, tempPw);
+        
+        if (isUpdated) {
+            // 3. 실제 이메일 발송 서비스 호출 (TODO: EmailService 구현 필요)
+            emailService.sendTempPassword(email, tempPw);
+            System.out.println("[UserService] " + email + " 유저에게 발송될 임시 비번: " + tempPw);
+        }
+        
+        return isUpdated;
     }
 }

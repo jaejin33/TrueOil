@@ -184,4 +184,24 @@ public class UserController {
         System.out.println("❌ 파일이 물리적으로 존재하지 않음: " + fileName);
         return "resources/images/profiles/default.png"; 
     }
+    
+    /**
+     * 사용자의 이름과 차량 번호를 전달받아 등록된 이메일(ID) 찾기를 요청합니다.
+     * * @param name 사용자의 실명
+     * @param carNumber 등록된 차량 번호
+     * @return 조회된 이메일 주소 (정보 불일치 시 null)
+     */
+    public String findUserEmail(String name, String carNumber) {
+        return userService.findEmail(name, carNumber);
+    }
+
+    /**
+     * 비밀번호 분실 시, 사용자의 계정 정보를 확인하고 임시 비밀번호 발급을 요청합니다.
+     * * @param email 사용자 계정 이메일
+     * @param carNumber 등록된 차량 번호
+     * @return 임시 비밀번호 발급 및 메일 발송 성공 여부
+     */
+    public boolean resetUserPassword(String email, String carNumber) {
+        return userService.resetPassword(email, carNumber);
+    }
 }

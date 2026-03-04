@@ -449,4 +449,73 @@ public class UserDao {
             pool.freeConnection(con, pstmt);
         }
     }
+    
+    /**
+     * 사용자의 이름과 차량 번호를 기반으로 등록된 이메일(ID)을 조회합니다.
+     * <p>이 기능은 '아이디 찾기' 화면에서 사용자의 계정 식별 정보를 확인하기 위해 사용됩니다.</p>
+     * * @param name 사용자의 실명
+     * @param carNumber 등록된 차량 번호 (예: 12가 3456)
+     * @return 조회된 이메일 주소, 일치하는 정보가 없을 경우 {@code null} 반환
+     */
+    public String findEmail(String name, String carNumber) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        String email = null;
+
+        String sql = "SELECT email FROM users WHERE name = ? AND car_number = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, name);
+            pstmt.setString(2, carNumber);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                email = rs.getString("email");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt, rs);
+        }
+        return email;
+    }
+    
+    /**
+     * 사용자의 이메일과 차량 번호가 일치하는 경우, 시스템에서 생성한 임시 비밀번호로 업데이트합니다.
+     * <p>보안을 위해 전달받은 평문 임시 비밀번호는 {@link util.PasswordUtil#encrypt(String)}를 통해 
+     * 암호화(SHA-256)되어 데이터베이스에 저장됩니다.</p>
+     * * @param email 비밀번호를 찾고자 하는 사용자 이메일
+     * @param carNumber 사용자의 차량 번호
+     * @param tempPassword 시스템에서 생성한 암호화 전 평문 임시 비밀번호
+     * @return 업데이트 성공 시 {@code true}, 정보 불일치 또는 오류 시 {@code false}
+     */
+    public boolean resetPassword(String email, String carNumber, String tempPassword) {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        boolean flag = false;
+
+        // 이메일과 차량번호가 모두 일치하는 사용자의 비밀번호를 업데이트
+        String sql = "UPDATE users SET password = ? WHERE email = ? AND car_number = ?";
+
+        try {
+            con = pool.getConnection();
+            pstmt = con.prepareStatement(sql);
+            // ★ 반드시 임시 비밀번호도 암호화해서 저장해야 함!
+            pstmt.setString(1, PasswordUtil.encrypt(tempPassword)); 
+            pstmt.setString(2, email);
+            pstmt.setString(3, carNumber);
+
+            if (pstmt.executeUpdate() == 1) {
+                flag = true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            pool.freeConnection(con, pstmt);
+        }
+        return flag;
+    }
 }
