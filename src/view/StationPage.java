@@ -368,21 +368,29 @@ public class StationPage extends JScrollPane {
 				}
 			}
 		});
+		searchInput.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
 
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					performSearch(); // 검색 공통 로직 실행
+				}
+			}
+		});
 		JButton searchBtn = new JButton("검색");
 		searchBtn.setPreferredSize(new Dimension(100, 0));
 		searchBtn.setBackground(COLOR_PRIMARY);
 		searchBtn.setForeground(Color.WHITE);
 		searchBtn.setFocusPainted(false);
 		searchBtn.setBorderPainted(false);
+		// 버튼 클릭 시에도 공통 로직 실행
+		searchBtn.addActionListener(e -> performSearch());
 
-		searchBtn.addActionListener(e -> {
-			String keyword = searchInput.getText().trim();
-			if (keyword.equals("주유소 이름을 입력하세요")) {
-				keyword = "";
-			}
-			refreshData(keyword);
-		});
+		searchBar.add(searchInput, BorderLayout.CENTER);
+		searchBar.add(searchBtn, BorderLayout.EAST);
+
+		body.add(searchBar);
+		body.add(Box.createVerticalStrut(20));
 
 		searchBar.add(searchInput, BorderLayout.CENTER);
 		searchBar.add(searchBtn, BorderLayout.EAST);
@@ -414,6 +422,15 @@ public class StationPage extends JScrollPane {
 
 		body.add(filterRow);
 		return card;
+	}
+
+	private void performSearch() {
+
+		String keyword = searchInput.getText().trim();
+		if (keyword.equals("주유소 이름을 입력하세요")) {
+			keyword = "";
+		}
+		refreshData(keyword);
 	}
 
 	private JPanel createStationListSection() {

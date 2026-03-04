@@ -8,6 +8,8 @@ import javax.swing.event.DocumentListener;
 import user.UserController;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -18,219 +20,257 @@ import java.awt.event.MouseEvent;
  * 2. DB 업데이트: 비밀번호 컬럼 UPDATE (암호화 권장)
  */
 public class PasswordChangeDialog extends JDialog {
-    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
-    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
-    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
-    private static final Color COLOR_BORDER = new Color(209, 213, 219);
-    private static final Color COLOR_DANGER = new Color(220, 38, 38);
-    private static final Color COLOR_LABEL = new Color(55, 65, 81);
+	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+	private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+	private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+	private static final Color COLOR_BORDER = new Color(209, 213, 219);
+	private static final Color COLOR_DANGER = new Color(220, 38, 38);
+	private static final Color COLOR_LABEL = new Color(55, 65, 81);
 
-    private JPasswordField currentPwF, newPwF, confirmPwF;
-    private JLabel pwStatusLabel;
-    private JButton saveBtn, cancelBtn;
-    
-    private UserController userController = new UserController();
-    private int mouseX, mouseY;
+	private JPasswordField currentPwF, newPwF, confirmPwF;
+	private JLabel pwStatusLabel;
+	private JButton saveBtn, cancelBtn;
 
-    public PasswordChangeDialog(Frame parent) {
-        super(parent, "비밀번호 변경", true);
-        setUndecorated(true);
-        setLayout(new BorderLayout());
-        setResizable(false);
-        setSize(420, 560);
+	private UserController userController = new UserController();
+	private int mouseX, mouseY;
 
-        /* ===== 전체 배경 ===== */
-        JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(COLOR_BG_GRAY);
-        background.setBorder(new CompoundBorder(
-                new LineBorder(Color.BLACK, 2),
-                new EmptyBorder(20, 20, 20, 20) 
-        ));
+	public PasswordChangeDialog(Frame parent) {
 
-        background.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                mouseX = e.getX();
-                mouseY = e.getY();
-            }
-        });
+		super(parent, "비밀번호 변경", true);
+		setUndecorated(true);
+		setLayout(new BorderLayout());
+		setResizable(false);
+		setSize(420, 560);
 
-        background.addMouseMotionListener(new MouseAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                int x = e.getXOnScreen();
-                int y = e.getYOnScreen();
-                setLocation(x - mouseX, y - mouseY);
-            }
-        });
+		/* ===== 전체 배경 ===== */
+		JPanel background = new JPanel(new BorderLayout());
+		background.setBackground(COLOR_BG_GRAY);
+		background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
 
-        /* ===== 카드 패널 ===== */
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-                new LineBorder(COLOR_BORDER, 2),
-                new EmptyBorder(16, 24, 24, 24)
-        ));
-        card.setAlignmentX(Component.CENTER_ALIGNMENT);
+		background.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
 
-        /* ===== 상단 헤더 (우측 종료 버튼) ===== */
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(Color.WHITE);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        header.setAlignmentX(Component.CENTER_ALIGNMENT);
+				mouseX = e.getX();
+				mouseY = e.getY();
+			}
+		});
 
-        JLabel closeLabel = new JLabel("✕");
-        closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        closeLabel.setForeground(Color.LIGHT_GRAY);
-        closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        closeLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) { dispose(); }
-            @Override
-            public void mouseEntered(MouseEvent e) { closeLabel.setForeground(COLOR_DANGER); }
-            @Override
-            public void mouseExited(MouseEvent e) { closeLabel.setForeground(Color.LIGHT_GRAY); }
-        });
-        header.add(closeLabel, BorderLayout.EAST);
+		background.addMouseMotionListener(new MouseAdapter() {
+			@Override
+			public void mouseDragged(MouseEvent e) {
 
-        /* ===== 제목 섹션 ===== */
-        JLabel titleLabel = new JLabel("비밀번호 변경");
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        titleLabel.setForeground(COLOR_TEXT_DARK);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+				int x = e.getXOnScreen();
+				int y = e.getYOnScreen();
+				setLocation(x - mouseX, y - mouseY);
+			}
+		});
 
-        /* ===== 입력 폼 영역 (JPasswordField) ===== */
-        JPanel formWrapper = new JPanel();
-        formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
-        formWrapper.setBackground(Color.WHITE);
-        formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 300));
+		/* ===== 카드 패널 ===== */
+		JPanel card = new JPanel();
+		card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+		card.setBackground(Color.WHITE);
+		card.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER, 2), new EmptyBorder(16, 24, 24, 24)));
+		card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
-        Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
+		/* ===== 상단 헤더 (우측 종료 버튼) ===== */
+		JPanel header = new JPanel(new BorderLayout());
+		header.setBackground(Color.WHITE);
+		header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+		header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        addPasswordInput(formWrapper, "현재 비밀번호", currentPwF = new JPasswordField(), labelFont, fieldSize);
-        addPasswordInput(formWrapper, "새 비밀번호", newPwF = new JPasswordField(), labelFont, fieldSize);
-        addPasswordInput(formWrapper, "새 비밀번호 확인", confirmPwF = new JPasswordField(), labelFont, fieldSize);
+		JLabel closeLabel = new JLabel("✕");
+		closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		closeLabel.setForeground(Color.LIGHT_GRAY);
+		closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		closeLabel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
 
-        // 실시간 상태 라벨 추가
-        pwStatusLabel = new JLabel(" ");
-        pwStatusLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        pwStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formWrapper.add(pwStatusLabel);
+				dispose();
+			}
 
-        /* ===== 실시간 일치 여부 리스너 ===== */
-        DocumentListener pwListener = new DocumentListener() {
-            public void check() {
-                String pw = new String(newPwF.getPassword());
-                String confirm = new String(confirmPwF.getPassword());
-                if (pw.isEmpty() || confirm.isEmpty()) { 
-                    pwStatusLabel.setText(" "); 
-                } else if (pw.equals(confirm)) {
-                    pwStatusLabel.setText("✓ 비밀번호가 서로 일치합니다.");
-                    pwStatusLabel.setForeground(COLOR_PRIMARY);
-                } else {
-                    pwStatusLabel.setText("✕ 비밀번호가 서로 일치하지 않습니다.");
-                    pwStatusLabel.setForeground(COLOR_DANGER);
-                }
-            }
-            @Override public void insertUpdate(DocumentEvent e) { check(); }
-            @Override public void removeUpdate(DocumentEvent e) { check(); }
-            @Override public void changedUpdate(DocumentEvent e) { check(); }
-        };
-        newPwF.getDocument().addDocumentListener(pwListener);
-        confirmPwF.getDocument().addDocumentListener(pwListener);
+			@Override
+			public void mouseEntered(MouseEvent e) {
 
-        /* ===== 하단 버튼 및 로직 ===== */
-        saveBtn = new JButton("저장");
-        saveBtn.setBackground(COLOR_PRIMARY);
-        saveBtn.setForeground(Color.WHITE);
-        saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
-        saveBtn.setFocusPainted(false);
-        saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        saveBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        saveBtn.setMaximumSize(new Dimension(320, 45));
+				closeLabel.setForeground(COLOR_DANGER);
+			}
 
-        saveBtn.addActionListener(e -> {
-            String currentPw = new String(currentPwF.getPassword());
-            String newPw = new String(newPwF.getPassword());
-            String confirmPw = new String(confirmPwF.getPassword());
+			@Override
+			public void mouseExited(MouseEvent e) {
 
-            // 1. [검증] 빈 칸 체크
-            if (currentPw.isEmpty() || newPw.isEmpty() || confirmPw.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "모든 필드를 입력해주세요.", "입력 오류", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+				closeLabel.setForeground(Color.LIGHT_GRAY);
+			}
+		});
+		header.add(closeLabel, BorderLayout.EAST);
 
-            // 2. [DB Point 1] 현재 비밀번호 대조
-            if (!userController.verifyPassword(currentPw)) {
-                JOptionPane.showMessageDialog(this, "현재 비밀번호가 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
-                currentPwF.requestFocus();
-                return;
-            }
+		/* ===== 제목 섹션 ===== */
+		JLabel titleLabel = new JLabel("비밀번호 변경");
+		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+		titleLabel.setForeground(COLOR_TEXT_DARK);
+		titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            // 3. [검증] 새 비밀번호 일치 여부
-            if (!newPw.equals(confirmPw)) {
-                JOptionPane.showMessageDialog(this, "새 비밀번호 확인이 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
-                confirmPwF.requestFocus();
-                return;
-            }
-            
-            // [추가 검증] 현재 비밀번호와 새 비밀번호가 같은 경우 방지
-            if (currentPw.equals(newPw)) {
-                JOptionPane.showMessageDialog(this, "현재 비밀번호와 다른 비밀번호를 입력해주세요.", "알림", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
+		/* ===== 입력 폼 영역 (JPasswordField) ===== */
+		JPanel formWrapper = new JPanel();
+		formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
+		formWrapper.setBackground(Color.WHITE);
+		formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+		formWrapper.setMaximumSize(new Dimension(320, 300));
 
-            // 4. [DB Point 2] 최종 업데이트
-            boolean success = userController.changePassword(newPw);
+		Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
+		Dimension fieldSize = new Dimension(Integer.MAX_VALUE, 35);
 
-            if (success) {
-                JOptionPane.showMessageDialog(this, "비밀번호가 성공적으로 변경되었습니다.");
-                dispose();
-            } else {
-                JOptionPane.showMessageDialog(this, "비밀번호 변경 중 오류가 발생했습니다.", "오류", JOptionPane.ERROR_MESSAGE);
-            }
-        });
+		addPasswordInput(formWrapper, "현재 비밀번호", currentPwF = new JPasswordField(), labelFont, fieldSize);
+		addPasswordInput(formWrapper, "새 비밀번호", newPwF = new JPasswordField(), labelFont, fieldSize);
+		addPasswordInput(formWrapper, "새 비밀번호 확인", confirmPwF = new JPasswordField(), labelFont, fieldSize);
 
-        cancelBtn = new JButton("취소");
-        cancelBtn.setBorderPainted(false);
-        cancelBtn.setContentAreaFilled(false);
-        cancelBtn.setForeground(Color.GRAY);
-        cancelBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        cancelBtn.addActionListener(e -> dispose());
+		// 실시간 상태 라벨 추가
+		pwStatusLabel = new JLabel(" ");
+		pwStatusLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+		pwStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		formWrapper.add(pwStatusLabel);
 
-        /* ===== 카드 조립 ===== */
-        card.add(header);
-        card.add(Box.createVerticalStrut(10));
-        card.add(titleLabel);
-        card.add(Box.createVerticalStrut(25));
-        card.add(formWrapper);
-        card.add(Box.createVerticalStrut(20));
-        card.add(saveBtn);
-        card.add(Box.createVerticalStrut(12));
-        card.add(cancelBtn);
+		/* ===== 실시간 일치 여부 리스너 ===== */
+		DocumentListener pwListener = new DocumentListener() {
+			public void check() {
 
-        background.add(card, BorderLayout.CENTER);
-        add(background);
-        setLocationRelativeTo(parent);
-    }
+				String pw = new String(newPwF.getPassword());
+				String confirm = new String(confirmPwF.getPassword());
+				if (pw.isEmpty() || confirm.isEmpty()) {
+					pwStatusLabel.setText(" ");
+				} else if (pw.equals(confirm)) {
+					pwStatusLabel.setText("✓ 비밀번호가 서로 일치합니다.");
+					pwStatusLabel.setForeground(COLOR_PRIMARY);
+				} else {
+					pwStatusLabel.setText("✕ 비밀번호가 서로 일치하지 않습니다.");
+					pwStatusLabel.setForeground(COLOR_DANGER);
+				}
+			}
 
-    private void addPasswordInput(JPanel p, String title, JPasswordField pf, Font font, Dimension size) {
-        JLabel lbl = new JLabel(title);
-        lbl.setFont(font);
-        lbl.setForeground(COLOR_LABEL);
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(lbl);
-        p.add(Box.createVerticalStrut(6));
+			@Override
+			public void insertUpdate(DocumentEvent e) {
 
-        pf.setMaximumSize(size);
-        pf.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pf.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER), new EmptyBorder(0, 10, 0, 10)));
-        p.add(pf);
-        p.add(Box.createVerticalStrut(14));
-    }
+				check();
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+
+				check();
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+
+				check();
+			}
+		};
+		newPwF.getDocument().addDocumentListener(pwListener);
+		confirmPwF.getDocument().addDocumentListener(pwListener);
+
+		/* ===== 하단 버튼 및 로직 ===== */
+		saveBtn = new JButton("저장");
+		saveBtn.setBackground(COLOR_PRIMARY);
+		saveBtn.setForeground(Color.WHITE);
+		saveBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+		saveBtn.setFocusPainted(false);
+		saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		saveBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+		saveBtn.setMaximumSize(new Dimension(320, 45));
+
+		saveBtn.addActionListener(e -> {
+			String currentPw = new String(currentPwF.getPassword());
+			String newPw = new String(newPwF.getPassword());
+			String confirmPw = new String(confirmPwF.getPassword());
+
+			// 1. [검증] 빈 칸 체크
+			if (currentPw.isEmpty() || newPw.isEmpty() || confirmPw.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "모든 필드를 입력해주세요.", "입력 오류", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+
+			// 2. [DB Point 1] 현재 비밀번호 대조
+			if (!userController.verifyPassword(currentPw)) {
+				JOptionPane.showMessageDialog(this, "현재 비밀번호가 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+				currentPwF.requestFocus();
+				return;
+			}
+
+			// 3. [검증] 새 비밀번호 일치 여부
+			if (!newPw.equals(confirmPw)) {
+				JOptionPane.showMessageDialog(this, "새 비밀번호 확인이 일치하지 않습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+				confirmPwF.requestFocus();
+				return;
+			}
+
+			// [추가 검증] 현재 비밀번호와 새 비밀번호가 같은 경우 방지
+			if (currentPw.equals(newPw)) {
+				JOptionPane.showMessageDialog(this, "현재 비밀번호와 다른 비밀번호를 입력해주세요.", "알림", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+
+			// 4. [DB Point 2] 최종 업데이트
+			boolean success = userController.changePassword(newPw);
+
+			if (success) {
+				JOptionPane.showMessageDialog(this, "비밀번호가 성공적으로 변경되었습니다.");
+				dispose();
+			} else {
+				JOptionPane.showMessageDialog(this, "비밀번호 변경 중 오류가 발생했습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+			}
+		});
+
+		cancelBtn = new JButton("취소");
+		cancelBtn.setBorderPainted(false);
+		cancelBtn.setContentAreaFilled(false);
+		cancelBtn.setForeground(Color.GRAY);
+		cancelBtn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+		cancelBtn.addActionListener(e -> dispose());
+
+		/* ===== 카드 조립 ===== */
+		card.add(header);
+		card.add(Box.createVerticalStrut(10));
+		card.add(titleLabel);
+		card.add(Box.createVerticalStrut(25));
+		card.add(formWrapper);
+		card.add(Box.createVerticalStrut(20));
+		card.add(saveBtn);
+		card.add(Box.createVerticalStrut(12));
+		card.add(cancelBtn);
+
+		background.add(card, BorderLayout.CENTER);
+		add(background);
+
+		// ESC 창종료
+		InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+		ActionMap actionMap = getRootPane().getActionMap();
+		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeDialog");
+		actionMap.put("closeDialog", new AbstractAction() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+				dispose();
+			}
+		});
+		//
+		setLocationRelativeTo(parent);
+	}
+
+	private void addPasswordInput(JPanel p, String title, JPasswordField pf, Font font, Dimension size) {
+
+		JLabel lbl = new JLabel(title);
+		lbl.setFont(font);
+		lbl.setForeground(COLOR_LABEL);
+		lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+		p.add(lbl);
+		p.add(Box.createVerticalStrut(6));
+
+		pf.setMaximumSize(size);
+		pf.setAlignmentX(Component.LEFT_ALIGNMENT);
+		pf.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER), new EmptyBorder(0, 10, 0, 10)));
+		p.add(pf);
+		p.add(Box.createVerticalStrut(14));
+	}
 }
