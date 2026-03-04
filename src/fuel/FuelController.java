@@ -4,7 +4,7 @@ import fuel.FuelService;
 import fuel.dto.FuelLogDto;
 import fuel.dto.FuelStatsDto;
 import fuel.dto.MonthlySummaryDto;
-import user.SessionManager;
+import util.SessionManager;
 
 import java.util.List;
 import java.util.Map;

@@ -2,7 +2,7 @@ package maintenance;
 
 import maintenance.MaintenanceService;
 import maintenance.dto.MaintenanceHistoryDto;
-import user.SessionManager; 
+import util.SessionManager;
 
 import javax.swing.*;
 import java.awt.Component;

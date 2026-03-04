@@ -5,7 +5,7 @@ import javax.swing.border.*;
 
 import maintenance.MaintenanceController;
 import maintenance.dto.MaintenanceStatusDto;
-import user.SessionManager;
+import util.SessionManager;
 
 import java.awt.*;
 import java.awt.event.*;

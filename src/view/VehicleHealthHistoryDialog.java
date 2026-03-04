@@ -5,7 +5,7 @@ import javax.swing.border.*;
 
 import maintenance.MaintenanceDao;
 import maintenance.dto.MaintenanceHistoryDto;
-import user.SessionManager;
+import util.SessionManager;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;

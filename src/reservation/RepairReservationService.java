@@ -3,7 +3,7 @@ package reservation;
 import java.util.List;
 
 import reservation.dto.RepairReservationDto;
-import user.SessionManager;
+import util.SessionManager;
 
 /**
  * 정비 예약과 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.

@@ -3,6 +3,7 @@ package user;
 import database.DBConnectionMgr;
 import user.dto.UserDto;
 import user.dto.UserSessionDto;
+import util.PasswordUtil;
 
 import java.sql.*;
 
@@ -30,7 +31,7 @@ public class UserDao {
             pstmt = con.prepareStatement(sql);
             pstmt.setString(1, user.getName()); // 추가된 name 필드
             pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getPassword());
+            pstmt.setString(3, PasswordUtil.encrypt(user.getPassword()));
             pstmt.setString(4, user.getCarNumber());
             pstmt.setString(5, user.getFuelType());
             pstmt.setInt(6, user.getCurrentMileage());
@@ -97,7 +98,7 @@ public class UserDao {
 	        con = pool.getConnection();
 	        pstmt = con.prepareStatement(sql);
 	        pstmt.setString(1, email);
-	        pstmt.setString(2, password);
+	        pstmt.setString(2, PasswordUtil.encrypt(password));
 
 	        rs = pstmt.executeQuery();
 
@@ -385,7 +386,7 @@ public class UserDao {
             con = pool.getConnection();
             pstmt = con.prepareStatement(sql);
             pstmt.setInt(1, userId);
-            pstmt.setString(2, password);
+            pstmt.setString(2, PasswordUtil.encrypt(password));
             rs = pstmt.executeQuery();
 
             if (rs.next()) isMatch = true;
@@ -413,7 +414,7 @@ public class UserDao {
         try {
             con = pool.getConnection();
             pstmt = con.prepareStatement(sql);
-            pstmt.setString(1, newPassword);
+            pstmt.setString(1, PasswordUtil.encrypt(newPassword));
             pstmt.setInt(2, userId);
 
             if (pstmt.executeUpdate() == 1) flag = true;
