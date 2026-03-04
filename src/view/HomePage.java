@@ -18,11 +18,16 @@ public class HomePage extends JScrollPane {
 	private static final Color COLOR_SUCCESS = new Color(22, 163, 74);
 
 	private JPanel container;
-	private JLabel briefingContent;
 	private JPanel recommendPanel;
 	private JLabel totalCountLabel, totalAmountLabel, avgPriceLabel, diffPercentLabel;
 	private String selectedProdCd = "B027"; // 기본값 휘발유
-	
+
+	private JLabel briefSummaryLabel; // 한 줄 요약 텍스트
+	private JLabel valPremium, diffPremium; // 고급휘발유 (값, 등락)
+	private JLabel valGasoline, diffGasoline; // 휘발유
+	private JLabel valDiesel, diffDiesel; // 경유
+	private JLabel valLpg, diffLpg; // LPG
+
 	private FuelChartPanel chart;
 	private FuelController fuelController = new FuelController(); // 컨트롤러 선언
 
@@ -41,8 +46,8 @@ public class HomePage extends JScrollPane {
 
 		container.add(createBriefingBox());
 		container.add(Box.createVerticalStrut(25));
-		container.add(createTrendChartBox()); 
-	    container.add(Box.createVerticalStrut(25));
+		container.add(createTrendChartBox());
+		container.add(Box.createVerticalStrut(25));
 		container.add(createRecommendBox());
 		container.add(Box.createVerticalStrut(25));
 		container.add(createEfficiencyBox());
@@ -69,21 +74,24 @@ public class HomePage extends JScrollPane {
 		String price = dto.getAvgPrice();
 		String diff = dto.getDiffPrice();
 
-		String trendColor = "#4B5563"; // 기본 회색 (변동 없음)
+		String trendColor = "#3f3f46";
 		String trendText = "변동이 없습니다.";
 
 		if (diff != null && !diff.isEmpty() && !diff.equals("0") && !diff.equals("0.0")) {
 			if (diff.contains("+")) {
 				trendColor = "#DC2626"; // 빨간색 (상승)
-				trendText = diff.replace("+", "") + "원 상승했습니다.";
+				trendText = "▲ " + diff.replace("+", "") + "원 상승했습니다.";
 			} else {
 				trendColor = "#2563EB"; // 파란색 (하락)
-				trendText = diff.replace("-", "") + "원 하락했습니다.";
+				trendText = "▼ " + diff.replace("-", "") + "원 하락했습니다.";
 			}
 		}
 
-		return "<html>오늘 전국 평균 휘발유 가격은 리터당 <font color='#2563EB'><b>" + price + "원</b></font>으로 어제보다 <font color='"
-				+ trendColor + "'><b>" + trendText + "</b></font></html>";
+		// 모던 & 클래식 느낌을 주는 좌측 포인트 라인 디자인 적용
+		return "<html><div style='padding:12px 15px; background-color:#fafafa; border-left:4px solid #18181b; font-family:sans-serif; font-size:13px; color:#3f3f46;'>"
+				+ "오늘 전국 평균 <b>휘발유</b> 가격은 리터당 <span style='color:#2563eb; font-weight:bold;'>" + price
+				+ "원</span>으로 어제보다 " + "<span style='color:" + trendColor + "; font-weight:bold;'>" + trendText
+				+ "</span>" + "</div></html>";
 	}
 
 	/**
@@ -99,10 +107,10 @@ public class HomePage extends JScrollPane {
 		 */
 
 		// 2
-		briefingContent.setText("<html>오늘 전국 평균 유가를 불러오는 중입니다... ⏳</html>");// UI 멈춤(프리징) 방지를 위한 비동기 처리
 		SwingWorker<java.util.Map<String, apiService.AvgPriceDto>, Void> worker = new SwingWorker<>() {
 			@Override
 			protected java.util.Map<String, apiService.AvgPriceDto> doInBackground() throws Exception {
+
 				// 백그라운드에서 API 호출 (Map 형태로 모든 유종의 평균가 가져오기)
 				return apiService.AvgPrice.getAvgPrice();
 			}
@@ -114,20 +122,25 @@ public class HomePage extends JScrollPane {
 					// API 호출 결과 받아오기
 					java.util.Map<String, apiService.AvgPriceDto> avgPriceMap = get();
 
-					apiService.AvgPriceDto dto = avgPriceMap.get("B027"); 
+					apiService.AvgPriceDto dto = avgPriceMap.get("B027");
 
-					if (dto != null) {
-						// 헬퍼 메서드를 통해 조립된 HTML 문자열을 받아와서 UI 업데이트
-						String htmlText = OneLineBriefing(dto);
-						briefingContent.setText(htmlText);
-					} else {
-						briefingContent.setText("<html><font color='#DC2626'><b>휘발유 가격 정보를 찾을 수 없습니다.</b></font></html>");
-					}
+					// 1. 한 줄 요약 업데이트 (휘발유 기준)
+		            apiService.AvgPriceDto gasDto = avgPriceMap.get("B027"); 
+		            if (gasDto != null) {
+		                briefSummaryLabel.setText(OneLineBriefing(gasDto));
+		            } else {
+		                briefSummaryLabel.setText("<html><font color='#DC2626'><b>휘발유 가격 정보를 찾을 수 없습니다.</b></font></html>");
+		            }
+		            
+		            updateFuelLabel(avgPriceMap.get("B034"), valPremium, diffPremium);   // 고급휘발유
+		            updateFuelLabel(avgPriceMap.get("B027"), valGasoline, diffGasoline); // 휘발유
+		            updateFuelLabel(avgPriceMap.get("D047"), valDiesel, diffDiesel);     // 경유
+		            updateFuelLabel(avgPriceMap.get("K015"), valLpg, diffLpg);
 
 				} catch (Exception e) {
 					e.printStackTrace();
 					// 오류 발생 시 표시할 텍스트
-					briefingContent.setText("<html><font color='#DC2626'><b>유가 정보를 불러오는 데 실패했습니다.</b></font></html>");
+					briefSummaryLabel.setText("<html><font color='#DC2626'><b>유가 정보를 불러오는 데 실패했습니다.</b></font></html>");
 				}
 			}
 		};
@@ -148,73 +161,145 @@ public class HomePage extends JScrollPane {
 		// --- 3. 주유비 통계 영역 (더미 데이터) ---
 		MonthlySummaryDto summary = fuelController.getMonthlySummary();
 
-        if (summary != null) {
-            // 총 주유 횟수
-            totalCountLabel.setText(summary.getTotalCount() + "회");
-            
-            // 총 주유 금액 (3자리 콤마 포맷: 245,000원)
-            totalAmountLabel.setText(String.format("%,d원", summary.getTotalAmount()));
-            
-            // 평균 가격
-            avgPriceLabel.setText(String.format("%,d원", summary.getAvgPrice()));
-            
-            // 지난달 대비 증감률 설정 및 색상 피드백
-            double diff = summary.getDiffPercent();
-            if (diff > 0) {
-                diffPercentLabel.setText(String.format("+%.1f%%", diff));
-                diffPercentLabel.setForeground(COLOR_DANGER); // 지출 증가 시 빨간색
-            } else if (diff < 0) {
-                diffPercentLabel.setText(String.format("%.1f%%", diff));
-                diffPercentLabel.setForeground(COLOR_SUCCESS); // 지출 감소 시 초록색
-            } else {
-                diffPercentLabel.setText("0%");
-                diffPercentLabel.setForeground(COLOR_TEXT_DARK);
-            }
-        }
-     // 처음 실행 시 휘발유(B027) 데이터를 자동으로 불러오게 합니다.
-        new SwingWorker<List<FuelTrendDto>, Void>() {
-            @Override 
-            protected List<FuelTrendDto> doInBackground() {
-                // 오피넷 API에서 휘발유(B027) 7일치 데이터를 가져옴 [cite: 101]
-                return new FuelTrendService().getWeeklyTrend("B027"); 
-            }
-            @Override 
-            protected void done() {
-                try {
-                    List<FuelTrendDto> result = get();
-                    if (result != null && !result.isEmpty()) {
-                        // 아래에서 올라오는 애니메이션과 함께 출력
-                        chart.setDataWithAnim(result); 
-                    }
-                } catch (Exception ex) { ex.printStackTrace(); }
-            }
-        }.execute();
+		if (summary != null) {
+			// 총 주유 횟수
+			totalCountLabel.setText(summary.getTotalCount() + "회");
 
-        // 갱신 후 화면 다시 그리기
-        revalidate();
-        repaint();
+			// 총 주유 금액 (3자리 콤마 포맷: 245,000원)
+			totalAmountLabel.setText(String.format("%,d원", summary.getTotalAmount()));
+
+			// 평균 가격
+			avgPriceLabel.setText(String.format("%,d원", summary.getAvgPrice()));
+
+			// 지난달 대비 증감률 설정 및 색상 피드백
+			double diff = summary.getDiffPercent();
+			if (diff > 0) {
+				diffPercentLabel.setText(String.format("+%.1f%%", diff));
+				diffPercentLabel.setForeground(COLOR_DANGER); // 지출 증가 시 빨간색
+			} else if (diff < 0) {
+				diffPercentLabel.setText(String.format("%.1f%%", diff));
+				diffPercentLabel.setForeground(COLOR_SUCCESS); // 지출 감소 시 초록색
+			} else {
+				diffPercentLabel.setText("0%");
+				diffPercentLabel.setForeground(COLOR_TEXT_DARK);
+			}
+		}
+		// 처음 실행 시 휘발유(B027) 데이터를 자동으로 불러오게 합니다.
+		new SwingWorker<List<FuelTrendDto>, Void>() {
+			@Override
+			protected List<FuelTrendDto> doInBackground() {
+
+				// 오피넷 API에서 휘발유(B027) 7일치 데이터를 가져옴 [cite: 101]
+				return new FuelTrendService().getWeeklyTrend("B027");
+			}
+
+			@Override
+			protected void done() {
+
+				try {
+					List<FuelTrendDto> result = get();
+					if (result != null && !result.isEmpty()) {
+						// 아래에서 올라오는 애니메이션과 함께 출력
+						chart.setDataWithAnim(result);
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		}.execute();
+
+		// 갱신 후 화면 다시 그리기
+		revalidate();
+		repaint();
 	}
 
 	// [섹션 1] 유가 브리핑 박스
 	private JPanel createBriefingBox() {
 
-		JPanel card = createBaseCard("📈 오늘의 유가 한 줄 브리핑");
+		JPanel card = createBaseCard("📈 오늘의 전국 유가 브리핑");
 
-		/**
-		 * [API 연동 및 비즈니스 로직 상세]
-		 * 1. API 호출 (Service 계층): 
-		 * - Opinet '전국 평균 유가(avgAllPrice)' API 호출
-		 * - URL: http://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=API_KEY
-		 * 2. 데이터 추출: JSON 파싱하여 'price'(평균가), 'diff'(전일대비) 추출
-		 * 3. 비즈니스 로직: diff 값이 0보다 크면 '상승', 작으면 '하락' 텍스트 매칭
-		 */
+		// 1. 한 줄 요약 라벨 초기화
+		briefSummaryLabel = new JLabel("<html>데이터를 불러오는 중입니다...⏳</html>");
+		briefSummaryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		card.add(briefSummaryLabel);
+		card.add(Box.createVerticalStrut(20));
 
-		briefingContent = new JLabel("데이터를 불러오는 중...");
-		briefingContent.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
-		briefingContent.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JPanel grid = new JPanel(new GridLayout(1, 4, 15, 0));
+		grid.setOpaque(false);
+		grid.setAlignmentX(Component.LEFT_ALIGNMENT);
+		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-		card.add(briefingContent);
+		valPremium = new JLabel("-");
+		diffPremium = new JLabel("-");
+		valGasoline = new JLabel("-");
+		diffGasoline = new JLabel("-");
+		valDiesel = new JLabel("-");
+		diffDiesel = new JLabel("-");
+		valLpg = new JLabel("-");
+		diffLpg = new JLabel("-");
+
+		// 그리드에 카드 추가 (휘발유만 isPrimary=true로 블랙 강조)
+		grid.add(createFuelCard("휘발유", valGasoline, diffGasoline));
+		grid.add(createFuelCard("경유", valDiesel, diffDiesel));
+		grid.add(createFuelCard("LPG", valLpg, diffLpg));
+		grid.add(createFuelCard("고급휘발유", valPremium, diffPremium));
+
+		card.add(grid);
 		return card;
+	}
+
+	private JPanel createFuelCard(String name, JLabel priceLbl, JLabel diffLbl) {
+
+		JPanel panel = new JPanel(new GridLayout(3, 1, 0, 5));
+
+		Color bgColor = Color.WHITE;
+		Color nameColor = new Color(113, 113, 122);
+		Color priceColor = new Color(24, 24, 27);
+
+		panel.setBackground(bgColor);
+		panel.setBorder(new CompoundBorder(
+				new LineBorder( new Color(228, 228, 231), 1, true),
+				new EmptyBorder(15, 15, 15, 15)));
+
+		JLabel nameLbl = new JLabel(name);
+		nameLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+		nameLbl.setForeground(nameColor);
+
+		priceLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+		priceLbl.setForeground(priceColor);
+		priceLbl.setHorizontalAlignment(SwingConstants.RIGHT);
+
+		diffLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+		diffLbl.setHorizontalAlignment(SwingConstants.RIGHT);
+
+		panel.add(nameLbl);
+		panel.add(priceLbl);
+		panel.add(diffLbl);
+
+		return panel;
+	}
+
+	// 📊 API 데이터 라벨 매핑 헬퍼
+	private void updateFuelLabel(apiService.AvgPriceDto dto, JLabel priceLbl, JLabel diffLbl) {
+
+		if (dto == null) {
+			priceLbl.setText("-");
+			diffLbl.setText("-");
+			return;
+		}
+		priceLbl.setText(dto.getAvgPrice());
+
+		String diff = dto.getDiffPrice();
+		if (diff == null || diff.isEmpty() || diff.equals("0") || diff.equals("0.0")) {
+			diffLbl.setText("- 0.00");
+			diffLbl.setForeground(new Color(113, 113, 122)); // 보합 (회색)
+		} else if (diff.contains("+")) {
+			diffLbl.setText("▲ " + diff.replace("+", ""));
+			diffLbl.setForeground(new Color(220, 38, 38)); // 상승 (빨간색)
+		} else {
+			diffLbl.setText("▼ " + diff.replace("-", ""));
+			diffLbl.setForeground(new Color(37, 99, 235)); // 하락 (파란색)
+		}
 	}
 
 	// [섹션 2] 내 지역 추천 주유소 박스
@@ -389,78 +474,88 @@ public class HomePage extends JScrollPane {
 		b.add(valueLabel);
 		return b;
 	}
-	
+
 	private JPanel createTrendChartBox() {
-	    JPanel card = createBaseCard("📊 최근 7일 유가 흐름");
-	    
-	    JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-	    btnPanel.setOpaque(false);
-	    
-	    String[][] types = {
-	        {"B027", "휘발유"}, {"D047", "경유"}, 
-	        {"B034", "고급"}, {"C004", "등유"}, {"K015", "LPG"}
-	    };
 
-	    chart = new FuelChartPanel();
-	    chart.setPreferredSize(new Dimension(0, 250));
+		JPanel card = createBaseCard("📊 최근 7일 유가 흐름");
 
-	    for (String[] t : types) {
-	        JButton btn = new JButton(t[1]);
-	        btn.putClientProperty("prodCd", t[0]);
-	        styleSecondaryBtn(btn, COLOR_PRIMARY);
-	        
-	        if(t[0].equals(selectedProdCd)) {
-	            btn.setBackground(COLOR_PRIMARY);
-	            btn.setForeground(Color.WHITE);
-	        }
+		JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+		btnPanel.setOpaque(false);
 
-	        btn.addActionListener(e -> {
-	            selectedProdCd = t[0];
-	            updateButtonStyles(btnPanel);
-	            
-	            new SwingWorker<List<FuelTrendDto>, Void>() {
-	                @Override protected List<FuelTrendDto> doInBackground() {
-	                    return new FuelTrendService().getWeeklyTrend(t[0]);
-	                }
-	                @Override protected void done() {
-	                    try { chart.setDataWithAnim(get()); } catch (Exception ex) {}
-	                }
-	            }.execute();
-	        });
-	        btnPanel.add(btn);
-	    }
-	    
-	    card.add(btnPanel);
-	    card.add(Box.createVerticalStrut(20));
-	    card.add(chart);
-	    return card;
+		String[][] types = { { "B027", "휘발유" }, { "D047", "경유" }, { "B034", "고급" }, { "C004", "등유" },
+				{ "K015", "LPG" } };
+
+		chart = new FuelChartPanel();
+		chart.setPreferredSize(new Dimension(0, 250));
+
+		for (String[] t : types) {
+			JButton btn = new JButton(t[1]);
+			btn.putClientProperty("prodCd", t[0]);
+			styleSecondaryBtn(btn, COLOR_PRIMARY);
+
+			if (t[0].equals(selectedProdCd)) {
+				btn.setBackground(COLOR_PRIMARY);
+				btn.setForeground(Color.WHITE);
+			}
+
+			btn.addActionListener(e -> {
+				selectedProdCd = t[0];
+				updateButtonStyles(btnPanel);
+
+				new SwingWorker<List<FuelTrendDto>, Void>() {
+					@Override
+					protected List<FuelTrendDto> doInBackground() {
+
+						return new FuelTrendService().getWeeklyTrend(t[0]);
+					}
+
+					@Override
+					protected void done() {
+
+						try {
+							chart.setDataWithAnim(get());
+						} catch (Exception ex) {
+						}
+					}
+				}.execute();
+			});
+			btnPanel.add(btn);
+		}
+
+		card.add(btnPanel);
+		card.add(Box.createVerticalStrut(20));
+		card.add(chart);
+		return card;
 	}
-	
+
 	/**
 	 * 보조 버튼 스타일 (흰색 배경 + 유색 테두리)
 	 */
 	private void styleSecondaryBtn(JButton b, Color fg) {
-	    b.setBackground(Color.WHITE);
-	    b.setForeground(fg);
-	    b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-	    b.setFocusPainted(false);
-	    b.setBorder(new LineBorder(fg, 1));
-	    b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-	    b.setPreferredSize(new Dimension(80, 35));
+
+		b.setBackground(Color.WHITE);
+		b.setForeground(fg);
+		b.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+		b.setFocusPainted(false);
+		b.setBorder(new LineBorder(fg, 1));
+		b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		b.setPreferredSize(new Dimension(80, 35));
 	}
-	
+
 	private void updateButtonStyles(JPanel btnPanel) {
-	    for (Component c : btnPanel.getComponents()) {
-	        if (c instanceof JButton) {
-	            JButton btn = (JButton) c;
-	            // 버튼의 ActionCommand나 텍스트로 비교 (여기선 텍스트 예시)
-	            if (btn.getClientProperty("prodCd").equals(selectedProdCd)) {
-	                btn.setBackground(COLOR_PRIMARY); // 파란색 채우기
-	                btn.setForeground(Color.WHITE);
-	            } else {
-	                styleSecondaryBtn(btn, COLOR_PRIMARY); // 다시 테두리만
-	            }
-	        }
-	    }
+
+		for (Component c : btnPanel.getComponents()) {
+			if (c instanceof JButton) {
+				JButton btn = (JButton) c;
+				// 버튼의 ActionCommand나 텍스트로 비교 (여기선 텍스트 예시)
+				if (btn.getClientProperty("prodCd").equals(selectedProdCd)) {
+					btn.setBackground(COLOR_PRIMARY); // 파란색 채우기
+					btn.setForeground(Color.WHITE);
+				} else {
+					styleSecondaryBtn(btn, COLOR_PRIMARY); // 다시 테두리만
+				}
+			}
+		}
 	}
+
 }
