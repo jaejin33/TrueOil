@@ -171,6 +171,44 @@ public class RepairPage extends JScrollPane {
 		shopListPanel.repaint();
 	}
 
+	private void styleComboBox(JComboBox<?> combo) {
+	    combo.setPreferredSize(new Dimension(150, 35)); // 정비 페이지에 맞게 너비 조절
+	    combo.setBackground(Color.WHITE);
+	    combo.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+	    combo.setBorder(new LineBorder(COLOR_BORDER, 1)); // 기존 상수 COLOR_BORDER 사용
+	    
+	    // 화살표 디자인 커스텀
+	    combo.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
+	        @Override
+	        protected JButton createArrowButton() {
+	            JButton button = new JButton("▼");
+	            button.setBorderPainted(false);
+	            button.setContentAreaFilled(false);
+	            button.setFocusPainted(false);
+	            button.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+	            button.setForeground(COLOR_PRIMARY); 
+	            return button;
+	        }
+	    });
+
+	    // 드롭다운 리스트 아이템 디자인
+	    combo.setRenderer(new DefaultListCellRenderer() {
+	        @Override
+	        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+	            JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+	            label.setBorder(new EmptyBorder(8, 10, 8, 10));
+	            if (isSelected) {
+	                label.setBackground(COLOR_SELECTED_BG); // RepairPage의 연한 파란색 배경 상수 사용
+	                label.setForeground(COLOR_PRIMARY);
+	            } else {
+	                label.setBackground(Color.WHITE);
+	                label.setForeground(COLOR_TEXT_DARK);
+	            }
+	            return label;
+	        }
+	    });
+	}
+	
 	private JPanel createMapSection() {
 
 		JPanel card = createBaseCard("");
@@ -184,9 +222,9 @@ public class RepairPage extends JScrollPane {
 		titleLabel.setForeground(COLOR_TEXT_DARK);
 
 		locationCombo = new JComboBox<>(LocationData.values());
+		styleComboBox(locationCombo);
 		locationCombo.setSelectedItem(LocationData.selected);
 		locationCombo.setPreferredSize(new Dimension(120, 30));
-
 		locationCombo.addActionListener(e -> {
 			LocationData loc = (LocationData) locationCombo.getSelectedItem();
 			if (loc != null) {
@@ -291,7 +329,7 @@ public class RepairPage extends JScrollPane {
 		dateField = new JTextField(today);
 		timeCombo = new JComboBox<>(
 				new String[] { "시간 선택", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00" });
-
+		styleComboBox(timeCombo);
 		grid.add(createInputGroup("📅 예약 날짜", dateField));
 		grid.add(createInputGroup("⏰ 예약 시간", timeCombo));
 		body.add(grid);

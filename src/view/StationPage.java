@@ -216,6 +216,7 @@ public class StationPage extends JScrollPane {
 		locationCombo.setSelectedItem(LocationData.selected); // 초기값 설정
 		locationCombo.setPreferredSize(new Dimension(120, 30));
 
+		styleComboBox(locationCombo);
 		locationCombo.addActionListener(e -> {
 			LocationData loc = (LocationData) locationCombo.getSelectedItem();
 			if (loc != null) {
@@ -450,7 +451,8 @@ public class StationPage extends JScrollPane {
 
 		fuelTypeCombo = new JComboBox<>(new String[] { "휘발유", "경유", "LPG", "고급휘발유", "등유" });
 		sortCombo = new JComboBox<>(new String[] { "가격순", "거리순" });
-
+		styleComboBox(fuelTypeCombo);
+		styleComboBox(sortCombo);
 		ActionListener filterListener = e -> {
 			String keyword = searchInput.getText().trim();
 			if (keyword.equals("주유소 이름을 입력하세요")) {
@@ -474,6 +476,42 @@ public class StationPage extends JScrollPane {
 		return card;
 	}
 
+	private void styleComboBox(JComboBox<?> combo) {
+	    combo.setPreferredSize(new Dimension(120, 35));
+	    combo.setBackground(Color.WHITE);
+	    combo.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+	    
+	    combo.setBorder(new LineBorder(COLOR_BORDER_LIGHT, 1));
+	    
+	    combo.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
+	        @Override
+	        protected JButton createArrowButton() {
+	            JButton button = new JButton("▼"); // 단순 텍스트나 아이콘 가능
+	            button.setBorderPainted(false);
+	            button.setContentAreaFilled(false);
+	            button.setFocusPainted(false);
+	            button.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+	            button.setForeground(COLOR_PRIMARY);
+	            return button;
+	        }
+	    });
+	    combo.setRenderer(new DefaultListCellRenderer() {
+	        @Override
+	        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+	            JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+	            label.setBorder(new EmptyBorder(8, 10, 8, 10));
+	            if (isSelected) {
+	                label.setBackground(new Color(239, 246, 255)); // 연한 파란색 배경
+	                label.setForeground(COLOR_PRIMARY);
+	            } else {
+	                label.setBackground(Color.WHITE);
+	                label.setForeground(COLOR_TEXT_DARK);
+	            }
+	            return label;
+	        }
+	    });
+	}
+	
 	private void performSearch() {
 
 		String keyword = searchInput.getText().trim();
