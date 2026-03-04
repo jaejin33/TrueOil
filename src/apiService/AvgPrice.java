@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AvgPrice {
-	public static String apiKey = "F260303263";
+	public static String apiKey = "F260206147";
     //F260303263
     //F260206147
 	

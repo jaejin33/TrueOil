@@ -19,6 +19,7 @@ public class HomePage extends JScrollPane {
 
 	private JPanel container;
 	private JPanel recommendPanel;
+	private JPanel efficiencyGrid;
 	private JLabel totalCountLabel, totalAmountLabel, avgPriceLabel, diffPercentLabel;
 	private String selectedProdCd = "B027"; // 기본값 휘발유
 
@@ -58,7 +59,7 @@ public class HomePage extends JScrollPane {
 		setBorder(null);
 		getVerticalScrollBar().setUnitIncrement(16);
 
-		// [이벤트] 탭이 전환되어 화면에 보일 때마다 refreshData 호출
+		// 탭이 전환되어 화면에 보일 때마다 refreshData 호출
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
 				refreshData();
@@ -124,18 +125,19 @@ public class HomePage extends JScrollPane {
 
 					apiService.AvgPriceDto dto = avgPriceMap.get("B027");
 
-					// 1. 한 줄 요약 업데이트 (휘발유 기준)
-		            apiService.AvgPriceDto gasDto = avgPriceMap.get("B027"); 
-		            if (gasDto != null) {
-		                briefSummaryLabel.setText(OneLineBriefing(gasDto));
-		            } else {
-		                briefSummaryLabel.setText("<html><font color='#DC2626'><b>휘발유 가격 정보를 찾을 수 없습니다.</b></font></html>");
-		            }
-		            
-		            updateFuelLabel(avgPriceMap.get("B034"), valPremium, diffPremium);   // 고급휘발유
-		            updateFuelLabel(avgPriceMap.get("B027"), valGasoline, diffGasoline); // 휘발유
-		            updateFuelLabel(avgPriceMap.get("D047"), valDiesel, diffDiesel);     // 경유
-		            updateFuelLabel(avgPriceMap.get("K015"), valLpg, diffLpg);
+					// 한 줄 요약 업데이트 (휘발유 기준)
+					apiService.AvgPriceDto gasDto = avgPriceMap.get("B027");
+					if (gasDto != null) {
+						briefSummaryLabel.setText(OneLineBriefing(gasDto));
+					} else {
+						briefSummaryLabel
+								.setText("<html><font color='#DC2626'><b>휘발유 가격 정보를 찾을 수 없습니다.</b></font></html>");
+					}
+
+					updateFuelLabel(avgPriceMap.get("B034"), valPremium, diffPremium); // 고급휘발유
+					updateFuelLabel(avgPriceMap.get("B027"), valGasoline, diffGasoline); // 휘발유
+					updateFuelLabel(avgPriceMap.get("D047"), valDiesel, diffDiesel); // 경유
+					updateFuelLabel(avgPriceMap.get("K015"), valLpg, diffLpg);
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -145,20 +147,85 @@ public class HomePage extends JScrollPane {
 			}
 		};
 		worker.execute();
-		// --- 2. 추천 주유소 영역 (더미 데이터) ---
+		// --- 2. 추천 주유소 영역 ---
 		recommendPanel.removeAll();
 		try {
-			List<apiService.NearStationDto> stations = apiService.NearStationService.getNearStations("1005"); // 예시: 부산
-																												// 부산진구
-			for (apiService.NearStationDto s : stations) {
-				recommendPanel.add(createGasRow(s.getName(), s.getAddr(), s.getPrice()));
-				recommendPanel.add(Box.createVerticalStrut(12));
+			database.LocationData currentLoc = database.LocationData.selected;
+			double currentX = currentLoc.getX();
+			double currentY = currentLoc.getY();
+			List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(currentX, currentY,
+					3000, "", "B027", "1");
+			if (stations != null && !stations.isEmpty()) {
+				// 3. 상위 3개 주유소만 리스트에 추가 (UI가 너무 길어지지 않도록 방지)
+				int limit = Math.min(stations.size(), 3);
+				for (int i = 0; i < limit; i++) {
+					apiService.ValueStationDto s = stations.get(i);
+
+					String distanceText = String.format("📍 %s 기준 약 %.1fkm", currentLoc.getName(),
+							s.getDistance() / 1000.0);
+
+					// 가격 포맷팅 (예: 1650 -> 1,650원)
+					int priceVal = Integer.parseInt(s.getPrice());
+					String formattedPrice = String.format("%,d원", priceVal);
+
+					recommendPanel.add(createGasRow(s.getName(), distanceText, formattedPrice));
+					recommendPanel.add(Box.createVerticalStrut(12));
+				}
+			} else {
+				// 검색된 주유소가 없을 경우
+				JLabel emptyLabel = new JLabel("선택된 지역(" + currentLoc.getName() + ") 주변에 추천할 주유소가 없습니다.");
+				emptyLabel.setForeground(Color.GRAY);
+				recommendPanel.add(emptyLabel);
 			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
-			recommendPanel.add(new JLabel("추천 주유소 정보를 불러오는 데 실패했습니다."));
+			JLabel errorLabel = new JLabel("추천 주유소 정보를 불러오는 데 실패했습니다.");
+			errorLabel.setForeground(COLOR_DANGER);
+			recommendPanel.add(errorLabel);
 		}
-		// --- 3. 주유비 통계 영역 (더미 데이터) ---
+		efficiencyGrid.removeAll();
+		try {
+			// 1. 전역에서 선택된 지역 정보 사용
+			database.LocationData currentLoc = database.LocationData.selected;
+			double currentX = currentLoc.getX();
+			double currentY = currentLoc.getY();
+
+			// 2. 반경 3km 내 휘발유 주유소 정보 호출
+			List<apiService.ValueStationDto> effStations = apiService.ValueStationService.getStations(currentX,
+					currentY, 3000, "", "B027", "1");
+
+			if (effStations != null && !effStations.isEmpty()) {
+				// 3. 거리+가격 비례 가성비 알고리즘 실행
+				apiService.BestValueService.EfficiencyResult result = apiService.BestValueService
+						.getBestStations(effStations);
+
+				if (result != null && result.cheapest != null && result.bestValue != null) {
+
+					// 금액 포맷팅 (예: 1650 -> 1,650원)
+					int cheapPrice = Integer.parseInt(result.cheapest.getPrice());
+					int bestPrice = Integer.parseInt(result.bestValue.getPrice());
+
+					efficiencyGrid.add(createNestedBox("단순 최저가 주유소", result.cheapest.getName(),
+							String.format("%,d원/L", cheapPrice), COLOR_PRIMARY));
+
+					efficiencyGrid.add(createNestedBox("거리 비례 가성비 추천", result.bestValue.getName(),
+							String.format("%,d원/L (%.1fkm)", bestPrice, result.bestValue.getDistance() / 1000.0),
+							COLOR_PRIMARY));
+				} else {
+					efficiencyGrid.add(new JLabel("추천할 주유소가 충분하지 않습니다."));
+				}
+			} else {
+				efficiencyGrid.add(new JLabel("주변에 가성비를 계산할 주유소가 없습니다."));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			JLabel errorLabel = new JLabel("가성비 추천 정보를 불러오는 데 실패했습니다.");
+			errorLabel.setForeground(COLOR_DANGER);
+			efficiencyGrid.add(errorLabel);
+		}
+
 		MonthlySummaryDto summary = fuelController.getMonthlySummary();
 
 		if (summary != null) {
@@ -184,7 +251,6 @@ public class HomePage extends JScrollPane {
 				diffPercentLabel.setForeground(COLOR_TEXT_DARK);
 			}
 		}
-		// 처음 실행 시 휘발유(B027) 데이터를 자동으로 불러오게 합니다.
 		new SwingWorker<List<FuelTrendDto>, Void>() {
 			@Override
 			protected List<FuelTrendDto> doInBackground() {
@@ -213,12 +279,10 @@ public class HomePage extends JScrollPane {
 		repaint();
 	}
 
-	// [섹션 1] 유가 브리핑 박스
 	private JPanel createBriefingBox() {
 
 		JPanel card = createBaseCard("📈 오늘의 전국 유가 브리핑");
 
-		// 1. 한 줄 요약 라벨 초기화
 		briefSummaryLabel = new JLabel("<html>데이터를 불러오는 중입니다...⏳</html>");
 		briefSummaryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		card.add(briefSummaryLabel);
@@ -238,7 +302,6 @@ public class HomePage extends JScrollPane {
 		valLpg = new JLabel("-");
 		diffLpg = new JLabel("-");
 
-		// 그리드에 카드 추가 (휘발유만 isPrimary=true로 블랙 강조)
 		grid.add(createFuelCard("휘발유", valGasoline, diffGasoline));
 		grid.add(createFuelCard("경유", valDiesel, diffDiesel));
 		grid.add(createFuelCard("LPG", valLpg, diffLpg));
@@ -257,9 +320,8 @@ public class HomePage extends JScrollPane {
 		Color priceColor = new Color(24, 24, 27);
 
 		panel.setBackground(bgColor);
-		panel.setBorder(new CompoundBorder(
-				new LineBorder( new Color(228, 228, 231), 1, true),
-				new EmptyBorder(15, 15, 15, 15)));
+		panel.setBorder(
+				new CompoundBorder(new LineBorder(new Color(228, 228, 231), 1, true), new EmptyBorder(15, 15, 15, 15)));
 
 		JLabel nameLbl = new JLabel(name);
 		nameLbl.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
@@ -302,17 +364,11 @@ public class HomePage extends JScrollPane {
 		}
 	}
 
-	// [섹션 2] 내 지역 추천 주유소 박스
+	// 내 지역 추천 주유소 박스
 	private JPanel createRecommendBox() {
 
 		JPanel card = createBaseCard("📍 내 지역 추천 주유소");
 
-		/**
-		 * [DB & API 복합 연동 포인트]
-		 * 1. DB: SELECT addr FROM users WHERE id = ? (사용자 선호 지역 정보 취득)
-		 * 2. API: 오피넷 '지역별 최저가 주유소' API 호출 (시군구 코드 활용)
-		 * 3. UI: 반환된 주유소 리스트를 for문을 통해 createGasRow()로 생성하여 recommendPanel에 추가
-		 */
 
 		recommendPanel = new JPanel();
 		recommendPanel.setLayout(new BoxLayout(recommendPanel, BoxLayout.Y_AXIS));
@@ -327,36 +383,14 @@ public class HomePage extends JScrollPane {
 	private JPanel createEfficiencyBox() {
 
 		JPanel card = createBaseCard("💰 가성비 추천");
-
-		JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
-		grid.setBackground(Color.WHITE);
-		grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-		grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-
-		/**
-		 * [API 연동 포인트]
-		 * 1. 주변 반경(3~5km) 내 주유소 정보 호출
-		 * 2. 알고리즘: (가격) + (이동 거리 비용)을 계산하여 최적의 주유소 도출
-		 */
-		try {
-			List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(494152, 282437,
-					3000);
-			apiService.BestValueService.EfficiencyResult result = apiService.BestValueService.getBestStations(stations);
-
-			grid.add(createNestedBox("최저가 주유소", result.cheapest.getName(), result.cheapest.getPrice() + "원/L",
-					COLOR_PRIMARY));
-
-			grid.add(
-					createNestedBox("거리 비례 가성비 추천", result.bestValue.getName(),
-							result.bestValue.getPrice() + "원/L ("
-									+ String.format("%.1fkm", result.bestValue.getDistance() / 1000.0) + ")",
-							COLOR_PRIMARY));
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			grid.add(new JLabel("추천 정보를 불러오는 데 실패했습니다."));
-		}
-		card.add(grid);
+		
+		efficiencyGrid = new JPanel(new GridLayout(1, 2, 20, 0));
+		efficiencyGrid.setBackground(Color.WHITE);
+		efficiencyGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+		efficiencyGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+		
+		efficiencyGrid.add(new JLabel("데이터를 불러오는 중입니다...⏳"));
+		card.add(efficiencyGrid);
 		return card;
 	}
 
