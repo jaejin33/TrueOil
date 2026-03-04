@@ -205,7 +205,7 @@ public class Login extends JFrame {
         signupText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         signupText.setForeground(Color.GRAY);
 
-        JLabel signupLink = new JLabel("회원가입");
+        JLabel signupLink = new JLabel("<html><u>회원가입</u></html>"); 
         signupLink.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         signupLink.setForeground(COLOR_PRIMARY);
         signupLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -218,11 +218,11 @@ public class Login extends JFrame {
             }
             @Override
             public void mouseEntered(MouseEvent e) {
-                signupLink.setText("<html><u>회원가입</u></html>");
+                signupLink.setForeground(COLOR_PRIMARY.darker());
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                signupLink.setText("회원가입");
+                signupLink.setForeground(COLOR_PRIMARY);
             }
         });
 
@@ -234,7 +234,7 @@ public class Login extends JFrame {
         findAccountPanel.setBackground(Color.WHITE);
         findAccountPanel.setMaximumSize(new Dimension(320, 30));
 
-        JLabel findAccountLink = new JLabel("아이디 / 비밀번호를 잊으셨나요?");
+        JLabel findAccountLink = new JLabel("<html><u>아이디 / 비밀번호를 잊으셨나요?</u></html>");
         findAccountLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         findAccountLink.setForeground(Color.GRAY);
         findAccountLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -246,11 +246,11 @@ public class Login extends JFrame {
             }
             @Override
             public void mouseEntered(MouseEvent e) {
-                findAccountLink.setText("<html><u>아이디 / 비밀번호를 잊으셨나요?</u></html>");
+                findAccountLink.setForeground(COLOR_TEXT_DARK);
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                findAccountLink.setText("아이디 / 비밀번호를 잊으셨나요?");
+                findAccountLink.setForeground(Color.GRAY);
             }
         });
 
