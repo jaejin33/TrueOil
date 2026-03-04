@@ -176,7 +176,6 @@ public class SignupDialog extends JFrame {
             // 2. Controller에게 처리를 맡김 (View는 결과만 받음)
             UserController controller = new UserController();
             if (controller.handleSignup(this, userDto)) {
-                JOptionPane.showMessageDialog(this, "회원가입이 완료되었습니다!");
                 new Login().setVisible(true);
                 dispose();
             }
