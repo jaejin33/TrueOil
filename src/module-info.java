@@ -8,6 +8,8 @@ module TrueOil {
 	requires jdk.jsobject; // 이미지 4의 sql 접근 에러 해결
 	// 2. 다른 모듈(JavaFX 등)이 내 코드를 읽을 수 있도록 허용
 	// FXML 파일이 있다면 해당 패키지를 열어줘야 합니다.
+	
+	requires java.mail;
 
 	opens view to javafx.fxml;
 	opens user to javafx.fxml;
