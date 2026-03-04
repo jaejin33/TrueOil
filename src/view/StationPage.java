@@ -153,7 +153,7 @@ public class StationPage extends JScrollPane {
 				}
 
 				List<apiService.ValueStationDto> stations = apiService.ValueStationService.getStations(currentX,
-						currentY, 3000, keyword, prodCd, sortCode);
+						currentY, 2000, keyword, prodCd, sortCode);
 
 				// 지도 마커 업데이트
 				if (webEngine != null) {
@@ -289,26 +289,29 @@ public class StationPage extends JScrollPane {
 	private void updateMapMarkers(List<apiService.ValueStationDto> stations) {
 
 		Platform.runLater(() -> {
-			if (webEngine == null)
+			if (webEngine == null || stations.isEmpty())
 				return;
-
 			try {
-				String checkScript = "typeof isMapLoaded !== 'undefined' && isMapLoaded && typeof clearMarkers === 'function'";
-				Object isReady = webEngine.executeScript(checkScript);
-				if (isReady instanceof Boolean && (Boolean) isReady) {
-					webEngine.executeScript("clearMarkers();");
+				webEngine.executeScript("clearMarkers();");
 
-					String currentFuel = (String) fuelTypeCombo.getSelectedItem();
-
-					for (apiService.ValueStationDto s : stations) {
-						int price = parsePrice(s.getPrice());
-						String script = String.format(java.util.Locale.US,
-								"if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s', '%s'); }",
-								s.getX(), s.getY(), s.getName().replace("'", "\\'"), String.format("%,d", price),
-								currentFuel);
-						webEngine.executeScript(script);
-					}
+				int minPrice = Integer.MAX_VALUE;
+				for (apiService.ValueStationDto s : stations) {
+					int p = parsePrice(s.getPrice());
+					if (p < minPrice)
+						minPrice = p;
 				}
+
+				String currentFuel = (String) fuelTypeCombo.getSelectedItem();
+
+				for (apiService.ValueStationDto s : stations) {
+					int price = parsePrice(s.getPrice());
+					boolean isCheapest = (price == minPrice && price != Integer.MAX_VALUE);
+					String script = String.format(java.util.Locale.US,
+							"if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s', '%s', %b); }", s.getX(),
+							s.getY(), s.getName().replace("'", "\\'"), String.format("%,d", price), currentFuel, isCheapest);
+					webEngine.executeScript(script);
+				}
+
 			} catch (Exception e) {
 				System.out.println("지도가 아직 완전히 로드되지 않아 마커 업데이트를 대기합니다.");
 			}
@@ -431,11 +434,18 @@ public class StationPage extends JScrollPane {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 
-				handleStationSelection(s.getX(), s.getY(), s.getName(), String.format("%,d", price),s.getFuelType());
+				if (e.getClickCount() == 1) {
+					handleStationSelection(s.getX(), s.getY(), s.getName(), String.format("%,d", price),
+							(String) fuelTypeCombo.getSelectedItem());
 
-				Window win = SwingUtilities.getWindowAncestor(item);
-				if (win instanceof MainPage) {
-					((MainPage) win).showStationDetail(s.getUniId());
+				}
+
+				if (e.getClickCount() == 2) {
+					// [더블 클릭] 상세 정보 페이지 표시
+					Window win = SwingUtilities.getWindowAncestor(item);
+					if (win instanceof MainPage) {
+						((MainPage) win).showStationDetail(s.getUniId());
+					}
 				}
 			}
 
@@ -493,12 +503,11 @@ public class StationPage extends JScrollPane {
 			if (webEngine == null)
 				return;
 			try {
-				webEngine.executeScript("clearMarkers();");
-				webEngine.executeScript(String.format(java.util.Locale.US, "setCenter(%f, %f);", x, y));
+				webEngine.executeScript("window.focusStation('" + name + "')");
+
+			} catch (Exception e) {
 				webEngine.executeScript(String.format(java.util.Locale.US, "addMarker(%f, %f, '%s', '%s','%s');", x, y,
 						name.replace("'", "\\'"), price, fuelType));
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
 		});
 	}

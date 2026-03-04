@@ -31,6 +31,7 @@ body {
 		var currentMode = "STATION"; // 기본값은 주유소 모드
 		var activeMarker = null;
 		var routePath = null;
+		var isInternalMove = false;
 		// 지도 중심 이동하기
 		window.setCenter = function(lat, lng) {
 			if (!map)
@@ -50,7 +51,6 @@ body {
 
 				if (map && latlng) {
 					map.setCenter(latlng);
-					map.setZoom(15); // 상세 페이지이므로 줌 레벨 확대
 				}
 			} catch (e) {
 				console.error("setCenter 에러:", e);
@@ -83,15 +83,19 @@ body {
 			}
 		}
 
-		// 새 마커 추가 (Java가 KATECH 좌표를 던져줌)
-		function addMarker(x, y, name, price, fuelType) {
+		// 새 마커 추가
+		function addMarker(x, y, name, price, fuelType, isCheapest) {
 			try {
 				if (!x || !y || x == 0 || y == 0)
 					return;
-				// KATECH(TM128) -> 네이버 위경도(LatLng) 변환
 
 				var tm128 = new naver.maps.Point(parseFloat(x), parseFloat(y));
 				var latLng = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+
+				// 최저가인 경우 빨간색(#ef4444), 일반은 파란색(#2563eb)
+				var themeColor = isCheapest ? "#ef4444" : "#2563eb";
+				var zIndex = isCheapest ? 100 : 1; // 최저가 마커를 위로 올림
+
 				var marker = new naver.maps.Marker(
 						{
 							position : latLng,
@@ -99,16 +103,51 @@ body {
 							title : name,
 							icon : {
 								content : [
-										'<div style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">',
-										'    <div style="background:#2563eb; color:white; padding:6px 12px; border-radius:20px; font-family: sans-serif; white-space:nowrap; display:flex; align-items:center; line-height: 1;">',
-										'        <span style="font-size:11px; font-weight:800; margin-right:3px; vertical-align: middle;">₩</span>',
-										'        <span style="font-size:14px; font-weight:800; vertical-align: middle;">'
-												+ price + '</span>',
-										'    </div>',
-										'    <div style="width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #2563eb; margin: -1px auto 0;"></div>',
+										'<div style="position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); scale: '
+												+ (isCheapest ? '1.2' : '1.0')
+												+ '; transition: transform 0.2s;">',
+
+										isCheapest ? '<div style="position: absolute; top: -28px; font-size: 30px; color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); text-shadow: 0 0 5px rgba(0,0,0,0.2);">👑</div>'
+												: '',
+
+										// [말풍선 본체]
+										'    <div style="background:'
+												+ (isCheapest ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+														: '#2563eb')
+												+ '; '
+												+ '                color: '
+												+ (isCheapest ? '#000' : '#fff')
+												+ '; '
+												+ '                padding:7px 14px; '
+												+ '                border-radius:20px; '
+												+ '                font-family: \'Pretendard\', sans-serif; '
+												+ '                white-space:nowrap; '
+												+ '                display:flex; '
+												+ '                align-items:center; '
+												+ '                border: 2px solid '
+												+ (isCheapest ? '#d3d3d3'
+														: '#fff')
+												+ '; '
+												+ '                box-shadow: inset 0 1px 1px rgba(255,255,255,0.4);">'
+												+
+
+												(isCheapest ? ''
+														: '<span style="font-size:11px; font-weight:700; margin-right:3px; opacity:0.9;">₩</span>')
+												+ '        <span style="font-size:15px; font-weight:700; letter-spacing:-0.5px;">'
+												+ price + '</span>'
+												+ '    </div>',
+
+										// [꼬리 부분]
+										'    <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; '
+												+ '                border-top:7px solid '
+												+ (isCheapest ? '#FFA500'
+														: '#2563eb')
+												+ '; '
+												+ '                margin-top: -1px;"></div>',
 										'</div>' ].join(''),
 								anchor : new naver.maps.Point(35, 30)
-							}
+							},
+							zIndex : isCheapest ? 1000 : 100
 						});
 				var infoContent = [
 						'<div style="padding: 15px; min-width: 200px; background: white; border-radius: 12px; border: none; font-family: sans-serif;">',
@@ -146,6 +185,9 @@ body {
 					} else {
 						infowindow.open(map, marker);
 						currentInfoWindow = infowindow;
+
+						isInternalMove = true;
+						map.panTo(latLng); // 해당 위치로 부드럽게 이동
 					}
 				});
 				markers.push(marker);
@@ -153,6 +195,27 @@ body {
 				log('❌ addMarker 에러: ' + e.message);
 			}
 		}
+		window.focusStation = function(name) {
+			if (!map || markers.length === 0)
+				return;
+
+			for (var i = 0; i < markers.length; i++) {
+				if (markers[i].getTitle() === name) {
+					var targetMarker = markers[i];
+					var latLng = targetMarker.getPosition();
+
+					isInternalMove = true;
+					map.panTo(latLng);
+
+					if (map.getZoom() < 15) {
+						map.setZoom(15);
+					}
+
+					naver.maps.Event.trigger(targetMarker, 'click');
+					return;
+				}
+			}
+		};
 		function initMap() {
 			if (map)
 				return;
@@ -176,7 +239,7 @@ body {
 			}
 		};
 		try {
-			// 1. 지도 초기 옵션 (기본 위치: 동의대역)
+			// 지도 초기 옵션 (기본 위치: 동의대역)
 			var mapOptions = {
 				center : new naver.maps.LatLng(35.154031, 129.032212),
 				zoom : 14,
@@ -189,12 +252,14 @@ body {
 
 					function() {
 						isMapLoaded = true;
+						if (isInternalMove) {
+							isInternalMove = false;
+							return;
+						}
 						if (currentMode === "STATION" && window.javaConnector) {
-							var center = map.getCenter(); // 현재 중심 위경도
-							// 네이버 위경도(LatLng) -> 오피넷 KATECH(TM128) 변환
+							var center = map.getCenter();
 							var tm128 = naver.maps.TransCoord
 									.fromLatLngToTM128(center);
-							// Java에 연결된 객체가 있으면 좌표 전송
 							if (window.javaConnector) {
 								window.javaConnector.searchStations(tm128.x,
 										tm128.y);

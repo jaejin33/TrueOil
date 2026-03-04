@@ -374,11 +374,9 @@ public class RepairPage extends JScrollPane {
 		updateFormVisibility();
 		refreshShopSelection();
 
-		// ✅ 예약 완료 후 지도 위의 강조된 이름표 마커를 모두 없애고 초기 상태로 되돌림
 		Platform.runLater(() -> {
 			try {
 				if (webEngine != null) {
-					// focusRepair에 빈 문자열이나 존재하지 않는 이름을 주면 모두 원상복구(점)됨
 					webEngine.executeScript("if(typeof focusRepair === 'function') { focusRepair(''); }");
 				}
 			} catch (Exception ex) {
@@ -403,7 +401,7 @@ public class RepairPage extends JScrollPane {
 		item.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
 
-				// ✅ 무한 피드백 루프 방지
+				// 무한 피드백 루프 방지
 				if (s.getName().equals(selectedShopName)) {
 					return;
 				}
@@ -447,7 +445,6 @@ public class RepairPage extends JScrollPane {
 
 	private void updateFormVisibility() {
 
-		// ✅ 빈 문자열 검사를 추가하여 처음 로드 시 폼이 비활성화되도록 수정
 		boolean enabled = (selectedShopName != null && !selectedShopName.isEmpty());
 
 		shopDisplayField.setText(!enabled ? " 정비소를 먼저 선택해주세요" : " " + selectedShopName);

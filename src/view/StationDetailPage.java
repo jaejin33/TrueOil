@@ -143,7 +143,6 @@ public class StationDetailPage extends JScrollPane {
 					webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
 						if (newState == Worker.State.SUCCEEDED) {
 							if (stationX != null && !stationX.isEmpty()) {
-								// 소수점 좌표를 위한 Locale.US 설정 포함
 								updateRealTimeData();
 								String script = String.format(java.util.Locale.US,
 										"if(typeof setCenter === 'function' && typeof addMarker === 'function'){ "
@@ -191,13 +190,11 @@ public class StationDetailPage extends JScrollPane {
 				ex.printStackTrace();
 			}
 		});
-
+		//길찾기
 		routeBtn.addActionListener(e -> {
-			// 1. 출발지 좌표 가져오기
 			LocationData startPlace = LocationData.selected;
 			double sLat = (startPlace != null) ? startPlace.getLat() : 35.154176;
 			double sLng = (startPlace != null) ? startPlace.getLng() : 129.033014;
-			// 2. JavaScript를 통해 목적지 위경도 좌표를 먼저 가져옴 (UI 스레드)
 			Platform.runLater(() -> {
 				try {
 					Object result = webEngine
@@ -207,8 +204,6 @@ public class StationDetailPage extends JScrollPane {
 						double dLat = Double.parseDouble(latlng[0]);
 						double dLng = Double.parseDouble(latlng[1]);
 
-						// 3. 좌표를 구한 후 네트워크 작업 시작 (별도 스레드)
-						// routeBtn 리스너 내 Thread 부분 수정
 						new Thread(() -> {
 							String jsonResponse = getRouteData(sLng, sLat, dLng, dLat);
 
@@ -232,7 +227,7 @@ public class StationDetailPage extends JScrollPane {
 										if (durMatcher.find()) {
 											durationMs = Long.parseLong(durMatcher.group(1));
 										}
-										// 2. Java에서 최종 표시용 텍스트 완성 (중복 계산 방지)
+										
 										long totalMinutes = Math.max(1, Math.round(durationMs / 1000.0 / 60.0));
 										String finalTimeText;
 										if (totalMinutes >= 60) {
@@ -242,7 +237,6 @@ public class StationDetailPage extends JScrollPane {
 										}
 
 										if (pathDataString.length() > 5) {
-											// [중요] 숫자가 아닌 문자열 '%s'로 전달합니다.
 											String script = String.format(java.util.Locale.US,
 													"if(window.drawRoute){ window.drawRoute(`[%s]`, '%s'); }",
 													pathDataString, finalTimeText);
@@ -274,13 +268,10 @@ public class StationDetailPage extends JScrollPane {
 	}
 
 	public String getRouteData(double sLng, double sLat, double eLng, double eLat) {
-		// 이미지에서 확인된 ID와 Secret (공백 없이 정확함)
 		String clientId = "jkwi5mphw2";
 		String clientSecret = "2EOprmGxyCh8FdCDBgTUKUUvAEX5uWv0UzBwG93f";
 
 		try {
-			// [수정] 매뉴얼의 curl 예시 주소와 100% 일치시킴
-			// 주소: maps.apigw.ntruss.com / 경로: v1/driving
 			String apiURL = String.format(java.util.Locale.US,
 					"https://maps.apigw.ntruss.com/map-direction/v1/driving?start=%f,%f&goal=%f,%f&option=trafast",
 					sLng, sLat, eLng, eLat);
@@ -289,7 +280,6 @@ public class StationDetailPage extends JScrollPane {
 			java.net.HttpURLConnection con = (java.net.HttpURLConnection) url.openConnection();
 			con.setRequestMethod("GET");
 
-			// [수정] 헤더 키 이름을 매뉴얼과 동일하게 소문자로 시도 (보안 장비 특성 반영)
 			con.setRequestProperty("x-ncp-apigw-api-key-id", clientId);
 			con.setRequestProperty("x-ncp-apigw-api-key", clientSecret);
 			con.setRequestProperty("Accept", "application/json");
@@ -479,7 +469,7 @@ public class StationDetailPage extends JScrollPane {
 				double sLat = Double.parseDouble(latLng[0]);
 				double sLng = Double.parseDouble(latLng[1]);
 
-				// 거리 및 비용 계산 로직...
+				// 거리 및 비용 계산 로직
 				LocationData current = LocationData.selected;
 				double distance = calculateDistance(current.getLat(), current.getLng(), sLat, sLng);
 				int price = parsePrice(this.representativePrice);
