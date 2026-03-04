@@ -26,7 +26,7 @@ public class Login extends JFrame {
         setTitle("TrueOil");
         setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(420, 550);
+        setSize(420, 600); // 계정 찾기 링크 공간 확보를 위해 높이 조정
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -66,7 +66,7 @@ public class Login extends JFrame {
                 new EmptyBorder(16, 24, 24, 24)
         ));
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.setMaximumSize(new Dimension(360, 520));
+        card.setMaximumSize(new Dimension(360, 560)); // 높이 상향 조정
 
         /* ===== 상단 헤더 ===== */
         JPanel header = new JPanel(new BorderLayout());
@@ -177,7 +177,6 @@ public class Login extends JFrame {
             UserSessionDto sessionUser = controller.handleLogin(this, email, password);
 
             if (sessionUser != null) {
-                // 로그인 성공 시 세션 정보를 메인 화면으로 전달하며 이동
                 SessionManager.setLoginUser(sessionUser);
                 new MainPage().setVisible(true);
                 this.dispose(); 
@@ -214,7 +213,6 @@ public class Login extends JFrame {
         signupLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // [기능] 회원가입 완료 후 로그인 페이지로 자동 리다이렉트 되는 구조 확인
                 new SignupDialog().setVisible(true);
                 dispose();
             }
@@ -231,6 +229,33 @@ public class Login extends JFrame {
         signupPanel.add(signupText);
         signupPanel.add(signupLink);
 
+        /* ===== 계정 찾기 링크 ===== */
+        JPanel findAccountPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 10));
+        findAccountPanel.setBackground(Color.WHITE);
+        findAccountPanel.setMaximumSize(new Dimension(320, 30));
+
+        JLabel findAccountLink = new JLabel("아이디 / 비밀번호를 잊으셨나요?");
+        findAccountLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        findAccountLink.setForeground(Color.GRAY);
+        findAccountLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        findAccountLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                new FindAccountDialog(Login.this).setVisible(true);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                findAccountLink.setText("<html><u>아이디 / 비밀번호를 잊으셨나요?</u></html>");
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                findAccountLink.setText("아이디 / 비밀번호를 잊으셨나요?");
+            }
+        });
+
+        findAccountPanel.add(findAccountLink);
+
         /* ===== 최종 조립 ===== */
         card.add(header);
         card.add(Box.createVerticalStrut(10));
@@ -243,6 +268,8 @@ public class Login extends JFrame {
         card.add(loginButton);
         card.add(Box.createVerticalStrut(18));
         card.add(signupPanel);
+        card.add(Box.createVerticalStrut(5)); // 회원가입과 계정찾기 사이 간격
+        card.add(findAccountPanel);
 
         centerWrapper.add(card);
         background.add(centerWrapper, BorderLayout.CENTER);
@@ -250,7 +277,6 @@ public class Login extends JFrame {
     }
 
     public static void main(String[] args) {
-        // [API Point] 오피넷 API 키 및 DB 연결 상태(JDBC 드라이버 로딩 등)를 체크하는 Pre-Check 로직 필요
         SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }
 }
