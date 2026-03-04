@@ -211,6 +211,18 @@ public class MainPage extends JFrame {
 			btn.setForeground(COLOR_PRIMARY);
 			btn.setBorder(new MatteBorder(0, 0, 3, 0, COLOR_PRIMARY));
 			cardLayout.show(contentArea, pageName);
+
+			for (Component comp : contentArea.getComponents()) {
+				if (comp.isVisible()) {
+					if (comp instanceof StationPage) {
+						((StationPage) comp).refreshData();
+					} else if (comp instanceof RepairPage) {
+						((RepairPage) comp).refreshData();
+					}
+					comp.revalidate();
+					comp.repaint();
+				}
+			}
 		});
 		navBar.add(btn);
 	}

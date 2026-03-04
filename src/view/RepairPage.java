@@ -98,9 +98,16 @@ public class RepairPage extends JScrollPane {
 
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
-				if (locationCombo != null) {
-					locationCombo.setSelectedItem(LocationData.selected);
-				}
+				Platform.runLater(() -> {
+					if (webEngine != null) {
+						// 현재 로드된 URL 확인 후 없으면 로드
+						String url = webEngine.getLocation();
+						if (url == null || url.isEmpty() || url.equals("about:blank")) {
+							loadMapFile();
+						}
+					}
+				});
+				// 데이터 갱신도 함께 수행
 				refreshData();
 			}
 		});
@@ -143,8 +150,7 @@ public class RepairPage extends JScrollPane {
 				if (webEngine != null) {
 					String escapedJson = finalJson.replace("\\", "\\\\").replace("'", "\\'");
 					String script = String.format(
-				            "if(typeof setRepairMarkers === 'function') { setRepairMarkers('%s'); }", 
-				            escapedJson);
+							"if(typeof setRepairMarkers === 'function') { setRepairMarkers('%s'); }", escapedJson);
 					try {
 						webEngine.executeScript(script);
 					} catch (Exception e) {
@@ -244,17 +250,16 @@ public class RepairPage extends JScrollPane {
 	private void updateLocation(LocationData loc) {
 
 		Platform.runLater(() -> {
-	        if (webEngine != null) {
-	            String script = String.format(java.util.Locale.US, 
-	                "if(typeof setCenter === 'function') { setCenter(%f, %f); }", 
-	                loc.getLat(), loc.getLng());
-	            try {
-	                webEngine.executeScript(script);
-	            } catch (Exception e) {
-	                System.err.println("RepairPage: 지도 이동 함수 없음");
-	            }
-	        }
-	    });
+			if (webEngine != null) {
+				String script = String.format(java.util.Locale.US,
+						"if(typeof setCenter === 'function') { setCenter(%f, %f); }", loc.getLat(), loc.getLng());
+				try {
+					webEngine.executeScript(script);
+				} catch (Exception e) {
+					System.err.println("RepairPage: 지도 이동 함수 없음");
+				}
+			}
+		});
 		refreshData();
 	}
 
@@ -424,6 +429,18 @@ public class RepairPage extends JScrollPane {
 		});
 
 		return item;
+	}
+
+	private void loadMapFile() {
+
+		try {
+			File mapFile = new File(System.getProperty("user.dir"), "map.html");
+			if (mapFile.exists()) {
+				webEngine.load(mapFile.toURI().toURL().toExternalForm());
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 	}
 
 	private void refreshShopSelection() {

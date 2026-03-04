@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import apiService.AvgPrice;
 import java.awt.*;
+import java.awt.event.*;
 import java.net.URI;
 import java.util.Map;
 import database.LocationData;
@@ -99,6 +100,12 @@ public class StationDetailPage extends JScrollPane {
 
 		setViewportView(container);
 
+		this.addHierarchyListener(e -> {
+			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+				refreshMapIfNeeded();
+			}
+		});
+
 		SwingUtilities.invokeLater(() -> {
 			revalidate();
 			repaint();
@@ -113,6 +120,33 @@ public class StationDetailPage extends JScrollPane {
 		return "";
 	}
 
+	private void refreshMapIfNeeded() {
+
+		Platform.runLater(() -> {
+			if (webEngine != null) {
+				String url = webEngine.getLocation();
+				// 로드된 URL이 없거나 blank 상태라면 다시 로드
+				if (url == null || url.isEmpty() || url.equals("about:blank")) {
+					loadMapFile();
+				}
+			}
+		});
+	}
+
+	// 맵 파일 로드 로직 분리
+	private void loadMapFile() {
+
+		try {
+			String projectRoot = System.getProperty("user.dir");
+			java.io.File mapFile = new java.io.File(projectRoot, "map.html");
+			if (mapFile.exists()) {
+				webEngine.load(mapFile.toURI().toURL().toExternalForm());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	// 지도 카드 생성 (JavaFX WebView 통합)
 	private JPanel createMapCard(String name) {
 
@@ -122,48 +156,29 @@ public class StationDetailPage extends JScrollPane {
 		jfxPanel = new JFXPanel();
 		Dimension mapDim = new Dimension(MAX_CARD_WIDTH - 80, 400);
 		jfxPanel.setPreferredSize(mapDim);
-		jfxPanel.setMinimumSize(mapDim);
-		jfxPanel.setMaximumSize(mapDim);
 
 		// JavaFX 스레드에서 WebView 초기화 실행
 		Platform.runLater(() -> {
 			WebView webView = new WebView();
 			webEngine = webView.getEngine();
+
 			webEngine.setUserAgent(
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
-			try {
-				// 현재 작업 디렉토리(프로젝트 루트)에서 map.html 찾기
-				String projectRoot = System.getProperty("user.dir");
-				java.io.File mapFile = new java.io.File(projectRoot, "map.html");
-
-				if (mapFile.exists()) {
-					String mapUrl = mapFile.toURI().toURL().toExternalForm();
-					webEngine.load(mapUrl);
-
-					webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-						if (newState == Worker.State.SUCCEEDED) {
-							if (stationX != null && !stationX.isEmpty()) {
-								updateRealTimeData();
-								String script = String.format(java.util.Locale.US,
-										"if(typeof setCenter === 'function' && typeof addMarker === 'function'){ "
-												+ "    setCenter(%s, %s); " + "    addMarker(%s, %s, '%s', '%s'); "
-												+ "}",
-										stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
-										representativePrice);
-
-								webEngine.executeScript(script);
-							}
-						}
-					});
-				} else {
-					System.err.println("❌ map.html 못 찾음. 실행 위치: " + projectRoot);
-					webEngine.loadContent("<html><body><h3 style='color:red;'>map.html missing at: "
-							+ mapFile.getAbsolutePath() + "</h3></body></html>");
+			webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+				if (newState == Worker.State.SUCCEEDED) {
+					if (stationX != null && !stationX.isEmpty()) {
+						updateRealTimeData();
+						String script = String.format(java.util.Locale.US,
+								"if(typeof setCenter === 'function' && typeof addMarker === 'function'){ "
+										+ "    setCenter(%s, %s); " + "    addMarker(%s, %s, '%s', '%s'); " + "}",
+								stationX, stationY, stationX, stationY, stationName.replace("'", "\\'"),
+								representativePrice);
+						webEngine.executeScript(script);
+					}
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			});
 			jfxPanel.setScene(new Scene(webView));
+			loadMapFile();
 		});
 
 		JPanel mapWrapper = new JPanel(new BorderLayout());
@@ -190,7 +205,7 @@ public class StationDetailPage extends JScrollPane {
 				ex.printStackTrace();
 			}
 		});
-		//길찾기
+		// 길찾기
 		routeBtn.addActionListener(e -> {
 			LocationData startPlace = LocationData.selected;
 			double sLat = (startPlace != null) ? startPlace.getLat() : 35.154176;
@@ -227,7 +242,7 @@ public class StationDetailPage extends JScrollPane {
 										if (durMatcher.find()) {
 											durationMs = Long.parseLong(durMatcher.group(1));
 										}
-										
+
 										long totalMinutes = Math.max(1, Math.round(durationMs / 1000.0 / 60.0));
 										String finalTimeText;
 										if (totalMinutes >= 60) {
@@ -268,6 +283,7 @@ public class StationDetailPage extends JScrollPane {
 	}
 
 	public String getRouteData(double sLng, double sLat, double eLng, double eLat) {
+
 		String clientId = "jkwi5mphw2";
 		String clientSecret = "2EOprmGxyCh8FdCDBgTUKUUvAEX5uWv0UzBwG93f";
 

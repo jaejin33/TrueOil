@@ -14,269 +14,288 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class Login extends JFrame {
-    private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
-    private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
-    private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
-    private static final Color COLOR_BORDER = new Color(209, 213, 219);
-    private static final Color COLOR_DANGER = new Color(239, 68, 68); 
-    
-    private Point initialClick;
+	private static final Color COLOR_PRIMARY = new Color(37, 99, 235);
+	private static final Color COLOR_BG_GRAY = new Color(243, 244, 246);
+	private static final Color COLOR_TEXT_DARK = new Color(31, 41, 55);
+	private static final Color COLOR_BORDER = new Color(209, 213, 219);
+	private static final Color COLOR_DANGER = new Color(239, 68, 68);
 
-    public Login() {
-        setTitle("TrueOil");
-        setUndecorated(true);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(420, 600); // 계정 찾기 링크 공간 확보를 위해 높이 조정
-        setLocationRelativeTo(null);
-        setResizable(false);
+	private Point initialClick;
 
-        /* ===== 전체 배경 ===== */
-        JPanel background = new JPanel(new BorderLayout());
-        background.setBackground(COLOR_BG_GRAY);
-        background.setBorder(new CompoundBorder(
-                new LineBorder(Color.BLACK, 2),
-                new EmptyBorder(20, 20, 20, 20) 
-        ));
+	public Login() {
+		try {
+			javafx.application.Platform.setImplicitExit(false);
+		} catch (Exception e) {
+			// 이미 초기화된 경우 무시
+		}
+		
+		setTitle("TrueOil");
+		setUndecorated(true);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setSize(420, 600); // 계정 찾기 링크 공간 확보를 위해 높이 조정
+		setLocationRelativeTo(null);
+		setResizable(false);
 
-        background.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                initialClick = e.getPoint();
-            }
-        });
-        background.addMouseMotionListener(new MouseAdapter() {
-            public void mouseDragged(MouseEvent e) {
-                int thisX = getLocation().x;
-                int thisY = getLocation().y;
-                int xMoved = e.getX() - initialClick.x;
-                int yMoved = e.getY() - initialClick.y;
-                setLocation(thisX + xMoved, thisY + yMoved);
-            }
-        });
+		/* ===== 전체 배경 ===== */
+		JPanel background = new JPanel(new BorderLayout());
+		background.setBackground(COLOR_BG_GRAY);
+		background.setBorder(new CompoundBorder(new LineBorder(Color.BLACK, 2), new EmptyBorder(20, 20, 20, 20)));
 
-        JPanel centerWrapper = new JPanel();
-        centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
-        centerWrapper.setBackground(COLOR_BG_GRAY);
+		background.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
 
-        /* ===== 카드 패널 ===== */
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-                new LineBorder(COLOR_BORDER, 2),
-                new EmptyBorder(16, 24, 24, 24)
-        ));
-        card.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.setMaximumSize(new Dimension(360, 560)); // 높이 상향 조정
+				initialClick = e.getPoint();
+			}
+		});
+		background.addMouseMotionListener(new MouseAdapter() {
+			public void mouseDragged(MouseEvent e) {
 
-        /* ===== 상단 헤더 ===== */
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(Color.WHITE);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        header.setAlignmentX(Component.CENTER_ALIGNMENT);
+				int thisX = getLocation().x;
+				int thisY = getLocation().y;
+				int xMoved = e.getX() - initialClick.x;
+				int yMoved = e.getY() - initialClick.y;
+				setLocation(thisX + xMoved, thisY + yMoved);
+			}
+		});
 
-        JLabel closeLabel = new JLabel("✕");
-        closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        closeLabel.setForeground(Color.LIGHT_GRAY);
-        closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        closeLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                System.exit(0);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                closeLabel.setForeground(COLOR_DANGER);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                closeLabel.setForeground(Color.LIGHT_GRAY);
-            }
-        });
-        header.add(closeLabel, BorderLayout.EAST);
+		JPanel centerWrapper = new JPanel();
+		centerWrapper.setLayout(new BoxLayout(centerWrapper, BoxLayout.Y_AXIS));
+		centerWrapper.setBackground(COLOR_BG_GRAY);
 
-        /* ===== 로고 영역 ===== */
-        JPanel logoPanel = new JPanel();
-        logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.Y_AXIS));
-        logoPanel.setBackground(Color.WHITE);
-        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		/* ===== 카드 패널 ===== */
+		JPanel card = new JPanel();
+		card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+		card.setBackground(Color.WHITE);
+		card.setBorder(new CompoundBorder(new LineBorder(COLOR_BORDER, 2), new EmptyBorder(16, 24, 24, 24)));
+		card.setAlignmentX(Component.CENTER_ALIGNMENT);
+		card.setMaximumSize(new Dimension(360, 560)); // 높이 상향 조정
 
-        JLabel iconLabel = new JLabel("⛽");
-        iconLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 48));
-        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		/* ===== 상단 헤더 ===== */
+		JPanel header = new JPanel(new BorderLayout());
+		header.setBackground(Color.WHITE);
+		header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+		header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel("TrueOil");
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
-        titleLabel.setForeground(COLOR_TEXT_DARK);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		JLabel closeLabel = new JLabel("✕");
+		closeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		closeLabel.setForeground(Color.LIGHT_GRAY);
+		closeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		closeLabel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
 
-        JLabel subtitleLabel = new JLabel("저렴한 주유소를 찾아보세요");
-        subtitleLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        subtitleLabel.setForeground(Color.BLACK);
-        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+				System.exit(0);
+			}
 
-        logoPanel.add(iconLabel);
-        logoPanel.add(Box.createVerticalStrut(10));
-        logoPanel.add(titleLabel);
-        logoPanel.add(Box.createVerticalStrut(4));
-        logoPanel.add(subtitleLabel);
+			@Override
+			public void mouseEntered(MouseEvent e) {
 
-        /* ===== 로그인 제목 ===== */
-        JLabel loginTitle = new JLabel("로그인");
-        loginTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        loginTitle.setForeground(COLOR_TEXT_DARK);
-        loginTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+				closeLabel.setForeground(COLOR_DANGER);
+			}
 
-        /* ===== 입력 폼 ===== */
-        JPanel formWrapper = new JPanel();
-        formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
-        formWrapper.setBackground(Color.WHITE);
-        formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formWrapper.setMaximumSize(new Dimension(320, 160));
+			@Override
+			public void mouseExited(MouseEvent e) {
 
-        JLabel emailLabel = new JLabel("이메일");
-        emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        emailLabel.setForeground(COLOR_TEXT_DARK);
-        emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+				closeLabel.setForeground(Color.LIGHT_GRAY);
+			}
+		});
+		header.add(closeLabel, BorderLayout.EAST);
 
-        JTextField emailField = new JTextField();
-        emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
+		/* ===== 로고 영역 ===== */
+		JPanel logoPanel = new JPanel();
+		logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.Y_AXIS));
+		logoPanel.setBackground(Color.WHITE);
+		logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel passwordLabel = new JLabel("비밀번호");
-        passwordLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        passwordLabel.setForeground(COLOR_TEXT_DARK);
-        passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JLabel iconLabel = new JLabel("⛽");
+		iconLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 48));
+		iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPasswordField passwordField = new JPasswordField();
-        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JLabel titleLabel = new JLabel("TrueOil");
+		titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+		titleLabel.setForeground(COLOR_TEXT_DARK);
+		titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        formWrapper.add(emailLabel);
-        formWrapper.add(Box.createVerticalStrut(6));
-        formWrapper.add(emailField);
-        formWrapper.add(Box.createVerticalStrut(14));
-        formWrapper.add(passwordLabel);
-        formWrapper.add(Box.createVerticalStrut(6));
-        formWrapper.add(passwordField);
+		JLabel subtitleLabel = new JLabel("저렴한 주유소를 찾아보세요");
+		subtitleLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		subtitleLabel.setForeground(Color.BLACK);
+		subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        /* ===== 로그인 버튼 및 로직 ===== */
-        JButton loginButton = new JButton("로그인");
-        loginButton.setBackground(COLOR_PRIMARY);
-        loginButton.setForeground(Color.WHITE);
-        loginButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
-        loginButton.setFocusPainted(false);
-        loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginButton.setMaximumSize(new Dimension(320, 45));
+		logoPanel.add(iconLabel);
+		logoPanel.add(Box.createVerticalStrut(10));
+		logoPanel.add(titleLabel);
+		logoPanel.add(Box.createVerticalStrut(4));
+		logoPanel.add(subtitleLabel);
 
-        Runnable loginAction = () -> {
-            String email = emailField.getText().trim();
-            String password = new String(passwordField.getPassword());
+		/* ===== 로그인 제목 ===== */
+		JLabel loginTitle = new JLabel("로그인");
+		loginTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+		loginTitle.setForeground(COLOR_TEXT_DARK);
+		loginTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            UserController controller = new UserController();
-            UserSessionDto sessionUser = controller.handleLogin(this, email, password);
+		/* ===== 입력 폼 ===== */
+		JPanel formWrapper = new JPanel();
+		formWrapper.setLayout(new BoxLayout(formWrapper, BoxLayout.Y_AXIS));
+		formWrapper.setBackground(Color.WHITE);
+		formWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+		formWrapper.setMaximumSize(new Dimension(320, 160));
 
-            if (sessionUser != null) {
-                SessionManager.setLoginUser(sessionUser);
-                new MainPage().setVisible(true);
-                this.dispose(); 
-            }
-        };
+		JLabel emailLabel = new JLabel("이메일");
+		emailLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		emailLabel.setForeground(COLOR_TEXT_DARK);
+		emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        loginButton.addActionListener(e -> loginAction.run());
+		JTextField emailField = new JTextField();
+		emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+		emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        KeyAdapter enterKeyAdapter = new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    loginAction.run();
-                }
-            }
-        };
-        emailField.addKeyListener(enterKeyAdapter);
-        passwordField.addKeyListener(enterKeyAdapter);
+		JLabel passwordLabel = new JLabel("비밀번호");
+		passwordLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		passwordLabel.setForeground(COLOR_TEXT_DARK);
+		passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        /* ===== 하단 회원가입 ===== */
-        JPanel signupPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
-        signupPanel.setBackground(Color.WHITE);
-        signupPanel.setMaximumSize(new Dimension(320, 20));
+		JPasswordField passwordField = new JPasswordField();
+		passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+		passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel signupText = new JLabel("계정이 없으신가요?");
-        signupText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        signupText.setForeground(Color.GRAY);
+		formWrapper.add(emailLabel);
+		formWrapper.add(Box.createVerticalStrut(6));
+		formWrapper.add(emailField);
+		formWrapper.add(Box.createVerticalStrut(14));
+		formWrapper.add(passwordLabel);
+		formWrapper.add(Box.createVerticalStrut(6));
+		formWrapper.add(passwordField);
 
-        JLabel signupLink = new JLabel("<html><u>회원가입</u></html>"); 
-        signupLink.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        signupLink.setForeground(COLOR_PRIMARY);
-        signupLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		/* ===== 로그인 버튼 및 로직 ===== */
+		JButton loginButton = new JButton("로그인");
+		loginButton.setBackground(COLOR_PRIMARY);
+		loginButton.setForeground(Color.WHITE);
+		loginButton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+		loginButton.setFocusPainted(false);
+		loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		loginButton.setMaximumSize(new Dimension(320, 45));
 
-        signupLink.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                new SignupDialog().setVisible(true);
-                dispose();
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                signupLink.setForeground(COLOR_PRIMARY.darker());
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                signupLink.setForeground(COLOR_PRIMARY);
-            }
-        });
+		Runnable loginAction = () -> {
+			String email = emailField.getText().trim();
+			String password = new String(passwordField.getPassword());
 
-        signupPanel.add(signupText);
-        signupPanel.add(signupLink);
+			UserController controller = new UserController();
+			UserSessionDto sessionUser = controller.handleLogin(this, email, password);
 
-        /* ===== 계정 찾기 링크 ===== */
-        JPanel findAccountPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 10));
-        findAccountPanel.setBackground(Color.WHITE);
-        findAccountPanel.setMaximumSize(new Dimension(320, 30));
+			if (sessionUser != null) {
+				SessionManager.setLoginUser(sessionUser);
+				new MainPage().setVisible(true);
+				this.dispose();
+			}
+		};
 
-        JLabel findAccountLink = new JLabel("<html><u>아이디 / 비밀번호를 잊으셨나요?</u></html>");
-        findAccountLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        findAccountLink.setForeground(Color.GRAY);
-        findAccountLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		loginButton.addActionListener(e -> loginAction.run());
 
-        findAccountLink.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                new FindAccountDialog(Login.this).setVisible(true);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                findAccountLink.setForeground(COLOR_TEXT_DARK);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                findAccountLink.setForeground(Color.GRAY);
-            }
-        });
+		KeyAdapter enterKeyAdapter = new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
 
-        findAccountPanel.add(findAccountLink);
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+					loginAction.run();
+				}
+			}
+		};
+		emailField.addKeyListener(enterKeyAdapter);
+		passwordField.addKeyListener(enterKeyAdapter);
 
-        /* ===== 최종 조립 ===== */
-        card.add(header);
-        card.add(Box.createVerticalStrut(10));
-        card.add(logoPanel);
-        card.add(Box.createVerticalStrut(28));
-        card.add(loginTitle);
-        card.add(Box.createVerticalStrut(20));
-        card.add(formWrapper);
-        card.add(Box.createVerticalStrut(26));
-        card.add(loginButton);
-        card.add(Box.createVerticalStrut(18));
-        card.add(signupPanel);
-        card.add(Box.createVerticalStrut(5)); // 회원가입과 계정찾기 사이 간격
-        card.add(findAccountPanel);
+		/* ===== 하단 회원가입 ===== */
+		JPanel signupPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+		signupPanel.setBackground(Color.WHITE);
+		signupPanel.setMaximumSize(new Dimension(320, 20));
 
-        centerWrapper.add(card);
-        background.add(centerWrapper, BorderLayout.CENTER);
-        add(background);
-    }
+		JLabel signupText = new JLabel("계정이 없으신가요?");
+		signupText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		signupText.setForeground(Color.GRAY);
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
-    }
+		JLabel signupLink = new JLabel("<html><u>회원가입</u></html>");
+		signupLink.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+		signupLink.setForeground(COLOR_PRIMARY);
+		signupLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+		signupLink.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+				new SignupDialog().setVisible(true);
+				dispose();
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+
+				signupLink.setForeground(COLOR_PRIMARY.darker());
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+
+				signupLink.setForeground(COLOR_PRIMARY);
+			}
+		});
+
+		signupPanel.add(signupText);
+		signupPanel.add(signupLink);
+
+		/* ===== 계정 찾기 링크 ===== */
+		JPanel findAccountPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 10));
+		findAccountPanel.setBackground(Color.WHITE);
+		findAccountPanel.setMaximumSize(new Dimension(320, 30));
+
+		JLabel findAccountLink = new JLabel("<html><u>아이디 / 비밀번호를 잊으셨나요?</u></html>");
+		findAccountLink.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+		findAccountLink.setForeground(Color.GRAY);
+		findAccountLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+		findAccountLink.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+				new FindAccountDialog(Login.this).setVisible(true);
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+
+				findAccountLink.setForeground(COLOR_TEXT_DARK);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+
+				findAccountLink.setForeground(Color.GRAY);
+			}
+		});
+
+		findAccountPanel.add(findAccountLink);
+
+		/* ===== 최종 조립 ===== */
+		card.add(header);
+		card.add(Box.createVerticalStrut(10));
+		card.add(logoPanel);
+		card.add(Box.createVerticalStrut(28));
+		card.add(loginTitle);
+		card.add(Box.createVerticalStrut(20));
+		card.add(formWrapper);
+		card.add(Box.createVerticalStrut(26));
+		card.add(loginButton);
+		card.add(Box.createVerticalStrut(18));
+		card.add(signupPanel);
+		card.add(Box.createVerticalStrut(5)); // 회원가입과 계정찾기 사이 간격
+		card.add(findAccountPanel);
+
+		centerWrapper.add(card);
+		background.add(centerWrapper, BorderLayout.CENTER);
+		add(background);
+	}
+
+	public static void main(String[] args) {
+
+		SwingUtilities.invokeLater(() -> new Login().setVisible(true));
+	}
 }

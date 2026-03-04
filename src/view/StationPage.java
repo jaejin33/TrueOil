@@ -109,12 +109,31 @@ public class StationPage extends JScrollPane {
 
 		this.addHierarchyListener(e -> {
 			if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
-				if (locationCombo != null) {
-					locationCombo.setSelectedItem(LocationData.selected);
-				}
+				Platform.runLater(() -> {
+					if (webEngine != null) {
+						// 현재 로드된 URL 확인 후 없으면 로드
+						String url = webEngine.getLocation();
+						if (url == null || url.isEmpty() || url.equals("about:blank")) {
+							loadMapFile();
+						}
+					}
+				});
+				// 데이터 갱신도 함께 수행
 				refreshData();
 			}
 		});
+	}
+
+	private void loadMapFile() {
+
+		try {
+			File mapFile = new File(System.getProperty("user.dir"), "map.html");
+			if (mapFile.exists()) {
+				webEngine.load(mapFile.toURI().toURL().toExternalForm());
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 	}
 
 	public void refreshData() {
@@ -307,8 +326,9 @@ public class StationPage extends JScrollPane {
 					int price = parsePrice(s.getPrice());
 					boolean isCheapest = (price == minPrice && price != Integer.MAX_VALUE);
 					String script = String.format(java.util.Locale.US,
-							"if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s', '%s', %b); }", s.getX(),
-							s.getY(), s.getName().replace("'", "\\'"), String.format("%,d", price), currentFuel, isCheapest);
+							"if(typeof addMarker === 'function') { addMarker(%f, %f, '%s', '%s', '%s', %b); }",
+							s.getX(), s.getY(), s.getName().replace("'", "\\'"), String.format("%,d", price),
+							currentFuel, isCheapest);
 					webEngine.executeScript(script);
 				}
 
